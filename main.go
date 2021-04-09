@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
-	vstConn *sql.DB
+	vstConn  *sql.DB
+	dictConn *sql.DB
 )
 
 // Token info for making a suggestion
@@ -29,6 +31,7 @@ type Symbol struct {
 	value2          string
 	value3          string
 	tag             string
+	weight          int
 	priority        int
 	acceptCondition int
 	flags           int
@@ -48,8 +51,16 @@ func openVST() {
 	}
 }
 
+func openDict() {
+	var err error
+	dictConn, err = sql.Open("sqlite3", "./ml.vst.learnings")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func search(ch string) []Symbol {
-	rows, err := vstConn.Query("select id, type, match_type, pattern, value1, value2, value3, tag, priority, accept_condition, flags from symbols where pattern = ? and match_type = 1;", ch)
+	rows, err := vstConn.Query("select id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols where pattern = ?", ch)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,7 +70,7 @@ func search(ch string) []Symbol {
 
 	for rows.Next() {
 		var item Symbol
-		rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.priority, &item.acceptCondition, &item.flags)
+		rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
 		results = append(results, item)
 	}
 
@@ -122,7 +133,7 @@ func flatten(tokens []Token) []Suggestion {
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
 			if i == 0 {
 				for _, possibility := range t.token {
-					sug := Suggestion{possibility.value1, possibility.priority}
+					sug := Suggestion{possibility.value1, possibility.weight}
 					results = append(results, sug)
 				}
 			} else {
@@ -130,18 +141,19 @@ func flatten(tokens []Token) []Suggestion {
 					till := result.word
 					tillWeight := result.weight
 
-					results[j].word += t.token[0].value1
-					results[j].weight += t.token[0].priority
+					firstToken := t.token[0]
+					results[j].word += firstToken.value1
+					results[j].weight += firstToken.weight
 
 					for k, possibility := range t.token {
 						if k == 0 {
 							continue
 						}
 
-						till += possibility.value1
-						tillWeight += possibility.priority
+						newTill := till + possibility.value1
+						newWeight := tillWeight + possibility.weight
 
-						sug := Suggestion{till, tillWeight}
+						sug := Suggestion{newTill, newWeight}
 						results = append(results, sug)
 					}
 				}
@@ -152,12 +164,46 @@ func flatten(tokens []Token) []Suggestion {
 	return results
 }
 
+func getTokenizedSuggestions(word string) []Suggestion {
+	sugs := flatten(make(word))
+	sort.SliceStable(sugs, func(i, j int) bool {
+		return sugs[i].weight < sugs[j].weight
+	})
+	return sugs
+}
+
+func getFromDictionary(sugs []Suggestion) []Suggestion {
+	rows, err := vstConn.Query("SELECT word, confidence FROM words WHERE word IN(?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var results []Suggestion
+
+	for rows.Next() {
+		var item Suggestion
+		rows.Scan(&item.word, &item.weight)
+		results = append(results, item)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return results
+}
+
 func transliterate(word string) {
-	fmt.Println(flatten(make(word)))
+	sugs := getTokenizedSuggestions(word)
+	fmt.Println(sugs)
+	// dictSugs := getFromDictionary(sugs)
 }
 
 func main() {
 	openVST()
+	openDict()
 	transliterate(os.Args[1])
 	defer vstConn.Close()
 }
