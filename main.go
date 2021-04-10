@@ -95,7 +95,7 @@ func make(word string) []Token {
 		sequence += ch
 
 		matches := search(sequence)
-		fmt.Println(sequence, matches)
+		// fmt.Println(sequence, matches)
 
 		if len(matches) == 0 {
 			// No more matches
@@ -173,7 +173,19 @@ func getTokenizedSuggestions(word string) []Suggestion {
 }
 
 func getFromDictionary(sugs []Suggestion) []Suggestion {
-	rows, err := vstConn.Query("SELECT word, confidence FROM words WHERE word IN(?)")
+	likes := ""
+
+	var vals []interface{}
+	vals = append(vals, sugs[0].word)
+	for i, sug := range sugs {
+		if i == 0 {
+			continue
+		}
+		likes += "OR word LIKE ? "
+		vals = append(vals, sug.word+"%")
+	}
+
+	rows, err := dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC", vals...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -198,7 +210,8 @@ func getFromDictionary(sugs []Suggestion) []Suggestion {
 func transliterate(word string) {
 	sugs := getTokenizedSuggestions(word)
 	fmt.Println(sugs)
-	// dictSugs := getFromDictionary(sugs)
+	dictSugs := getFromDictionary(sugs)
+	fmt.Println(dictSugs)
 }
 
 func main() {
