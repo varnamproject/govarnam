@@ -137,13 +137,11 @@ func tokenizeWord(word string) []Token {
 func tokensToSuggestions(tokens []Token) []Suggestion {
 	var results []Suggestion
 
-	const constWeight = 10
-
 	for i, t := range tokens {
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
 			if i == 0 {
 				for _, possibility := range t.token {
-					sug := Suggestion{possibility.value1, constWeight - possibility.weight}
+					sug := Suggestion{possibility.value1, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight}
 					results = append(results, sug)
 				}
 			} else {
@@ -204,7 +202,7 @@ func searchDictionary(words []string, all bool) []Suggestion {
 		}
 	}
 
-	rows, err := dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC", vals...)
+	rows, err := dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC LIMIT 10", vals...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -239,8 +237,9 @@ func getFromDictionary(tokens []Token) DictionaryResult {
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
 			if i == 0 {
 				for _, possibility := range t.token {
-					sug := Suggestion{possibility.value1, possibility.weight}
+					sug := Suggestion{possibility.value1, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight}
 					results = append(results, sug)
+					tempFoundDictWords = append(tempFoundDictWords, sug)
 				}
 			} else {
 				for j, result := range results {
@@ -253,7 +252,7 @@ func getFromDictionary(tokens []Token) DictionaryResult {
 
 					firstToken := t.token[0]
 					results[j].word += firstToken.value1
-					results[j].weight += firstToken.weight
+					results[j].weight -= firstToken.weight
 
 					search := []string{results[j].word}
 					searchResults := searchDictionary(search, false)
@@ -278,7 +277,7 @@ func getFromDictionary(tokens []Token) DictionaryResult {
 						if len(searchResults) > 0 {
 							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
 
-							newWeight := tillWeight + possibility.weight
+							newWeight := tillWeight - possibility.weight
 
 							sug := Suggestion{newTill, newWeight}
 							results = append(results, sug)
