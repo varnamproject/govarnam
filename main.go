@@ -19,6 +19,7 @@ var (
 type Token struct {
 	tokenType int
 	token     []Symbol
+	position  int
 }
 
 // Symbol result from VST
@@ -37,10 +38,17 @@ type Symbol struct {
 	flags           int
 }
 
-// Suggestion suggsestion
+// Suggestion suggestion
 type Suggestion struct {
 	word   string
 	weight int
+}
+
+// DictionaryResult result from dictionary search
+type DictionaryResult struct {
+	sugs                 []Suggestion
+	exactMatch           bool
+	longestMatchPosition int
 }
 
 func openVST() {
@@ -82,7 +90,7 @@ func search(ch string) []Symbol {
 	return results
 }
 
-func make(word string) []Token {
+func tokenizeWord(word string) []Token {
 	var results []Token
 
 	var prevSequenceMatches []Symbol
@@ -102,11 +110,11 @@ func make(word string) []Token {
 
 			if len(sequence) == 1 {
 				// No matches for a single char, add it
-				token := Token{VARNAM_TOKEN_CHAR, matches}
+				token := Token{VARNAM_TOKEN_CHAR, matches, i}
 				results = append(results, token)
 			} else {
 				// Backtrack and add the previous sequence matches
-				token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches}
+				token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i - 1}
 				results = append(results, token)
 				i--
 			}
@@ -115,7 +123,7 @@ func make(word string) []Token {
 		} else {
 			if i == len(word)-1 {
 				// Last character
-				token := Token{VARNAM_TOKEN_SYMBOL, matches}
+				token := Token{VARNAM_TOKEN_SYMBOL, matches, i}
 				results = append(results, token)
 			} else {
 				prevSequenceMatches = matches
@@ -164,26 +172,35 @@ func flatten(tokens []Token) []Suggestion {
 	return results
 }
 
-func getTokenizedSuggestions(word string) ([]Suggestion, []Token) {
-	tokens := make(word)
+func getTokenizedSuggestions(tokens []Token) []Suggestion {
 	sugs := flatten(tokens)
 	sort.SliceStable(sugs, func(i, j int) bool {
 		return sugs[i].weight < sugs[j].weight
 	})
-	return sugs, tokens
+	return sugs
 }
 
-func searchDictionary(words []string) []Suggestion {
+func searchDictionary(words []string, all bool) []Suggestion {
 	likes := ""
 
 	var vals []interface{}
-	vals = append(vals, words[0]+"%")
+
+	if all == true {
+		vals = append(vals, words[0]+"%")
+	} else {
+		vals = append(vals, words[0])
+	}
+
 	for i, word := range words {
 		if i == 0 {
 			continue
 		}
 		likes += "OR word LIKE ? "
-		vals = append(vals, word+"%")
+		if all == true {
+			vals = append(vals, word+"%")
+		} else {
+			vals = append(vals, word)
+		}
 	}
 
 	rows, err := dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC", vals...)
@@ -208,15 +225,16 @@ func searchDictionary(words []string) []Suggestion {
 	return results
 }
 
-func getFromDictionary(tokens []Token) [][]Suggestion {
-	// This is returned
-	var words [][]Suggestion
-
+func getFromDictionary(tokens []Token) DictionaryResult {
 	// This is a temporary storage for tokenized words
+	// Similar to usage in tokenizeWord
 	var results []Suggestion
 
+	foundPosition := 0
+	var foundDictWords []Suggestion
+
 	for i, t := range tokens {
-		var foundDictWords [][]Suggestion
+		var tempFoundDictWords []Suggestion
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
 			if i == 0 {
 				for _, possibility := range t.token {
@@ -237,10 +255,10 @@ func getFromDictionary(tokens []Token) [][]Suggestion {
 					results[j].weight += firstToken.weight
 
 					search := []string{results[j].word}
-					searchResults := searchDictionary(search)
+					searchResults := searchDictionary(search, false)
 
 					if len(searchResults) > 0 {
-						foundDictWords = append(foundDictWords, searchResults)
+						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
 					} else {
 						// No need of processing this anymore
 						results[j].weight = -1
@@ -254,10 +272,10 @@ func getFromDictionary(tokens []Token) [][]Suggestion {
 						newTill := till + possibility.value1
 
 						search = []string{newTill}
-						searchResults = searchDictionary(search)
+						searchResults = searchDictionary(search, false)
 
 						if len(searchResults) > 0 {
-							foundDictWords = append(foundDictWords, searchResults)
+							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
 
 							newWeight := tillWeight + possibility.weight
 
@@ -270,16 +288,28 @@ func getFromDictionary(tokens []Token) [][]Suggestion {
 				}
 			}
 		}
-		if len(foundDictWords) > 0 {
-			words = foundDictWords
+		if len(tempFoundDictWords) > 0 {
+			foundDictWords = tempFoundDictWords
+			foundPosition = t.position
 		}
 	}
 
-	return words
+	return DictionaryResult{foundDictWords, foundPosition == tokens[len(tokens)-1].position, foundPosition}
+}
+
+func getMoreFromDictionary(words []Suggestion) [][]Suggestion {
+	var results [][]Suggestion
+	for _, sug := range words {
+		search := []string{sug.word}
+		searchResults := searchDictionary(search, true)
+		results = append(results, searchResults)
+	}
+	return results
 }
 
 func transliterate(word string) {
-	sugs, tokens := getTokenizedSuggestions(word)
+	tokens := tokenizeWord(word)
+	sugs := getTokenizedSuggestions(tokens)
 	fmt.Println(sugs)
 	dictSugs := getFromDictionary(tokens)
 	fmt.Println(dictSugs)
