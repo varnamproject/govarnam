@@ -114,7 +114,7 @@ func tokenizeWord(word string) []Token {
 				results = append(results, token)
 			} else {
 				// Backtrack and add the previous sequence matches
-				token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i - 1}
+				token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i}
 				results = append(results, token)
 				i--
 			}
@@ -134,14 +134,16 @@ func tokenizeWord(word string) []Token {
 	return results
 }
 
-func flatten(tokens []Token) []Suggestion {
+func tokensToSuggestions(tokens []Token) []Suggestion {
 	var results []Suggestion
+
+	const constWeight = 10
 
 	for i, t := range tokens {
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
 			if i == 0 {
 				for _, possibility := range t.token {
-					sug := Suggestion{possibility.value1, possibility.weight}
+					sug := Suggestion{possibility.value1, constWeight - possibility.weight}
 					results = append(results, sug)
 				}
 			} else {
@@ -151,7 +153,7 @@ func flatten(tokens []Token) []Suggestion {
 
 					firstToken := t.token[0]
 					results[j].word += firstToken.value1
-					results[j].weight += firstToken.weight
+					results[j].weight -= firstToken.weight
 
 					for k, possibility := range t.token {
 						if k == 0 {
@@ -159,7 +161,7 @@ func flatten(tokens []Token) []Suggestion {
 						}
 
 						newTill := till + possibility.value1
-						newWeight := tillWeight + possibility.weight
+						newWeight := tillWeight - possibility.weight
 
 						sug := Suggestion{newTill, newWeight}
 						results = append(results, sug)
@@ -172,10 +174,9 @@ func flatten(tokens []Token) []Suggestion {
 	return results
 }
 
-func getTokenizedSuggestions(tokens []Token) []Suggestion {
-	sugs := flatten(tokens)
+func sortSuggestions(sugs []Suggestion) []Suggestion {
 	sort.SliceStable(sugs, func(i, j int) bool {
-		return sugs[i].weight < sugs[j].weight
+		return sugs[i].weight > sugs[j].weight
 	})
 	return sugs
 }
@@ -307,17 +308,62 @@ func getMoreFromDictionary(words []Suggestion) [][]Suggestion {
 	return results
 }
 
-func transliterate(word string) {
+func transliterate(word string) []Suggestion {
+	var results []Suggestion
 	tokens := tokenizeWord(word)
-	sugs := getTokenizedSuggestions(tokens)
-	fmt.Println(sugs)
+
 	dictSugs := getFromDictionary(tokens)
 	fmt.Println(dictSugs)
+
+	if len(dictSugs.sugs) > 0 {
+		results = dictSugs.sugs
+
+		if dictSugs.exactMatch == false {
+			restOfWord := word[dictSugs.longestMatchPosition:]
+
+			fmt.Println("Dictionary results:", dictSugs.sugs)
+			fmt.Printf("Tokenizing %s\n", restOfWord)
+
+			restOfWordTokens := tokenizeWord(restOfWord)
+			restOfWordSugs := tokensToSuggestions(restOfWordTokens)
+
+			for j, result := range results {
+				till := result.word
+				tillWeight := result.weight
+
+				firstSug := restOfWordSugs[0]
+				results[j].word += firstSug.word
+				results[j].weight += firstSug.weight
+
+				for k, sug := range restOfWordSugs {
+					if k == 0 {
+						continue
+					}
+					sug := Suggestion{till + sug.word, tillWeight + sug.weight}
+					results = append(results, sug)
+				}
+			}
+		} else {
+			moreFromDict := getMoreFromDictionary(dictSugs.sugs)
+			for _, sugSet := range moreFromDict {
+				for _, sug := range sugSet {
+					results = append(results, sug)
+				}
+			}
+		}
+	} else {
+		sugs := tokensToSuggestions(tokens)
+		results = sugs
+	}
+
+	results = sortSuggestions(results)
+
+	return results
 }
 
 func main() {
 	openVST()
 	openDict()
-	transliterate(os.Args[1])
+	fmt.Println(transliterate(os.Args[1]))
 	defer vstConn.Close()
 }
