@@ -2,9 +2,9 @@ package main
 
 import (
 	sql "database/sql"
+	"flag"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -13,6 +13,7 @@ import (
 var (
 	vstConn  *sql.DB
 	dictConn *sql.DB
+	debug    bool = false
 )
 
 // Token info for making a suggestion
@@ -103,7 +104,10 @@ func tokenizeWord(word string) []Token {
 		sequence += ch
 
 		matches := search(sequence)
-		// fmt.Println(sequence, matches)
+
+		if debug {
+			fmt.Println(sequence, matches)
+		}
 
 		if len(matches) == 0 {
 			// No more matches
@@ -312,7 +316,10 @@ func transliterate(word string) []Suggestion {
 	tokens := tokenizeWord(word)
 
 	dictSugs := getFromDictionary(tokens)
-	fmt.Println(dictSugs)
+
+	if debug {
+		fmt.Println(dictSugs)
+	}
 
 	if len(dictSugs.sugs) > 0 {
 		results = dictSugs.sugs
@@ -320,8 +327,10 @@ func transliterate(word string) []Suggestion {
 		if dictSugs.exactMatch == false {
 			restOfWord := word[dictSugs.longestMatchPosition:]
 
-			fmt.Println("Dictionary results:", dictSugs.sugs)
-			fmt.Printf("Tokenizing %s\n", restOfWord)
+			if debug {
+				fmt.Println("Dictionary results:", dictSugs.sugs)
+				fmt.Printf("Tokenizing %s\n", restOfWord)
+			}
 
 			restOfWordTokens := tokenizeWord(restOfWord)
 			restOfWordSugs := tokensToSuggestions(restOfWordTokens)
@@ -363,6 +372,13 @@ func transliterate(word string) []Suggestion {
 func main() {
 	openVST()
 	openDict()
-	fmt.Println(transliterate(os.Args[1]))
+
+	debugTemp := flag.Bool("debug", false, "Debug")
+	flag.Parse()
+	debug = *debugTemp
+	args := flag.Args()
+
+	fmt.Println(debug, transliterate(args[0]))
+
 	defer vstConn.Close()
 }
