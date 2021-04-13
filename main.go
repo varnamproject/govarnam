@@ -52,6 +52,11 @@ type DictionaryResult struct {
 	longestMatchPosition int
 }
 
+type TransliterationResult struct {
+	suggestions     []Suggestion
+	greedyTokenized []Suggestion
+}
+
 func openVST() {
 	var err error
 	vstConn, err = sql.Open("sqlite3", "./ml.vst")
@@ -142,17 +147,16 @@ func calcNewWeight(weight int, symbolWeight int, tokensLength int, position int)
 	return weight - symbolWeight + (tokensLength-position)*2
 }
 
-func tokensToSuggestions(tokens []Token, greedy int) []Suggestion {
+func tokensToSuggestions(tokens []Token, greedy bool) []Suggestion {
 	var results []Suggestion
-
-	if greedy == 0 {
-		greedy = 100
-	}
 
 	for i, t := range tokens {
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
 			if i == 0 {
 				for _, possibility := range t.token {
+					if greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY {
+						continue
+					}
 					sug := Suggestion{possibility.value1, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight}
 					results = append(results, sug)
 				}
@@ -166,7 +170,7 @@ func tokensToSuggestions(tokens []Token, greedy int) []Suggestion {
 					results[j].weight = calcNewWeight(results[j].weight, firstToken.weight, len(tokens), i)
 
 					for k, possibility := range t.token {
-						if k == 0 {
+						if k == 0 || (greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY) {
 							continue
 						}
 
@@ -175,10 +179,6 @@ func tokensToSuggestions(tokens []Token, greedy int) []Suggestion {
 
 						sug := Suggestion{newTill, newWeight}
 						results = append(results, sug)
-
-						if len(results) > greedy {
-							break
-						}
 					}
 				}
 			}
@@ -323,8 +323,11 @@ func getMoreFromDictionary(words []Suggestion) [][]Suggestion {
 	return results
 }
 
-func transliterate(word string) []Suggestion {
-	var results []Suggestion
+func transliterate(word string) TransliterationResult {
+	var (
+		results               []Suggestion
+		transliterationResult TransliterationResult
+	)
 	tokens := tokenizeWord(word)
 
 	dictSugs := getFromDictionary(tokens)
@@ -344,7 +347,7 @@ func transliterate(word string) []Suggestion {
 			}
 
 			restOfWordTokens := tokenizeWord(restOfWord)
-			restOfWordSugs := tokensToSuggestions(restOfWordTokens, 0)
+			restOfWordSugs := tokensToSuggestions(restOfWordTokens, false)
 
 			if debug {
 				fmt.Println("Tokenized:", restOfWordSugs)
@@ -367,11 +370,8 @@ func transliterate(word string) []Suggestion {
 				}
 			}
 
-			// Add greedy basic tokenized suggestions at the end
-			sugs := tokensToSuggestions(tokens, 8)
-			for _, sug := range sugs {
-				results = append(results, sug)
-			}
+			// Add greedy tokenized suggestions at the end
+			transliterationResult.greedyTokenized = sortSuggestions(tokensToSuggestions(tokens, true))
 		} else {
 			moreFromDict := getMoreFromDictionary(dictSugs.sugs)
 			for _, sugSet := range moreFromDict {
@@ -381,13 +381,14 @@ func transliterate(word string) []Suggestion {
 			}
 		}
 	} else {
-		sugs := tokensToSuggestions(tokens, 0)
+		sugs := tokensToSuggestions(tokens, false)
 		results = sugs
 	}
 
 	results = sortSuggestions(results)
+	transliterationResult.suggestions = results
 
-	return results
+	return transliterationResult
 }
 
 func main() {
