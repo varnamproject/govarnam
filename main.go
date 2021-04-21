@@ -127,16 +127,30 @@ func tokenizeWord(word string, possibilityLimit int) []Token {
 	return results
 }
 
-func calcNewWeight(weight int, symbol Symbol, tokensLength int, position int) int {
+func getNewValue(weight int, symbol Symbol, tokensLength int, position int) (string, int) {
 	/**
 	 * Weight priority:
 	 * 1. Position of character in string
 	 * 2. Symbol's probability occurence
 	 */
-	return weight - symbol.weight + (tokensLength-position)*2 + (VARNAM_MATCH_POSSIBILITY - symbol.matchType)
+	newWeight := weight - symbol.weight + (tokensLength-position)*2 + (VARNAM_MATCH_POSSIBILITY - symbol.matchType)
+
+	var value string
+	if symbol.generalType == VARNAM_SYMBOL_VOWEL && position > 0 {
+		// If in between word, we use the vowel and not the consonant
+		value = symbol.value2 // ാ
+	} else {
+		value = symbol.value1 // ആ
+	}
+
+	return value, newWeight
 }
 
-func tokensToSuggestions(tokens []Token, greedy bool) []Suggestion {
+/**
+ * greed - Set to true for getting only exact match suggestions.
+ * partial - set true if only a part of a word is being tokenized and not an entire word
+ */
+func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion {
 	var results []Suggestion
 
 	for i, t := range tokens {
@@ -146,7 +160,15 @@ func tokensToSuggestions(tokens []Token, greedy bool) []Suggestion {
 					if greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY {
 						continue
 					}
-					sug := Suggestion{possibility.value1, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight}
+
+					var value string
+					if partial && possibility.generalType == VARNAM_SYMBOL_VOWEL {
+						value = possibility.value2
+					} else {
+						value = possibility.value1
+					}
+
+					sug := Suggestion{value, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight}
 					results = append(results, sug)
 				}
 			} else {
@@ -155,16 +177,20 @@ func tokensToSuggestions(tokens []Token, greedy bool) []Suggestion {
 					tillWeight := result.weight
 
 					firstToken := t.token[0]
-					results[j].word += firstToken.value1
-					results[j].weight = calcNewWeight(results[j].weight, firstToken, len(tokens), i)
+
+					newValue, newWeight := getNewValue(results[j].weight, firstToken, len(tokens), i)
+
+					results[j].word += newValue
+					results[j].weight = newWeight
 
 					for k, possibility := range t.token {
 						if k == 0 || (greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY) {
 							continue
 						}
 
-						newTill := till + possibility.value1
-						newWeight := calcNewWeight(tillWeight, possibility, len(tokens), i)
+						newValue, newWeight := getNewValue(tillWeight, possibility, len(tokens), i)
+
+						newTill := till + newValue
 
 						sug := Suggestion{newTill, newWeight}
 						results = append(results, sug)
@@ -200,8 +226,8 @@ func transliterate(word string, possibilityLimit int) TransliterationResult {
 	if len(dictSugs.sugs) > 0 {
 		results = dictSugs.sugs
 
-		// Add greedy tokenized suggestions. These will be >=1 and <5
-		transliterationResult.greedyTokenized = tokensToSuggestions(tokens, true)
+		// Add greedy tokenized suggestions. This will give >=1 and <5 suggestions
+		transliterationResult.greedyTokenized = tokensToSuggestions(tokens, true, false)
 
 		if dictSugs.exactMatch == false {
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
@@ -211,7 +237,7 @@ func transliterate(word string, possibilityLimit int) TransliterationResult {
 			}
 
 			restOfWordTokens := tokenizeWord(restOfWord, possibilityLimit)
-			restOfWordSugs := tokensToSuggestions(restOfWordTokens, false)
+			restOfWordSugs := tokensToSuggestions(restOfWordTokens, false, true)
 
 			if debug {
 				fmt.Println("Tokenized:", restOfWordSugs)
@@ -242,7 +268,7 @@ func transliterate(word string, possibilityLimit int) TransliterationResult {
 			}
 		}
 	} else {
-		sugs := tokensToSuggestions(tokens, false)
+		sugs := tokensToSuggestions(tokens, false, false)
 		results = sugs
 	}
 
