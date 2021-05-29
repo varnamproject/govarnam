@@ -215,6 +215,7 @@ func transliterate(word string, possibilityLimit int) TransliterationResult {
 		results               []Suggestion
 		transliterationResult TransliterationResult
 	)
+
 	tokens := tokenizeWord(word, 10)
 
 	dictSugs := getFromDictionary(tokens)
@@ -224,7 +225,7 @@ func transliterate(word string, possibilityLimit int) TransliterationResult {
 	}
 
 	if len(dictSugs.sugs) > 0 {
-		results = dictSugs.sugs
+		results = append(results, dictSugs.sugs...)
 
 		// Add greedy tokenized suggestions. This will give >=1 and <5 suggestions
 		transliterationResult.greedyTokenized = tokensToSuggestions(tokens, true, false)
@@ -272,6 +273,15 @@ func transliterate(word string, possibilityLimit int) TransliterationResult {
 		results = sugs
 	}
 
+	patternDictSugs := getFromPatternDictionary(word)
+	if len(patternDictSugs) > 0 {
+		results = append(results, patternDictSugs...)
+
+		if debug {
+			fmt.Println("Pattern dictionary results:", patternDictSugs)
+		}
+	}
+
 	results = sortSuggestions(results)
 	transliterationResult.suggestions = results
 
@@ -282,12 +292,23 @@ func main() {
 	openVST()
 	openDict()
 
-	debugTemp := flag.Bool("debug", false, "Debug")
+	debugFlag := flag.Bool("debug", false, "Debug")
+	trainFlag := flag.Bool("train", false, "Train")
 	flag.Parse()
-	debug = *debugTemp
+
+	debug = *debugFlag
 	args := flag.Args()
 
-	fmt.Println(transliterate(args[0], 2))
+	if *trainFlag {
+		pattern := args[0]
+		word := args[1]
+
+		train(pattern, word)
+
+		fmt.Printf("Trained %s => %s", pattern, word)
+	} else {
+		fmt.Println(transliterate(args[0], 2))
+	}
 
 	defer vstConn.Close()
 }
