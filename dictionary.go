@@ -30,7 +30,9 @@ func searchDictionary(words []string, all bool) []Suggestion {
 	var vals []interface{}
 
 	if all == true {
-		vals = append(vals, words[0]+"%")
+		// _% means a wildcard with a sequence of 1 or more
+		// % means 0 or more and would include the word itself
+		vals = append(vals, words[0]+"_%")
 	} else {
 		vals = append(vals, words[0])
 	}
@@ -41,7 +43,7 @@ func searchDictionary(words []string, all bool) []Suggestion {
 		}
 		likes += "OR word LIKE ? "
 		if all == true {
-			vals = append(vals, word+"%")
+			vals = append(vals, word+"_%")
 		} else {
 			vals = append(vals, word)
 		}
