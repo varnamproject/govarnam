@@ -57,6 +57,60 @@ func openVST() {
 	}
 }
 
+// Checks if a symbol exist in VST
+func symbolExist(ch string) bool {
+	rows, err := vstConn.Query("SELECT COUNT(*) FROM symbols WHERE value1 = ?", ch)
+	checkError(err)
+
+	count := 0
+	for rows.Next() {
+		err := rows.Scan(&count)
+		checkError(err)
+	}
+	return count != 0
+}
+
+// Split a word into conjuncts
+func splitWordByConjunct(input string) []string {
+	var results []string
+
+	var prevSequenceMatch string
+	var sequence string
+
+	word := []rune(input)
+
+	i := 0
+	for i < len(word) {
+		ch := string(word[i])
+
+		sequence += ch
+
+		if !symbolExist(sequence) {
+			// No more matches
+
+			if len(sequence) == 1 {
+				// No matches for a single char, add it
+				results = append(results, sequence)
+			} else {
+				// Backtrack and add the previous sequence matches
+				i--
+				results = append(results, prevSequenceMatch)
+			}
+
+			sequence = ""
+		} else {
+			if i == len(word)-1 {
+				// Last character
+				results = append(results, sequence)
+			} else {
+				prevSequenceMatch = sequence
+			}
+		}
+		i++
+	}
+	return results
+}
+
 func searchSymbol(ch string, possibilityLimit int) []Symbol {
 	rows, err := vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? ORDER BY weight ASC LIMIT ?", ch, possibilityLimit)
 	if err != nil {
@@ -292,8 +346,9 @@ func main() {
 	openVST()
 	openDict()
 
-	debugFlag := flag.Bool("debug", false, "Debug")
-	trainFlag := flag.Bool("train", false, "Train")
+	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
+	learnFlag := flag.Bool("learn", false, "Learn a word")
+	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
 	flag.Parse()
 
 	debug = *debugFlag
@@ -306,6 +361,12 @@ func main() {
 		train(pattern, word)
 
 		fmt.Printf("Trained %s => %s", pattern, word)
+	} else if *learnFlag {
+		word := args[0]
+
+		learn(word)
+
+		fmt.Printf("Learnt %s", word)
 	} else {
 		fmt.Println(transliterate(args[0], 2))
 	}

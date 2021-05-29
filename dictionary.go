@@ -164,7 +164,7 @@ func getFromPatternDictionary(pattern string) []Suggestion {
 	for rows.Next() {
 		var item Suggestion
 		rows.Scan(&item.word, &item.weight)
-		item.weight += VARNAM_PATTERN_WORD_MIN_CONFIDENCE
+		item.weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
 		results = append(results, item)
 	}
 
