@@ -21,3 +21,6 @@ const VARNAM_SYMBOL_OTHER = 10
 const VARNAM_SYMBOL_NON_JOINER = 11
 const VARNAM_SYMBOL_JOINER = 12
 const VARNAM_SYMBOL_PERIOD = 13
+
+// VARNAM_PATTERN_WORD_MIN_CONFIDENCE Minimum confidence for words in patterns dictionary. These words are mostly english and won't work with malayalam transliteration
+const VARNAM_PATTERN_WORD_MIN_CONFIDENCE = 30

@@ -151,3 +151,27 @@ func getMoreFromDictionary(words []Suggestion) [][]Suggestion {
 	}
 	return results
 }
+
+func getFromPatternDictionary(pattern string) []Suggestion {
+	rows, err := dictConn.Query("SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns_content WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var results []Suggestion
+
+	for rows.Next() {
+		var item Suggestion
+		rows.Scan(&item.word, &item.weight)
+		item.weight += VARNAM_PATTERN_WORD_MIN_CONFIDENCE
+		results = append(results, item)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return results
+}
