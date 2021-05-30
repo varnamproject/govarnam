@@ -1,13 +1,9 @@
-package main
+package govarnam
 
 import (
 	sql "database/sql"
 	"log"
-
-	_ "github.com/mattn/go-sqlite3"
 )
-
-var dictConn *sql.DB
 
 // DictionaryResult result from dictionary search
 type DictionaryResult struct {
@@ -16,15 +12,15 @@ type DictionaryResult struct {
 	longestMatchPosition int
 }
 
-func openDict() {
+func (varnam *Varnam) openDict(dictPath string) {
 	var err error
-	dictConn, err = sql.Open("sqlite3", "./ml.vst.learnings")
+	varnam.dictConn, err = sql.Open("sqlite3", dictPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func searchDictionary(words []string, all bool) []Suggestion {
+func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
 	likes := ""
 
 	var vals []interface{}
@@ -49,7 +45,7 @@ func searchDictionary(words []string, all bool) []Suggestion {
 		}
 	}
 
-	rows, err := dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC LIMIT 10", vals...)
+	rows, err := varnam.dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC LIMIT 10", vals...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +67,7 @@ func searchDictionary(words []string, all bool) []Suggestion {
 	return results
 }
 
-func getFromDictionary(tokens []Token) DictionaryResult {
+func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 	// This is a temporary storage for tokenized words
 	// Similar to usage in tokenizeWord
 	var results []Suggestion
@@ -102,7 +98,7 @@ func getFromDictionary(tokens []Token) DictionaryResult {
 					results[j].weight -= firstToken.weight
 
 					search := []string{results[j].word}
-					searchResults := searchDictionary(search, false)
+					searchResults := varnam.searchDictionary(search, false)
 
 					if len(searchResults) > 0 {
 						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
@@ -119,7 +115,7 @@ func getFromDictionary(tokens []Token) DictionaryResult {
 						newTill := till + possibility.value1
 
 						search = []string{newTill}
-						searchResults = searchDictionary(search, false)
+						searchResults = varnam.searchDictionary(search, false)
 
 						if len(searchResults) > 0 {
 							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
@@ -144,18 +140,18 @@ func getFromDictionary(tokens []Token) DictionaryResult {
 	return DictionaryResult{foundDictWords, foundPosition == tokens[len(tokens)-1].position, foundPosition}
 }
 
-func getMoreFromDictionary(words []Suggestion) [][]Suggestion {
+func (varnam *Varnam) getMoreFromDictionary(words []Suggestion) [][]Suggestion {
 	var results [][]Suggestion
 	for _, sug := range words {
 		search := []string{sug.word}
-		searchResults := searchDictionary(search, true)
+		searchResults := varnam.searchDictionary(search, true)
 		results = append(results, searchResults)
 	}
 	return results
 }
 
-func getFromPatternDictionary(pattern string) []Suggestion {
-	rows, err := dictConn.Query("SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns_content WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
+func (varnam *Varnam) getFromPatternDictionary(pattern string) []Suggestion {
+	rows, err := varnam.dictConn.Query("SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns_content WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
 	if err != nil {
 		log.Fatal(err)
 	}

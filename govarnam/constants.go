@@ -1,4 +1,4 @@
-package main
+package govarnam
 
 const VARNAM_MATCH_EXACT = 1
 const VARNAM_MATCH_POSSIBILITY = 2
