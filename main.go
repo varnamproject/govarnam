@@ -3,18 +3,25 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 	"gitlab.com/subins2000/govarnam/govarnam"
 )
 
 func main() {
-	varnam := govarnam.Init("ml.vst", "./ml.vst.learnings")
-
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
+	langFlag := flag.String("lang", "", "Language")
 	learnFlag := flag.Bool("learn", false, "Learn a word")
 	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
 	flag.Parse()
+
+	varnam, err := govarnam.InitFromLang(*langFlag)
+
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 
 	varnam.Debug(*debugFlag)
 	args := flag.Args()

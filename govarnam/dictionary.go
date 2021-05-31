@@ -1,8 +1,10 @@
 package govarnam
 
 import (
+	"context"
 	sql "database/sql"
 	"log"
+	"time"
 )
 
 // DictionaryResult result from dictionary search
@@ -12,12 +14,37 @@ type DictionaryResult struct {
 	longestMatchPosition int
 }
 
-func (varnam *Varnam) openDict(dictPath string) {
-	var err error
-	varnam.dictConn, err = sql.Open("sqlite3", dictPath)
+func openDB(path string) *sql.DB {
+	conn, err := sql.Open("sqlite3", path)
 	if err != nil {
 		log.Fatal(err)
 	}
+	return conn
+}
+
+func (varnam *Varnam) openDict(dictPath string) {
+	varnam.dictConn = openDB(dictPath)
+}
+
+func makeDictionary(dictPath string) {
+	// TODO pragmas include
+
+	conn := openDB(dictPath)
+	queries := [3]string{"CREATE TABLE IF NOT EXISTS metadata (key TEXT UNIQUE, value TEXT);",
+		"CREATE TABLE IF NOT EXISTS words (id integer primary key, word text unique, confidence integer default 1, learned_on integer);",
+		"CREATE TABLE IF NOT EXISTS patterns_content (pattern text, word_id integer, learned integer default 0, primary key(pattern, word_id)) WITHOUT rowid;"}
+
+	for _, query := range queries {
+		ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelfunc()
+		stmt, err := conn.PrepareContext(ctx, query)
+		checkError(err)
+		defer stmt.Close()
+		_, err = stmt.ExecContext(ctx)
+		checkError(err)
+	}
+
+	defer conn.Close()
 }
 
 func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {

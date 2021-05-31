@@ -1,5 +1,10 @@
 package govarnam
 
+import (
+	"os"
+	"path"
+)
+
 const VARNAM_MATCH_EXACT = 1
 const VARNAM_MATCH_POSSIBILITY = 2
 
@@ -24,3 +29,27 @@ const VARNAM_SYMBOL_PERIOD = 13
 
 // VARNAM_LEARNT_WORD_MIN_CONFIDENCE Minimum confidence for learnt words
 const VARNAM_LEARNT_WORD_MIN_CONFIDENCE = 30
+
+// VARNAM_VST_DIR VST lookiup directories according to priority
+var VARNAM_VST_DIR = [2]string{
+	// "/usr/local/share/varnam/vst",
+	"",
+	"schemes"}
+
+func findLearningsFilePath(langCode string) string {
+	var (
+		loc string
+		dir string
+	)
+
+	home := os.Getenv("XDG_DATA_HOME")
+	if home == "" {
+		home = os.Getenv("HOME")
+		dir = path.Join(home, ".local", "share", "varnam", "suggestions")
+	} else {
+		dir = path.Join(home, "varnam", "suggestions")
+	}
+	loc = path.Join(dir, langCode+".vst.learnings")
+
+	return loc
+}

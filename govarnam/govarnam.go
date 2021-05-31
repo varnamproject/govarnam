@@ -4,6 +4,8 @@ import (
 	sql "database/sql"
 	"fmt"
 	"log"
+	"os"
+	"path"
 	"sort"
 )
 
@@ -348,6 +350,52 @@ func Init(vstPath string, dictPath string) Varnam {
 	varnam.openVST(vstPath)
 	varnam.openDict(dictPath)
 	return varnam
+}
+
+// InitFromLang code
+func InitFromLang(langCode string) (*Varnam, error) {
+	var (
+		vstPath  *string = nil
+		dictPath string
+	)
+
+	for _, loc := range VARNAM_VST_DIR {
+		temp := path.Join(loc, langCode+".vst")
+		if fileExists(temp) {
+			vstPath = &temp
+			break
+		}
+	}
+
+	dictPath = findLearningsFilePath(langCode)
+	if !fileExists(dictPath) {
+		os.MkdirAll(path.Dir(dictPath), 0750)
+		makeDictionary(dictPath)
+	}
+
+	if vstPath == nil {
+		return nil, fmt.Errorf("Couldn't find VST")
+	}
+
+	varnam := Init(*vstPath, dictPath)
+
+	return &varnam, nil
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func dirExists(loc string) bool {
+	info, err := os.Stat(loc)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
 }
 
 // Debug turn on or off debug messages
