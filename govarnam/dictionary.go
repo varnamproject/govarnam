@@ -82,7 +82,7 @@ func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
 
 	for rows.Next() {
 		var item Suggestion
-		rows.Scan(&item.word, &item.weight)
+		rows.Scan(&item.Word, &item.Weight)
 		results = append(results, item)
 	}
 
@@ -113,25 +113,25 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 				}
 			} else {
 				for j, result := range results {
-					till := result.word
-					tillWeight := result.weight
+					till := result.Word
+					tillWeight := result.Weight
 
 					if tillWeight == -1 {
 						continue
 					}
 
 					firstToken := t.token[0]
-					results[j].word += firstToken.value1
-					results[j].weight -= firstToken.weight
+					results[j].Word += firstToken.value1
+					results[j].Weight -= firstToken.weight
 
-					search := []string{results[j].word}
+					search := []string{results[j].Word}
 					searchResults := varnam.searchDictionary(search, false)
 
 					if len(searchResults) > 0 {
 						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
 					} else {
 						// No need of processing this anymore
-						results[j].weight = -1
+						results[j].Weight = -1
 					}
 
 					for k, possibility := range t.token {
@@ -152,7 +152,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 							sug := Suggestion{newTill, newWeight}
 							results = append(results, sug)
 						} else {
-							result.weight = -1
+							result.Weight = -1
 						}
 					}
 				}
@@ -170,7 +170,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 func (varnam *Varnam) getMoreFromDictionary(words []Suggestion) [][]Suggestion {
 	var results [][]Suggestion
 	for _, sug := range words {
-		search := []string{sug.word}
+		search := []string{sug.Word}
 		searchResults := varnam.searchDictionary(search, true)
 		results = append(results, searchResults)
 	}
@@ -188,8 +188,8 @@ func (varnam *Varnam) getFromPatternDictionary(pattern string) []Suggestion {
 
 	for rows.Next() {
 		var item Suggestion
-		rows.Scan(&item.word, &item.weight)
-		item.weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
+		rows.Scan(&item.Word, &item.Weight)
+		item.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
 		results = append(results, item)
 	}
 

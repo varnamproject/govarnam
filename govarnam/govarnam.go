@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 	"sort"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // Varnam config
@@ -41,13 +43,14 @@ type Symbol struct {
 
 // Suggestion suggestion
 type Suggestion struct {
-	word   string
-	weight int
+	Word   string
+	Weight int
 }
 
+// TransliterationResult result
 type TransliterationResult struct {
-	suggestions     []Suggestion
-	greedyTokenized []Suggestion
+	Suggestions     []Suggestion
+	GreedyTokenized []Suggestion
 }
 
 func (varnam *Varnam) openVST(vstPath string) {
@@ -228,15 +231,15 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 				}
 			} else {
 				for j, result := range results {
-					till := result.word
-					tillWeight := result.weight
+					till := result.Word
+					tillWeight := result.Weight
 
 					firstToken := t.token[0]
 
-					newValue, newWeight := getNewValue(results[j].weight, firstToken, len(tokens), i)
+					newValue, newWeight := getNewValue(results[j].Weight, firstToken, len(tokens), i)
 
-					results[j].word += newValue
-					results[j].weight = newWeight
+					results[j].Word += newValue
+					results[j].Weight = newWeight
 
 					for k, possibility := range t.token {
 						if k == 0 || (greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY) {
@@ -260,7 +263,7 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 
 func sortSuggestions(sugs []Suggestion) []Suggestion {
 	sort.SliceStable(sugs, func(i, j int) bool {
-		return sugs[i].weight > sugs[j].weight
+		return sugs[i].Weight > sugs[j].Weight
 	})
 	return sugs
 }
@@ -284,7 +287,7 @@ func (varnam *Varnam) Transliterate(word string, possibilityLimit int) Translite
 		results = append(results, dictSugs.sugs...)
 
 		// Add greedy tokenized suggestions. This will give >=1 and <5 suggestions
-		transliterationResult.greedyTokenized = tokensToSuggestions(tokens, true, false)
+		transliterationResult.GreedyTokenized = tokensToSuggestions(tokens, true, false)
 
 		if dictSugs.exactMatch == false {
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
@@ -301,18 +304,18 @@ func (varnam *Varnam) Transliterate(word string, possibilityLimit int) Translite
 			}
 
 			for j, result := range results {
-				till := result.word
-				tillWeight := result.weight
+				till := result.Word
+				tillWeight := result.Weight
 
 				firstSug := restOfWordSugs[0]
-				results[j].word += firstSug.word
-				results[j].weight += firstSug.weight
+				results[j].Word += firstSug.Word
+				results[j].Weight += firstSug.Weight
 
 				for k, sug := range restOfWordSugs {
 					if k == 0 {
 						continue
 					}
-					sug := Suggestion{till + sug.word, tillWeight + sug.weight}
+					sug := Suggestion{till + sug.Word, tillWeight + sug.Weight}
 					results = append(results, sug)
 				}
 			}
@@ -339,7 +342,7 @@ func (varnam *Varnam) Transliterate(word string, possibilityLimit int) Translite
 	}
 
 	results = sortSuggestions(results)
-	transliterationResult.suggestions = results
+	transliterationResult.Suggestions = results
 
 	return transliterationResult
 }

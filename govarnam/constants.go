@@ -32,8 +32,7 @@ const VARNAM_LEARNT_WORD_MIN_CONFIDENCE = 30
 
 // VARNAM_VST_DIR VST lookiup directories according to priority
 var VARNAM_VST_DIR = [2]string{
-	// "/usr/local/share/varnam/vst",
-	"",
+	"/usr/local/share/varnam/vst",
 	"schemes"}
 
 func findLearningsFilePath(langCode string) string {

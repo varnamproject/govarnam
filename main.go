@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/mattn/go-sqlite3"
 	"gitlab.com/subins2000/govarnam/govarnam"
 )
 
