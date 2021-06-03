@@ -51,6 +51,7 @@ type Suggestion struct {
 type TransliterationResult struct {
 	Suggestions     []Suggestion
 	GreedyTokenized []Suggestion
+	ExactMatch      bool // Whether there was an exact match from dictionary
 }
 
 func (varnam *Varnam) openVST(vstPath string) {
@@ -288,6 +289,7 @@ func (varnam *Varnam) Transliterate(word string, possibilityLimit int) Translite
 
 		// Add greedy tokenized suggestions. This will give >=1 and <5 suggestions
 		transliterationResult.GreedyTokenized = tokensToSuggestions(tokens, true, false)
+		transliterationResult.ExactMatch = dictSugs.exactMatch
 
 		if dictSugs.exactMatch == false {
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
