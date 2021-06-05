@@ -72,7 +72,7 @@ func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
 		}
 	}
 
-	rows, err := varnam.dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC LIMIT 10", vals...)
+	rows, err := varnam.dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC LIMIT 5", vals...)
 	if err != nil {
 		log.Fatal(err)
 	}

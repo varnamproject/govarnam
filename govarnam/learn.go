@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -45,7 +46,7 @@ func (varnam *Varnam) insertWord(word string, confidence int) {
 // When learning a word, each path to that word is inserted into DB.
 // Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
 func (varnam *Varnam) Learn(word string) {
-	conjuncts := varnam.splitWordByConjunct(word)
+	conjuncts := varnam.splitWordByConjunct(strings.TrimSpace(word))
 	sequence := conjuncts[0]
 	for i, ch := range conjuncts {
 		if i == 0 {

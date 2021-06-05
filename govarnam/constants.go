@@ -7,6 +7,7 @@ import (
 
 const VARNAM_MATCH_EXACT = 1
 const VARNAM_MATCH_POSSIBILITY = 2
+const VARNAM_MATCH_ALL = 3
 
 const VARNAM_TOKEN_CHAR = 1
 const VARNAM_TOKEN_SYMBOL = 2
@@ -32,8 +33,8 @@ const VARNAM_LEARNT_WORD_MIN_CONFIDENCE = 30
 
 // VARNAM_VST_DIR VST lookiup directories according to priority
 var VARNAM_VST_DIR = [2]string{
-	"/usr/local/share/varnam/vst",
-	"schemes"}
+	// "/usr/local/share/varnam/vst",
+	"/home/mint/go/src/gitlab.com/subins2000/govarnam/schemes"}
 
 func findLearningsFilePath(langCode string) string {
 	var (
@@ -44,9 +45,9 @@ func findLearningsFilePath(langCode string) string {
 	home := os.Getenv("XDG_DATA_HOME")
 	if home == "" {
 		home = os.Getenv("HOME")
-		dir = path.Join(home, ".local", "share", "varnam", "suggestions")
+		dir = path.Join(home, ".local", "share", "varnam", "suggestionsDEV")
 	} else {
-		dir = path.Join(home, "varnam", "suggestions")
+		dir = path.Join(home, "varnam", "suggestionsDEV")
 	}
 	loc = path.Join(dir, langCode+".vst.learnings")
 
