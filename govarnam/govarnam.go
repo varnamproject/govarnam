@@ -302,7 +302,7 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	if len(dictSugs.sugs) > 0 {
 		results = append(results, dictSugs.sugs...)
 
-		// Add greedy tokenized suggestions. This will give >=1 and <5 suggestions
+		// Add greedy tokenized suggestions. This will only give exact match results which will be >=1 || <=3
 		transliterationResult.GreedyTokenized = tokensToSuggestions(tokens, true, false)
 
 		if dictSugs.exactMatch == false {
