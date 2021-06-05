@@ -23,6 +23,7 @@ type Token struct {
 	tokenType int
 	token     []Symbol
 	position  int
+	character *string // Non language character
 }
 
 // Symbol result from VST
@@ -49,9 +50,9 @@ type Suggestion struct {
 
 // TransliterationResult result
 type TransliterationResult struct {
+	ExactMatch      []Suggestion
 	Suggestions     []Suggestion
 	GreedyTokenized []Suggestion
-	ExactMatch      bool // Whether there was an exact match from dictionary
 }
 
 func (varnam *Varnam) openVST(vstPath string) {
@@ -116,8 +117,18 @@ func (varnam *Varnam) splitWordByConjunct(input string) []string {
 	return results
 }
 
-func (varnam *Varnam) searchSymbol(ch string, possibilityLimit int) []Symbol {
-	rows, err := varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? ORDER BY weight ASC LIMIT ?", ch, possibilityLimit)
+func (varnam *Varnam) searchSymbol(ch string, matchType int) []Symbol {
+	var (
+		rows *sql.Rows
+		err  error
+	)
+
+	if matchType == VARNAM_MATCH_ALL {
+		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ?", ch)
+	} else {
+		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -139,7 +150,7 @@ func (varnam *Varnam) searchSymbol(ch string, possibilityLimit int) []Symbol {
 	return results
 }
 
-func (varnam *Varnam) tokenizeWord(word string, possibilityLimit int) []Token {
+func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 	var results []Token
 
 	var prevSequenceMatches []Symbol
@@ -151,7 +162,7 @@ func (varnam *Varnam) tokenizeWord(word string, possibilityLimit int) []Token {
 
 		sequence += ch
 
-		matches := varnam.searchSymbol(sequence, possibilityLimit)
+		matches := varnam.searchSymbol(sequence, matchType)
 
 		if varnam.debug {
 			fmt.Println(sequence, matches)
@@ -162,12 +173,12 @@ func (varnam *Varnam) tokenizeWord(word string, possibilityLimit int) []Token {
 
 			if len(sequence) == 1 {
 				// No matches for a single char, add it
-				token := Token{VARNAM_TOKEN_CHAR, matches, i}
+				token := Token{VARNAM_TOKEN_CHAR, matches, i, &ch}
 				results = append(results, token)
 			} else {
 				// Backtrack and add the previous sequence matches
 				i--
-				token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i}
+				token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, nil}
 				results = append(results, token)
 			}
 
@@ -175,7 +186,7 @@ func (varnam *Varnam) tokenizeWord(word string, possibilityLimit int) []Token {
 		} else {
 			if i == len(word)-1 {
 				// Last character
-				token := Token{VARNAM_TOKEN_SYMBOL, matches, i}
+				token := Token{VARNAM_TOKEN_SYMBOL, matches, i, nil}
 				results = append(results, token)
 			} else {
 				prevSequenceMatches = matches
@@ -256,6 +267,10 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 					}
 				}
 			}
+		} else if t.tokenType == VARNAM_TOKEN_CHAR {
+			for i := range results {
+				results[i].Word += *t.character
+			}
 		}
 	}
 
@@ -270,13 +285,13 @@ func sortSuggestions(sugs []Suggestion) []Suggestion {
 }
 
 // Transliterate a word
-func (varnam *Varnam) Transliterate(word string, possibilityLimit int) TransliterationResult {
+func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	var (
 		results               []Suggestion
 		transliterationResult TransliterationResult
 	)
 
-	tokens := varnam.tokenizeWord(word, 10)
+	tokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
 
 	dictSugs := varnam.getFromDictionary(tokens)
 
@@ -289,7 +304,6 @@ func (varnam *Varnam) Transliterate(word string, possibilityLimit int) Translite
 
 		// Add greedy tokenized suggestions. This will give >=1 and <5 suggestions
 		transliterationResult.GreedyTokenized = tokensToSuggestions(tokens, true, false)
-		transliterationResult.ExactMatch = dictSugs.exactMatch
 
 		if dictSugs.exactMatch == false {
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
@@ -298,30 +312,34 @@ func (varnam *Varnam) Transliterate(word string, possibilityLimit int) Translite
 				fmt.Printf("Tokenizing %s\n", restOfWord)
 			}
 
-			restOfWordTokens := varnam.tokenizeWord(restOfWord, possibilityLimit)
-			restOfWordSugs := tokensToSuggestions(restOfWordTokens, false, true)
+			restOfWordTokens := varnam.tokenizeWord(restOfWord, VARNAM_MATCH_EXACT)
+			restOfWordSugs := tokensToSuggestions(restOfWordTokens, true, true)
 
 			if varnam.debug {
 				fmt.Println("Tokenized:", restOfWordSugs)
 			}
 
-			for j, result := range results {
-				till := result.Word
-				tillWeight := result.Weight
+			if len(restOfWordSugs) > 0 {
+				for j, result := range results {
+					till := result.Word
+					tillWeight := result.Weight
 
-				firstSug := restOfWordSugs[0]
-				results[j].Word += firstSug.Word
-				results[j].Weight += firstSug.Weight
+					firstSug := restOfWordSugs[0]
+					results[j].Word += firstSug.Word
+					results[j].Weight += firstSug.Weight
 
-				for k, sug := range restOfWordSugs {
-					if k == 0 {
-						continue
+					for k, sug := range restOfWordSugs {
+						if k == 0 {
+							continue
+						}
+						sug := Suggestion{till + sug.Word, tillWeight + sug.Weight}
+						results = append(results, sug)
 					}
-					sug := Suggestion{till + sug.Word, tillWeight + sug.Weight}
-					results = append(results, sug)
 				}
 			}
 		} else {
+			transliterationResult.ExactMatch = sortSuggestions(dictSugs.sugs)
+
 			moreFromDict := varnam.getMoreFromDictionary(dictSugs.sugs)
 			for _, sugSet := range moreFromDict {
 				for _, sug := range sugSet {

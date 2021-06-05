@@ -39,7 +39,7 @@ func main() {
 
 		fmt.Printf("Learnt %s", word)
 	} else {
-		fmt.Println(varnam.Transliterate(args[0], 2))
+		fmt.Println(varnam.Transliterate(args[0]))
 	}
 
 	defer varnam.Close()
