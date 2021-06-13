@@ -29,9 +29,12 @@ func main() {
 		pattern := args[0]
 		word := args[1]
 
-		varnam.Train(pattern, word)
-
-		fmt.Printf("Trained %s => %s", pattern, word)
+		err := varnam.Train(pattern, word)
+		if err == nil {
+			fmt.Printf("Trained %s => %s\n", pattern, word)
+		} else {
+			fmt.Printf(err.Error() + "\n")
+		}
 	} else if *learnFlag {
 		word := args[0]
 

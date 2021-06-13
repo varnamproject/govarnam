@@ -14,6 +14,12 @@ type DictionaryResult struct {
 	longestMatchPosition int
 }
 
+// LongestPatternMatchResult longest match result
+type LongestPatternMatchResult struct {
+	Sug    Suggestion
+	Length int
+}
+
 func openDB(path string) *sql.DB {
 	conn, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -177,7 +183,11 @@ func (varnam *Varnam) getMoreFromDictionary(words []Suggestion) [][]Suggestion {
 	return results
 }
 
-func (varnam *Varnam) getFromPatternDictionary(pattern string) []Suggestion {
+// A simpler function to get matches from pattern dictionary
+// Gets incomplete matches.
+// Eg: If pattern = "chin", will return "china"
+// TODO better function name ? Ambiguous ?
+func (varnam *Varnam) getTrailingFromPatternDictionary(pattern string) []Suggestion {
 	rows, err := varnam.dictConn.Query("SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns_content WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
 	if err != nil {
 		log.Fatal(err)
@@ -190,6 +200,35 @@ func (varnam *Varnam) getFromPatternDictionary(pattern string) []Suggestion {
 		var item Suggestion
 		rows.Scan(&item.Word, &item.Weight)
 		item.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
+		results = append(results, item)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return results
+}
+
+// Gets incomplete and complete matches from pattern dictionary
+// Eg: If pattern = "chin" or "chinayil", will return "china"
+func (varnam *Varnam) getFromPatternDictionary(pattern string) []LongestPatternMatchResult {
+	// TODO better optimized query. Use JOIN maybe
+	rows, err := varnam.dictConn.Query("SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT 10", pattern, pattern+"%")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var results []LongestPatternMatchResult
+
+	for rows.Next() {
+		var item LongestPatternMatchResult
+		var sug Suggestion
+		rows.Scan(&item.Length, &sug.Word, &sug.Weight)
+		sug.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
+		item.Sug = sug
 		results = append(results, item)
 	}
 

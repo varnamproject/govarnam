@@ -7,15 +7,21 @@ import (
 	"os"
 	"path"
 	"sort"
+	"unicode/utf8"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type LangRules struct {
+	virama string
+}
+
 // Varnam config
 type Varnam struct {
-	vstConn  *sql.DB
-	dictConn *sql.DB
-	debug    bool
+	vstConn   *sql.DB
+	dictConn  *sql.DB
+	langRules LangRules
+	debug     bool
 }
 
 // Token info for making a suggestion
@@ -277,6 +283,55 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 	return results
 }
 
+func (varnam *Varnam) tokenizeRestOfWord(word string, results []Suggestion) []Suggestion {
+	if varnam.debug {
+		fmt.Printf("Tokenizing %s\n", word)
+	}
+
+	restOfWordTokens := varnam.tokenizeWord(word, VARNAM_MATCH_EXACT)
+	restOfWordSugs := tokensToSuggestions(restOfWordTokens, true, true)
+
+	if varnam.debug {
+		fmt.Println("Tokenized:", restOfWordSugs)
+	}
+
+	if len(restOfWordSugs) > 0 {
+		for j, result := range results {
+			till := varnam.removeLastVirama(result.Word)
+			tillWeight := result.Weight
+
+			firstSug := restOfWordSugs[0]
+			results[j].Word = varnam.removeLastVirama(results[j].Word) + firstSug.Word
+			results[j].Weight += firstSug.Weight
+
+			for k, sug := range restOfWordSugs {
+				if k == 0 {
+					continue
+				}
+				sug := Suggestion{till + sug.Word, tillWeight + sug.Weight}
+				results = append(results, sug)
+			}
+		}
+	}
+
+	return results
+}
+
+func (varnam *Varnam) setLangRules() {
+	varnam.langRules.virama = varnam.searchSymbol("~", VARNAM_MATCH_EXACT)[0].value1
+}
+
+func (varnam *Varnam) removeLastVirama(input string) string {
+	r, size := utf8.DecodeLastRuneInString(input)
+	if r == utf8.RuneError && (size == 0 || size == 1) {
+		size = 0
+	}
+	if input[len(input)-size:] == varnam.langRules.virama {
+		return input[0 : len(input)-size]
+	}
+	return input
+}
+
 func sortSuggestions(sugs []Suggestion) []Suggestion {
 	sort.SliceStable(sugs, func(i, j int) bool {
 		return sugs[i].Weight > sugs[j].Weight
@@ -294,7 +349,6 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	tokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
 
 	dictSugs := varnam.getFromDictionary(tokens)
-
 	if varnam.debug {
 		fmt.Println("Dictionary results:", dictSugs)
 	}
@@ -307,36 +361,7 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 
 		if dictSugs.exactMatch == false {
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
-
-			if varnam.debug {
-				fmt.Printf("Tokenizing %s\n", restOfWord)
-			}
-
-			restOfWordTokens := varnam.tokenizeWord(restOfWord, VARNAM_MATCH_EXACT)
-			restOfWordSugs := tokensToSuggestions(restOfWordTokens, true, true)
-
-			if varnam.debug {
-				fmt.Println("Tokenized:", restOfWordSugs)
-			}
-
-			if len(restOfWordSugs) > 0 {
-				for j, result := range results {
-					till := result.Word
-					tillWeight := result.Weight
-
-					firstSug := restOfWordSugs[0]
-					results[j].Word += firstSug.Word
-					results[j].Weight += firstSug.Weight
-
-					for k, sug := range restOfWordSugs {
-						if k == 0 {
-							continue
-						}
-						sug := Suggestion{till + sug.Word, tillWeight + sug.Weight}
-						results = append(results, sug)
-					}
-				}
-			}
+			results = varnam.tokenizeRestOfWord(restOfWord, results)
 		} else {
 			transliterationResult.ExactMatch = sortSuggestions(dictSugs.sugs)
 
@@ -347,18 +372,26 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 				}
 			}
 		}
-	} else {
-		sugs := tokensToSuggestions(tokens, false, false)
-		results = sugs
 	}
 
 	patternDictSugs := varnam.getFromPatternDictionary(word)
 	if len(patternDictSugs) > 0 {
-		results = append(results, patternDictSugs...)
-
 		if varnam.debug {
 			fmt.Println("Pattern dictionary results:", patternDictSugs)
 		}
+
+		for _, match := range patternDictSugs {
+			if match.Length < len(word) {
+				restOfWord := word[match.Length:]
+				filled := varnam.tokenizeRestOfWord(restOfWord, []Suggestion{match.Sug})
+				results = append(results, filled...)
+			} else {
+				results = append(results, match.Sug)
+			}
+		}
+	} else {
+		sugs := tokensToSuggestions(tokens, false, false)
+		results = sugs
 	}
 
 	results = sortSuggestions(results)
@@ -372,6 +405,7 @@ func Init(vstPath string, dictPath string) Varnam {
 	varnam := Varnam{}
 	varnam.openVST(vstPath)
 	varnam.openDict(dictPath)
+	varnam.setLangRules()
 	return varnam
 }
 

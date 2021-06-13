@@ -47,17 +47,22 @@ func (varnam *Varnam) insertWord(word string, confidence int) {
 // Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
 func (varnam *Varnam) Learn(word string) {
 	conjuncts := varnam.splitWordByConjunct(strings.TrimSpace(word))
-	sequence := conjuncts[0]
-	for i, ch := range conjuncts {
-		if i == 0 {
-			continue
+
+	if len(conjuncts) == 1 {
+		varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE)
+	} else {
+		sequence := conjuncts[0]
+		for i, ch := range conjuncts {
+			if i == 0 {
+				continue
+			}
+			sequence += ch
+			if varnam.debug {
+				fmt.Println(sequence)
+			}
+			// The final word should have the highest confidence
+			varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-1-i))
 		}
-		sequence += ch
-		if varnam.debug {
-			fmt.Println(sequence)
-		}
-		// The final word should have the highest confidence
-		varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-1-i))
 	}
 }
 
@@ -67,10 +72,14 @@ func unlearn(word string) {
 }
 
 // Train a word with a particular pattern. Pattern => word
-func (varnam *Varnam) Train(pattern string, word string) {
+func (varnam *Varnam) Train(pattern string, word string) error {
 	varnam.Learn(word)
 
 	wordInfo := varnam.getWordInfo(word)
+
+	if wordInfo == nil {
+		return fmt.Errorf("Word %s couldn't be inserted", word)
+	}
 
 	query := "INSERT OR IGNORE INTO patterns_content(pattern, word_id, learned) VALUES (?, ?, 1)"
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
@@ -80,6 +89,8 @@ func (varnam *Varnam) Train(pattern string, word string) {
 	defer stmt.Close()
 	_, err = stmt.ExecContext(ctx, pattern, wordInfo.id)
 	checkError(err)
+
+	return nil
 }
 
 func (varnam *Varnam) getWordInfo(word string) *WordInfo {
@@ -99,7 +110,6 @@ func (varnam *Varnam) getWordInfo(word string) *WordInfo {
 
 	if wordExists {
 		return &wordInfo
-	} else {
-		return nil
 	}
+	return nil
 }
