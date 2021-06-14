@@ -416,13 +416,7 @@ func InitFromLang(langCode string) (*Varnam, error) {
 		dictPath string
 	)
 
-	for _, loc := range VARNAM_VST_DIR {
-		temp := path.Join(loc, langCode+".vst")
-		if fileExists(temp) {
-			vstPath = &temp
-			break
-		}
-	}
+	vstPath = findVSTPath(langCode)
 
 	dictPath = findLearningsFilePath(langCode)
 	if !fileExists(dictPath) {
