@@ -33,8 +33,19 @@ const VARNAM_LEARNT_WORD_MIN_CONFIDENCE = 30
 
 // VARNAM_VST_DIR VST lookiup directories according to priority
 var VARNAM_VST_DIR = [2]string{
+	// "/usr/share/varnam/vst",
 	// "/usr/local/share/varnam/vst",
-	"/home/mint/go/src/gitlab.com/subins2000/govarnam/schemes"}
+	"/usr/local/share/varnam/vstDEV"}
+
+func findVSTPath(langCode string) *string {
+	for _, loc := range VARNAM_VST_DIR {
+		temp := path.Join(loc, langCode+".vst")
+		if fileExists(temp) {
+			return &temp
+		}
+	}
+	return nil
+}
 
 func findLearningsFilePath(langCode string) string {
 	var (
