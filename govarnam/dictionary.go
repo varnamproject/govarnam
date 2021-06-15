@@ -160,13 +160,13 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 							sug := Suggestion{newTill, newWeight}
 							results = append(results, sug)
 						} else {
-							result.Weight = -1
+							results[j].Weight = -1
 						}
 					}
 				}
 			}
 		}
-		if len(tempFoundDictWords) > 0 {
+		if i > 0 && len(tempFoundDictWords) > 0 {
 			foundDictWords = tempFoundDictWords
 			foundPosition = t.position
 		}

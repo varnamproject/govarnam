@@ -31,6 +31,9 @@ const VARNAM_SYMBOL_PERIOD = 13
 // VARNAM_LEARNT_WORD_MIN_CONFIDENCE Minimum confidence for learnt words
 const VARNAM_LEARNT_WORD_MIN_CONFIDENCE = 30
 
+const RENDER_VALUE2_TAG = "render_value2"
+const CHIL_TAG = "chill"
+
 // VARNAM_VST_DIR VST lookiup directories according to priority
 var VARNAM_VST_DIR = [2]string{
 	// "/usr/share/varnam/vst",

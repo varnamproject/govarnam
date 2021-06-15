@@ -130,9 +130,9 @@ func (varnam *Varnam) searchSymbol(ch string, matchType int) []Symbol {
 	)
 
 	if matchType == VARNAM_MATCH_ALL {
-		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND priority >= -1", ch)
+		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND priority >= 0", ch)
 	} else {
-		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
+		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND priority >= 0 AND match_type = ?", ch, matchType)
 	}
 
 	if err != nil {
@@ -203,7 +203,19 @@ func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 	return results
 }
 
-func getNewValue(weight int, symbol Symbol, tokensLength int, position int) (string, int) {
+func getSymbolValue(symbol Symbol, position int) string {
+	if symbol.tag == RENDER_VALUE2_TAG {
+		// Specific rule to use value 2
+		return symbol.value2
+	} else if symbol.generalType == VARNAM_SYMBOL_VOWEL && position > 0 {
+		// If in between word, we use the vowel and not the consonant
+		return symbol.value2 // ാ
+	} else {
+		return symbol.value1 // ആ
+	}
+}
+
+func getNewValueAndWeight(weight int, symbol Symbol, tokensLength int, position int) (string, int) {
 	/**
 	 * Weight priority:
 	 * 1. Position of character in string
@@ -211,15 +223,7 @@ func getNewValue(weight int, symbol Symbol, tokensLength int, position int) (str
 	 */
 	newWeight := weight - symbol.weight + (tokensLength-position)*2 + (VARNAM_MATCH_POSSIBILITY - symbol.matchType)
 
-	var value string
-	if symbol.generalType == VARNAM_SYMBOL_VOWEL && position > 0 {
-		// If in between word, we use the vowel and not the consonant
-		value = symbol.value2 // ാ
-	} else {
-		value = symbol.value1 // ആ
-	}
-
-	return value, newWeight
+	return getSymbolValue(symbol, position), newWeight
 }
 
 /**
@@ -237,12 +241,7 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 						continue
 					}
 
-					var value string
-					if partial && possibility.generalType == VARNAM_SYMBOL_VOWEL {
-						value = possibility.value2
-					} else {
-						value = possibility.value1
-					}
+					value := getSymbolValue(possibility, 0)
 
 					sug := Suggestion{value, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight}
 					results = append(results, sug)
@@ -254,7 +253,7 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 
 					firstToken := t.token[0]
 
-					newValue, newWeight := getNewValue(results[j].Weight, firstToken, len(tokens), i)
+					newValue, newWeight := getNewValueAndWeight(results[j].Weight, firstToken, len(tokens), i)
 
 					results[j].Word += newValue
 					results[j].Weight = newWeight
@@ -264,7 +263,7 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 							continue
 						}
 
-						newValue, newWeight := getNewValue(tillWeight, possibility, len(tokens), i)
+						newValue, newWeight := getNewValueAndWeight(tillWeight, possibility, len(tokens), i)
 
 						newTill := till + newValue
 
