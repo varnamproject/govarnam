@@ -67,8 +67,48 @@ func (varnam *Varnam) Learn(word string) {
 }
 
 // Unlearn a word, remove from words DB and pattern if there is
-func unlearn(word string) {
-	// TODO
+func (varnam *Varnam) Unlearn(word string) {
+	conjuncts := varnam.splitWordByConjunct(strings.TrimSpace(word))
+
+	varnam.dictConn.Exec("PRAGMA foreign_keys = ON")
+
+	for i := range conjuncts {
+		// Loop will be going from full string to the first conjunct
+		sequence := strings.Join(conjuncts[0:len(conjuncts)-i], "")
+		if varnam.debug {
+			fmt.Println(sequence)
+		}
+
+		// Check if there are words starting with this sequence
+		rows, err := varnam.dictConn.Query("SELECT COUNT(*) FROM words WHERE word LIKE ?", sequence+"%")
+		checkError(err)
+
+		count := 0
+		for rows.Next() {
+			err := rows.Scan(&count)
+			checkError(err)
+		}
+
+		if count == 1 {
+			// If there's only one, remove it
+			query := "DELETE FROM words WHERE word = ?"
+			ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancelfunc()
+			stmt, err := varnam.dictConn.PrepareContext(ctx, query)
+			checkError(err)
+			defer stmt.Close()
+			_, err = stmt.ExecContext(ctx, word)
+			checkError(err)
+
+			// No need to remove from `patterns_content` since FOREIGN KEY ON DELETE CASCADE will work
+
+			if varnam.debug {
+				fmt.Printf("Removed %s\n", sequence)
+			}
+		}
+	}
+
+	varnam.dictConn.Exec("PRAGMA foreign_keys = OFF")
 }
 
 // Train a word with a particular pattern. Pattern => word

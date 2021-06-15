@@ -12,6 +12,7 @@ func main() {
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
 	langFlag := flag.String("lang", "", "Language")
 	learnFlag := flag.Bool("learn", false, "Learn a word")
+	unlearnFlag := flag.Bool("unlearn", false, "Unlearn a word")
 	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
 	flag.Parse()
 
@@ -41,6 +42,12 @@ func main() {
 		varnam.Learn(word)
 
 		fmt.Printf("Learnt %s", word)
+	} else if *unlearnFlag {
+		word := args[0]
+
+		varnam.Unlearn(word)
+
+		fmt.Printf("Unlearnt %s", word)
 	} else {
 		fmt.Println(varnam.Transliterate(args[0]))
 	}

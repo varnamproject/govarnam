@@ -38,7 +38,7 @@ func makeDictionary(dictPath string) {
 	conn := openDB(dictPath)
 	queries := [3]string{"CREATE TABLE IF NOT EXISTS metadata (key TEXT UNIQUE, value TEXT);",
 		"CREATE TABLE IF NOT EXISTS words (id integer primary key, word text unique, confidence integer default 1, learned_on integer);",
-		"CREATE TABLE IF NOT EXISTS patterns_content (pattern text, word_id integer, learned integer default 0, primary key(pattern, word_id)) WITHOUT rowid;"}
+		"CREATE TABLE IF NOT EXISTS patterns_content ( `pattern` text, `word_id` integer, `learned` integer DEFAULT 0, FOREIGN KEY(`word_id`) REFERENCES `words`(`id`) ON DELETE CASCADE, PRIMARY KEY(`pattern`,`word_id`) ) WITHOUT ROWID;"}
 
 	for _, query := range queries {
 		ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
