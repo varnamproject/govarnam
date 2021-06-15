@@ -420,6 +420,7 @@ func InitFromLang(langCode string) (*Varnam, error) {
 
 	dictPath = findLearningsFilePath(langCode)
 	if !fileExists(dictPath) {
+		fmt.Printf("Making Varnam Learnings File at %s\n", dictPath)
 		os.MkdirAll(path.Dir(dictPath), 0750)
 		makeDictionary(dictPath)
 	}
