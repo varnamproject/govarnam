@@ -130,7 +130,7 @@ func (varnam *Varnam) searchSymbol(ch string, matchType int) []Symbol {
 	)
 
 	if matchType == VARNAM_MATCH_ALL {
-		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ?", ch)
+		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND priority >= -1", ch)
 	} else {
 		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
 	}
@@ -348,7 +348,16 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 
 	tokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
 
-	dictSugs := varnam.getFromDictionary(tokens)
+	dictSugsChan := make(chan DictionaryResult)
+	patternDictSugsChan := make(chan []PatternDictionarySuggestion)
+	moreFromDictChan := make(chan [][]Suggestion)
+
+	go varnam.channelGetFromDictionary(tokens, dictSugsChan)
+	go varnam.channelGetFromPatternDictionary(word, patternDictSugsChan)
+
+	dictSugs := <-dictSugsChan
+	patternDictSugs := <-patternDictSugsChan
+
 	if varnam.debug {
 		fmt.Println("Dictionary results:", dictSugs)
 	}
@@ -365,16 +374,10 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 		} else {
 			transliterationResult.ExactMatch = sortSuggestions(dictSugs.sugs)
 
-			moreFromDict := varnam.getMoreFromDictionary(dictSugs.sugs)
-			for _, sugSet := range moreFromDict {
-				for _, sug := range sugSet {
-					results = append(results, sug)
-				}
-			}
+			go varnam.channelGetMoreFromDictionary(dictSugs.sugs, moreFromDictChan)
 		}
 	}
 
-	patternDictSugs := varnam.getFromPatternDictionary(word)
 	if len(patternDictSugs) > 0 {
 		if varnam.debug {
 			fmt.Println("Pattern dictionary results:", patternDictSugs)
@@ -392,6 +395,15 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	} else {
 		sugs := tokensToSuggestions(tokens, false, false)
 		results = sugs
+	}
+
+	if len(transliterationResult.ExactMatch) > 0 {
+		moreFromDict := <-moreFromDictChan
+		for _, sugSet := range moreFromDict {
+			for _, sug := range sugSet {
+				results = append(results, sug)
+			}
+		}
 	}
 
 	results = sortSuggestions(results)

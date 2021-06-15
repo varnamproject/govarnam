@@ -14,8 +14,8 @@ type DictionaryResult struct {
 	longestMatchPosition int
 }
 
-// LongestPatternMatchResult longest match result
-type LongestPatternMatchResult struct {
+// PatternDictionarySuggestion longest match result
+type PatternDictionarySuggestion struct {
 	Sug    Suggestion
 	Length int
 }
@@ -215,7 +215,7 @@ func (varnam *Varnam) getTrailingFromPatternDictionary(pattern string) []Suggest
 
 // Gets incomplete and complete matches from pattern dictionary
 // Eg: If pattern = "chin" or "chinayil", will return "china"
-func (varnam *Varnam) getFromPatternDictionary(pattern string) []LongestPatternMatchResult {
+func (varnam *Varnam) getFromPatternDictionary(pattern string) []PatternDictionarySuggestion {
 	// TODO better optimized query. Use JOIN maybe
 	rows, err := varnam.dictConn.Query("SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT 10", pattern, pattern+"%")
 	if err != nil {
@@ -223,11 +223,13 @@ func (varnam *Varnam) getFromPatternDictionary(pattern string) []LongestPatternM
 	}
 	defer rows.Close()
 
-	var results []LongestPatternMatchResult
+	var results []PatternDictionarySuggestion
 
 	for rows.Next() {
-		var item LongestPatternMatchResult
-		var sug Suggestion
+		var (
+			item PatternDictionarySuggestion
+			sug  Suggestion
+		)
 		rows.Scan(&item.Length, &sug.Word, &sug.Weight)
 		sug.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
 		item.Sug = sug
