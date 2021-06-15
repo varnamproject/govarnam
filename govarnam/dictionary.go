@@ -33,8 +33,6 @@ func (varnam *Varnam) openDict(dictPath string) {
 }
 
 func makeDictionary(dictPath string) {
-	// TODO pragmas include
-
 	conn := openDB(dictPath)
 
 	conn.Exec("PRAGMA page_size=4096;")
