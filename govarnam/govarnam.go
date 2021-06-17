@@ -174,9 +174,6 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	if len(dictSugs.sugs) > 0 {
 		results = append(results, dictSugs.sugs...)
 
-		// Add greedy tokenized suggestions. This will only give exact match results which will be >=1 || <=3
-		transliterationResult.GreedyTokenized = tokensToSuggestions(tokens, true, false)
-
 		if dictSugs.exactMatch == false {
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
 			results = varnam.tokenizeRestOfWord(restOfWord, results)
@@ -198,13 +195,14 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 				filled := varnam.tokenizeRestOfWord(restOfWord, []Suggestion{match.Sug})
 				results = append(results, filled...)
 			} else {
-				results = append(results, match.Sug)
+				// Same length
+				transliterationResult.ExactMatch = append(transliterationResult.ExactMatch, match.Sug)
 			}
 		}
-	} else {
-		sugs := tokensToSuggestions(tokens, false, false)
-		results = sugs
 	}
+
+	// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
+	transliterationResult.GreedyTokenized = tokensToSuggestions(tokens, true, false)
 
 	if len(transliterationResult.ExactMatch) > 0 {
 		moreFromDict := <-moreFromDictChan
@@ -213,10 +211,13 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 				results = append(results, sug)
 			}
 		}
+	} else {
+		sugs := tokensToSuggestions(tokens, false, false)
+		results = sugs
 	}
 
-	results = sortSuggestions(results)
-	transliterationResult.Suggestions = results
+	transliterationResult.ExactMatch = sortSuggestions(transliterationResult.ExactMatch)
+	transliterationResult.Suggestions = sortSuggestions(results)
 
 	return transliterationResult
 }
