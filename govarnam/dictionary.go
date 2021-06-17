@@ -226,13 +226,9 @@ func (varnam *Varnam) getFromPatternDictionary(pattern string) []PatternDictiona
 	var results []PatternDictionarySuggestion
 
 	for rows.Next() {
-		var (
-			item PatternDictionarySuggestion
-			sug  Suggestion
-		)
-		rows.Scan(&item.Length, &sug.Word, &sug.Weight)
-		sug.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
-		item.Sug = sug
+		var item PatternDictionarySuggestion
+		rows.Scan(&item.Length, &item.Sug.Word, &item.Sug.Weight)
+		item.Sug.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
 		results = append(results, item)
 	}
 
