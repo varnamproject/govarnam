@@ -5,15 +5,19 @@ import (
 	"path"
 )
 
+/* Pattern matching */
 const VARNAM_MATCH_EXACT = 1
 const VARNAM_MATCH_POSSIBILITY = 2
 const VARNAM_MATCH_ALL = 3
 
-const VARNAM_TOKEN_CHAR = 1
-const VARNAM_TOKEN_SYMBOL = 2
+/* Type of tokens */
+const VARNAM_TOKEN_CHAR = 1   // Non-lang characters like A, B, 1, * etc.
+const VARNAM_TOKEN_SYMBOL = 2 // Lang characters
 
+/* A symbol token's maximum possible weight value */
 const VARNAM_TOKEN_BASIC_WEIGHT = 10
 
+/* Available type of symbol tokens */
 const VARNAM_SYMBOL_VOWEL = 1
 const VARNAM_SYMBOL_CONSONANT = 2
 const VARNAM_SYMBOL_DEAD_CONSONANT = 3
@@ -27,6 +31,12 @@ const VARNAM_SYMBOL_OTHER = 10
 const VARNAM_SYMBOL_NON_JOINER = 11
 const VARNAM_SYMBOL_JOINER = 12
 const VARNAM_SYMBOL_PERIOD = 13
+
+/* Token acceptance rules */
+const VARNAM_TOKEN_ACCEPT_ALL = 0
+const VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH = 1
+const VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN = 2
+const VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH = 3
 
 // VARNAM_LEARNT_WORD_MIN_CONFIDENCE Minimum confidence for learnt words
 const VARNAM_LEARNT_WORD_MIN_CONFIDENCE = 30

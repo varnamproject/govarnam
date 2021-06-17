@@ -57,9 +57,22 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 
 	for i, t := range tokens {
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
+			var state int
+			if i == 0 {
+				state = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
+			} else if i+1 == len(tokens) {
+				state = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
+			} else {
+				state = VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
+			}
+
 			if i == 0 {
 				for _, possibility := range t.token {
 					if greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY {
+						continue
+					}
+
+					if possibility.acceptCondition != VARNAM_TOKEN_ACCEPT_ALL && possibility.acceptCondition != state {
 						continue
 					}
 
@@ -87,6 +100,10 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 
 					for k, possibility := range t.token {
 						if k == 0 || (greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY) {
+							continue
+						}
+
+						if possibility.acceptCondition != VARNAM_TOKEN_ACCEPT_ALL && possibility.acceptCondition != state {
 							continue
 						}
 
