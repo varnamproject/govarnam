@@ -38,7 +38,11 @@ const VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH = 1
 const VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN = 2
 const VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH = 3
 
-// VARNAM_LEARNT_WORD_MIN_CONFIDENCE Minimum confidence for learnt words
+/* VARNAM_LEARNT_WORD_MIN_CONFIDENCE Minimum confidence for learnt words.
+Conjunct splitted words leading upto the learnt word would have confidence lesser than this based on length.
+For a word "മലയാളം". മല will have 28, മലയാ will have 29 and finally മലയാളം will have 30. Note that the first conjunct won't be stored
+Hence this value becomes a limit on the longest possible word that can be written (>0)
+*/
 const VARNAM_LEARNT_WORD_MIN_CONFIDENCE = 30
 
 const RENDER_VALUE2_TAG = "render_value2"

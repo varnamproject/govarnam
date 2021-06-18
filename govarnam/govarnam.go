@@ -26,8 +26,9 @@ type Varnam struct {
 
 // Suggestion suggestion
 type Suggestion struct {
-	Word   string
-	Weight int
+	Word      string
+	Weight    int
+	LearnedOn int
 }
 
 // TransliterationResult result
@@ -83,7 +84,7 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 						value = getSymbolValue(possibility, 0)
 					}
 
-					sug := Suggestion{value, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight}
+					sug := Suggestion{value, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight, 0}
 					results = append(results, sug)
 				}
 			} else {
@@ -111,7 +112,7 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 
 						newTill := till + newValue
 
-						sug := Suggestion{newTill, newWeight}
+						sug := Suggestion{newTill, newWeight, 0}
 						results = append(results, sug)
 					}
 				}
@@ -143,7 +144,7 @@ func (varnam *Varnam) removeLastVirama(input string) string {
 
 func sortSuggestions(sugs []Suggestion) []Suggestion {
 	sort.SliceStable(sugs, func(i, j int) bool {
-		return sugs[i].Weight > sugs[j].Weight
+		return sugs[i].LearnedOn > sugs[j].LearnedOn || sugs[i].Weight > sugs[j].Weight
 	})
 	return sugs
 }
@@ -157,15 +158,20 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 
 	tokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
 
+	/* Channels make things faster, getting from DB is time-consuming */
+
 	dictSugsChan := make(chan DictionaryResult)
 	patternDictSugsChan := make(chan []PatternDictionarySuggestion)
+	greedyTokenizedChan := make(chan []Suggestion)
+
 	moreFromDictChan := make(chan [][]Suggestion)
+	triggeredGetMoreFromDict := false
 
 	go varnam.channelGetFromDictionary(tokens, dictSugsChan)
 	go varnam.channelGetFromPatternDictionary(word, patternDictSugsChan)
+	go varnam.channelTokensToSuggestions(tokens, true, false, greedyTokenizedChan)
 
 	dictSugs := <-dictSugsChan
-	patternDictSugs := <-patternDictSugsChan
 
 	if varnam.debug {
 		fmt.Println("Dictionary results:", dictSugs)
@@ -178,11 +184,13 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
 			results = varnam.tokenizeRestOfWord(restOfWord, results)
 		} else {
-			transliterationResult.ExactMatch = sortSuggestions(dictSugs.sugs)
-
-			go varnam.channelGetMoreFromDictionary(dictSugs.sugs, moreFromDictChan)
+			transliterationResult.ExactMatch = dictSugs.sugs
 		}
+		go varnam.channelGetMoreFromDictionary(dictSugs.sugs, moreFromDictChan)
+		triggeredGetMoreFromDict = true
 	}
+
+	patternDictSugs := <-patternDictSugsChan
 
 	if len(patternDictSugs) > 0 {
 		if varnam.debug {
@@ -194,30 +202,39 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 				restOfWord := word[match.Length:]
 				filled := varnam.tokenizeRestOfWord(restOfWord, []Suggestion{match.Sug})
 				results = append(results, filled...)
-			} else {
+			} else if match.Length == len(word) {
 				// Same length
 				transliterationResult.ExactMatch = append(transliterationResult.ExactMatch, match.Sug)
+			} else {
+				results = append(results, match.Sug)
 			}
 		}
 	}
 
-	// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
-	transliterationResult.GreedyTokenized = tokensToSuggestions(tokens, true, false)
-
-	if len(transliterationResult.ExactMatch) > 0 {
+	if triggeredGetMoreFromDict {
 		moreFromDict := <-moreFromDictChan
+
+		if varnam.debug {
+			fmt.Println("More dictionary results:", moreFromDict)
+		}
+
 		for _, sugSet := range moreFromDict {
 			for _, sug := range sugSet {
 				results = append(results, sug)
 			}
 		}
-	} else {
+	}
+
+	if len(transliterationResult.ExactMatch) == 0 {
 		sugs := tokensToSuggestions(tokens, false, false)
-		results = sugs
+		results = append(results, sugs...)
 	}
 
 	transliterationResult.ExactMatch = sortSuggestions(transliterationResult.ExactMatch)
 	transliterationResult.Suggestions = sortSuggestions(results)
+
+	// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
+	transliterationResult.GreedyTokenized = <-greedyTokenizedChan
 
 	return transliterationResult
 }

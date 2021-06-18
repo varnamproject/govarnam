@@ -55,10 +55,12 @@ func makeDictionary(dictPath string) {
 	defer conn.Close()
 }
 
+// all - Search for words starting with the word
 func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
 	likes := ""
 
 	var vals []interface{}
+	var query string
 
 	if all == true {
 		// _% means a wildcard with a sequence of 1 or more
@@ -80,7 +82,13 @@ func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
 		}
 	}
 
-	rows, err := varnam.dictConn.Query("SELECT word, confidence FROM words WHERE word LIKE ? "+likes+" ORDER BY confidence DESC LIMIT 5", vals...)
+	if all == true {
+		query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " AND learned_on > 0 ORDER BY confidence DESC LIMIT 5"
+	} else {
+		query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT 5"
+	}
+
+	rows, err := varnam.dictConn.Query(query, vals...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +98,7 @@ func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
 
 	for rows.Next() {
 		var item Suggestion
-		rows.Scan(&item.Word, &item.Weight)
+		rows.Scan(&item.Word, &item.Weight, &item.LearnedOn)
 		results = append(results, item)
 	}
 
@@ -115,22 +123,21 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
 			if i == 0 {
 				for _, possibility := range t.token {
-					sug := Suggestion{possibility.value1, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight}
+					// Weight has no use in dictionary lookup
+					sug := Suggestion{possibility.value1, 0, 0}
 					results = append(results, sug)
 					tempFoundDictWords = append(tempFoundDictWords, sug)
 				}
 			} else {
 				for j, result := range results {
-					till := result.Word
-					tillWeight := result.Weight
-
-					if tillWeight == -1 {
+					if result.Weight == -1 {
 						continue
 					}
 
+					till := result.Word
+
 					firstToken := t.token[0]
 					results[j].Word += firstToken.value1
-					results[j].Weight -= firstToken.weight
 
 					search := []string{results[j].Word}
 					searchResults := varnam.searchDictionary(search, false)
@@ -138,7 +145,8 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 					if len(searchResults) > 0 {
 						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
 					} else {
-						// No need of processing this anymore
+						// No need of processing this anymore.
+						// Weight is used as a flag here to skip some results
 						results[j].Weight = -1
 					}
 
@@ -155,12 +163,8 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 						if len(searchResults) > 0 {
 							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
 
-							newWeight := tillWeight - possibility.weight
-
-							sug := Suggestion{newTill, newWeight}
+							sug := Suggestion{newTill, 0, 0}
 							results = append(results, sug)
-						} else {
-							results[j].Weight = -1
 						}
 					}
 				}

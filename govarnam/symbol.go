@@ -157,7 +157,7 @@ func (varnam *Varnam) tokenizeRestOfWord(word string, results []Suggestion) []Su
 				if k == 0 {
 					continue
 				}
-				sug := Suggestion{till + sug.Word, tillWeight + sug.Weight}
+				sug := Suggestion{till + sug.Word, tillWeight + sug.Weight, sug.LearnedOn}
 				results = append(results, sug)
 			}
 		}

@@ -22,8 +22,14 @@ func checkError(err error) {
 }
 
 // Insert a word into word DB. Increment confidence if word exists
-func (varnam *Varnam) insertWord(word string, confidence int) {
-	query := "INSERT OR IGNORE INTO words(word, confidence, learned_on) VALUES (trim(?), ?, strftime('%s', datetime(), 'localtime'))"
+// Partial - Whether the word is not a real word, but only part of a pathway to a word
+func (varnam *Varnam) insertWord(word string, confidence int, partial bool) {
+	var query string
+	if partial {
+		query = "INSERT OR IGNORE INTO words(word, confidence, learned_on) VALUES (trim(?), ?, NULL)"
+	} else {
+		query = "INSERT OR IGNORE INTO words(word, confidence, learned_on) VALUES (trim(?), ?, strftime('%s', datetime(), 'localtime'))"
+	}
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
@@ -49,7 +55,7 @@ func (varnam *Varnam) Learn(word string) {
 	conjuncts := varnam.splitWordByConjunct(strings.TrimSpace(word))
 
 	if len(conjuncts) == 1 {
-		varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE)
+		varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
 	} else {
 		sequence := conjuncts[0]
 		for i, ch := range conjuncts {
@@ -60,8 +66,13 @@ func (varnam *Varnam) Learn(word string) {
 			if varnam.debug {
 				fmt.Println(sequence)
 			}
-			// The final word should have the highest confidence
-			varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-1-i))
+			if i+1 == len(conjuncts) {
+				// The word. The final word should have the highest confidence
+				varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
+			} else {
+				// Partial word. Part of pathway to the word to be learnt
+				varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-i), true)
+			}
 		}
 	}
 }

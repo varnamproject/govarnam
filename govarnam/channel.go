@@ -1,5 +1,10 @@
 package govarnam
 
+func (varnam *Varnam) channelTokensToSuggestions(tokens []Token, greedy bool, partial bool, channel chan []Suggestion) {
+	channel <- tokensToSuggestions(tokens, greedy, partial)
+	close(channel)
+}
+
 func (varnam *Varnam) channelGetFromDictionary(tokens []Token, channel chan DictionaryResult) {
 	channel <- varnam.getFromDictionary(tokens)
 	close(channel)
