@@ -49,7 +49,21 @@ func main() {
 
 		fmt.Printf("Unlearnt %s", word)
 	} else {
-		fmt.Println(varnam.Transliterate(args[0]))
+		results := varnam.Transliterate(args[0])
+		if len(results.ExactMatch) > 0 {
+			fmt.Println("Exact Matches")
+			for _, sug := range results.ExactMatch {
+				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+			}
+		}
+		fmt.Println("Suggestions")
+		for _, sug := range results.Suggestions {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+		}
+		fmt.Println("Greedy Tokenized")
+		for _, sug := range results.GreedyTokenized {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+		}
 	}
 
 	defer varnam.Close()

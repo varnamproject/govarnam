@@ -178,11 +178,10 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	}
 
 	if len(dictSugs.sugs) > 0 {
-		results = append(results, dictSugs.sugs...)
-
 		if dictSugs.exactMatch == false {
+			// These will be partial words
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
-			results = varnam.tokenizeRestOfWord(restOfWord, results)
+			results = varnam.tokenizeRestOfWord(restOfWord, dictSugs.sugs)
 		} else {
 			transliterationResult.ExactMatch = dictSugs.sugs
 
