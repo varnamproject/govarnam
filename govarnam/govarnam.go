@@ -185,9 +185,12 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 			results = varnam.tokenizeRestOfWord(restOfWord, results)
 		} else {
 			transliterationResult.ExactMatch = dictSugs.sugs
+
+			// Since partial words are in dictionary, exactMatch will be TRUE
+			// for pathway to a word. Hence we're calling this here
+			go varnam.channelGetMoreFromDictionary(dictSugs.sugs, moreFromDictChan)
+			triggeredGetMoreFromDict = true
 		}
-		go varnam.channelGetMoreFromDictionary(dictSugs.sugs, moreFromDictChan)
-		triggeredGetMoreFromDict = true
 	}
 
 	patternDictSugs := <-patternDictSugsChan
@@ -234,7 +237,7 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	transliterationResult.Suggestions = sortSuggestions(results)
 
 	// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
-	transliterationResult.GreedyTokenized = <-greedyTokenizedChan
+	transliterationResult.GreedyTokenized = sortSuggestions(<-greedyTokenizedChan)
 
 	return transliterationResult
 }
