@@ -5,6 +5,10 @@ import (
 	"path"
 )
 
+/* General */
+const ZWNJ = "\u200c"
+const ZWJ = "\u200d"
+
 /* Pattern matching */
 const VARNAM_MATCH_EXACT = 1
 const VARNAM_MATCH_POSSIBILITY = 2

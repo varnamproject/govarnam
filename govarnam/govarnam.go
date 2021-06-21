@@ -39,7 +39,7 @@ type TransliterationResult struct {
 	GreedyTokenized []Suggestion
 }
 
-func getNewValueAndWeight(weight int, symbol Symbol, tokensLength int, position int) (string, int) {
+func (varnam *Varnam) getNewValueAndWeight(weight int, symbol Symbol, previousCharacter string, tokensLength int, position int) (string, int) {
 	/**
 	 * Weight priority:
 	 * 1. Position of character in string
@@ -47,14 +47,31 @@ func getNewValueAndWeight(weight int, symbol Symbol, tokensLength int, position 
 	 */
 	newWeight := weight - symbol.weight + (tokensLength - position) + (VARNAM_MATCH_POSSIBILITY - symbol.matchType)
 
-	return getSymbolValue(symbol, position), newWeight
+	var value string
+
+	if symbol.generalType == VARNAM_SYMBOL_VIRAMA {
+		/*
+			we are resolving a virama. If the output ends with a virama already,
+			add a ZWNJ to it, so that following character will not be combined.
+			If output does not end with virama, add a virama and ZWNJ
+		*/
+		if previousCharacter == varnam.LangRules.Virama {
+			value = ZWNJ
+		} else {
+			value = getSymbolValue(symbol, position) + ZWNJ
+		}
+	} else {
+		value = getSymbolValue(symbol, position)
+	}
+
+	return value, newWeight
 }
 
 /**
  * greed - Set to true for getting only VARNAM_MATCH_EXACT suggestions.
  * partial - set true if only a part of a word is being tokenized and not an entire word
  */
-func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion {
+func (varnam *Varnam) tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion {
 	var results []Suggestion
 
 	for i, t := range tokens {
@@ -95,7 +112,8 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 
 					firstToken := t.token[0]
 
-					newValue, newWeight := getNewValueAndWeight(results[j].Weight, firstToken, len(tokens), i)
+					lastChar, _ := getLastCharacter(till)
+					newValue, newWeight := varnam.getNewValueAndWeight(results[j].Weight, firstToken, lastChar, len(tokens), i)
 
 					results[j].Word += newValue
 					results[j].Weight = newWeight
@@ -109,7 +127,8 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 							continue
 						}
 
-						newValue, newWeight := getNewValueAndWeight(tillWeight, possibility, len(tokens), i)
+						lastChar, _ := getLastCharacter(till)
+						newValue, newWeight := varnam.getNewValueAndWeight(tillWeight, possibility, lastChar, len(tokens), i)
 
 						newTill := till + newValue
 
@@ -133,12 +152,17 @@ func (varnam *Varnam) setLangRules() {
 	varnam.LangRules.Virama = varnam.searchSymbol("~", VARNAM_MATCH_EXACT)[0].value1
 }
 
-func (varnam *Varnam) removeLastVirama(input string) string {
+func getLastCharacter(input string) (string, int) {
 	r, size := utf8.DecodeLastRuneInString(input)
 	if r == utf8.RuneError && (size == 0 || size == 1) {
 		size = 0
 	}
-	if input[len(input)-size:] == varnam.LangRules.Virama {
+	return input[len(input)-size:], size
+}
+
+func (varnam *Varnam) removeLastVirama(input string) string {
+	char, size := getLastCharacter(input)
+	if char == varnam.LangRules.Virama {
 		return input[0 : len(input)-size]
 	}
 	return input
@@ -230,7 +254,7 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	}
 
 	if len(transliterationResult.ExactMatch) == 0 {
-		sugs := tokensToSuggestions(tokens, false, false)
+		sugs := varnam.tokensToSuggestions(tokens, false, false)
 		results = append(results, sugs...)
 	}
 

@@ -144,7 +144,7 @@ func (varnam *Varnam) tokenizeRestOfWord(word string, results []Suggestion) []Su
 	}
 
 	restOfWordTokens := varnam.tokenizeWord(word, VARNAM_MATCH_EXACT)
-	restOfWordSugs := tokensToSuggestions(restOfWordTokens, true, true)
+	restOfWordSugs := varnam.tokensToSuggestions(restOfWordTokens, true, true)
 
 	if varnam.debug {
 		fmt.Println("Tokenized:", restOfWordSugs)
