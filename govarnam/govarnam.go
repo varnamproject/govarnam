@@ -13,14 +13,15 @@ import (
 )
 
 type LangRules struct {
-	virama string
+	Virama      string
+	IndicDigits bool
 }
 
 // Varnam config
 type Varnam struct {
 	vstConn   *sql.DB
 	dictConn  *sql.DB
-	langRules LangRules
+	LangRules LangRules
 	debug     bool
 }
 
@@ -44,7 +45,7 @@ func getNewValueAndWeight(weight int, symbol Symbol, tokensLength int, position 
 	 * 1. Position of character in string
 	 * 2. Symbol's probability occurence
 	 */
-	newWeight := weight - symbol.weight + (tokensLength-position)*2 + (VARNAM_MATCH_POSSIBILITY - symbol.matchType)
+	newWeight := weight - symbol.weight + (tokensLength - position) + (VARNAM_MATCH_POSSIBILITY - symbol.matchType)
 
 	return getSymbolValue(symbol, position), newWeight
 }
@@ -128,7 +129,8 @@ func tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion
 }
 
 func (varnam *Varnam) setLangRules() {
-	varnam.langRules.virama = varnam.searchSymbol("~", VARNAM_MATCH_EXACT)[0].value1
+	varnam.LangRules.IndicDigits = false
+	varnam.LangRules.Virama = varnam.searchSymbol("~", VARNAM_MATCH_EXACT)[0].value1
 }
 
 func (varnam *Varnam) removeLastVirama(input string) string {
@@ -136,7 +138,7 @@ func (varnam *Varnam) removeLastVirama(input string) string {
 	if r == utf8.RuneError && (size == 0 || size == 1) {
 		size = 0
 	}
-	if input[len(input)-size:] == varnam.langRules.virama {
+	if input[len(input)-size:] == varnam.LangRules.Virama {
 		return input[0 : len(input)-size]
 	}
 	return input

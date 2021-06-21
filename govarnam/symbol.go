@@ -118,7 +118,13 @@ func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 
 			sequence = ""
 		} else {
-			if i == len(word)-1 {
+			if matches[0].generalType == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
+				// Skip numbers
+				token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, &ch}
+				results = append(results, token)
+
+				sequence = ""
+			} else if i == len(word)-1 {
 				// Last character
 				token := Token{VARNAM_TOKEN_SYMBOL, matches, i, nil}
 				results = append(results, token)

@@ -108,7 +108,7 @@ func (varnam *Varnam) Unlearn(word string) {
 			stmt, err := varnam.dictConn.PrepareContext(ctx, query)
 			checkError(err)
 			defer stmt.Close()
-			_, err = stmt.ExecContext(ctx, word)
+			_, err = stmt.ExecContext(ctx, sequence)
 			checkError(err)
 
 			// No need to remove from `patterns_content` since FOREIGN KEY ON DELETE CASCADE will work

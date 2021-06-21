@@ -11,9 +11,13 @@ import (
 func main() {
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
 	langFlag := flag.String("lang", "", "Language")
+
 	learnFlag := flag.Bool("learn", false, "Learn a word")
 	unlearnFlag := flag.Bool("unlearn", false, "Unlearn a word")
 	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
+
+	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
+
 	flag.Parse()
 
 	varnam, err := govarnam.InitFromLang(*langFlag)
@@ -24,6 +28,8 @@ func main() {
 	}
 
 	varnam.Debug(*debugFlag)
+	varnam.LangRules.IndicDigits = *indicDigitsFlag
+
 	args := flag.Args()
 
 	if *trainFlag {
