@@ -122,7 +122,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 		var tempFoundDictWords []Suggestion
 		if t.tokenType == VARNAM_TOKEN_SYMBOL {
 			if i == 0 {
-				for _, possibility := range t.token {
+				for _, possibility := range t.symbols {
 					// Weight has no use in dictionary lookup
 					value := getSymbolValue(possibility, 0)
 
@@ -143,8 +143,8 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 
 					till := result.Word
 
-					firstToken := t.token[0]
-					results[j].Word += getSymbolValue(firstToken, i)
+					firstSymbol := t.symbols[0]
+					results[j].Word += getSymbolValue(firstSymbol, i)
 
 					search := []string{results[j].Word}
 					searchResults := varnam.searchDictionary(search, false)
@@ -157,12 +157,12 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 						results[j].Weight = -1
 					}
 
-					for k, possibility := range t.token {
+					for k, symbol := range t.symbols {
 						if k == 0 {
 							continue
 						}
 
-						newTill := till + getSymbolValue(possibility, i)
+						newTill := till + getSymbolValue(symbol, i)
 
 						search = []string{newTill}
 						searchResults = varnam.searchDictionary(search, false)

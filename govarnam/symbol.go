@@ -25,7 +25,7 @@ type Symbol struct {
 // Token info for making a suggestion
 type Token struct {
 	tokenType int
-	token     []Symbol
+	symbols   []Symbol // Will be empty for non language character
 	position  int
 	character *string // Non language character
 }

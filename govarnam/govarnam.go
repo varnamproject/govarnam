@@ -85,7 +85,7 @@ func (varnam *Varnam) tokensToSuggestions(tokens []Token, greedy bool, partial b
 			}
 
 			if i == 0 {
-				for _, possibility := range t.token {
+				for _, possibility := range t.symbols {
 					if greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY {
 						continue
 					}
@@ -109,25 +109,33 @@ func (varnam *Varnam) tokensToSuggestions(tokens []Token, greedy bool, partial b
 					till := result.Word
 					tillWeight := result.Weight
 
-					firstToken := t.token[0]
+					/*
+						^ Copied the result first.
+						Then, add first symbol to the result
+					*/
+					firstSymbol := t.symbols[0]
 
 					lastChar, _ := getLastCharacter(till)
-					newValue, newWeight := varnam.getNewValueAndWeight(results[j].Weight, firstToken, lastChar, len(tokens), i)
+					newValue, newWeight := varnam.getNewValueAndWeight(results[j].Weight, firstSymbol, lastChar, len(tokens), i)
 
 					results[j].Word += newValue
 					results[j].Weight = newWeight
 
-					for k, possibility := range t.token {
-						if k == 0 || (greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY) {
+					/*
+						Go through rest of symbol possibilities, make new result
+						and add it to the results list
+					*/
+					for k, symbol := range t.symbols {
+						if k == 0 || (greedy && symbol.matchType == VARNAM_MATCH_POSSIBILITY) {
 							continue
 						}
 
-						if possibility.acceptCondition != VARNAM_TOKEN_ACCEPT_ALL && possibility.acceptCondition != state {
+						if symbol.acceptCondition != VARNAM_TOKEN_ACCEPT_ALL && symbol.acceptCondition != state {
 							continue
 						}
 
 						lastChar, _ := getLastCharacter(till)
-						newValue, newWeight := varnam.getNewValueAndWeight(tillWeight, possibility, lastChar, len(tokens), i)
+						newValue, newWeight := varnam.getNewValueAndWeight(tillWeight, symbol, lastChar, len(tokens), i)
 
 						newTill := till + newValue
 
