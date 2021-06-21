@@ -161,7 +161,11 @@ func (varnam *Varnam) setLangRules() {
 
 func sortSuggestions(sugs []Suggestion) []Suggestion {
 	sort.SliceStable(sugs, func(i, j int) bool {
-		return sugs[i].LearnedOn > sugs[j].LearnedOn || sugs[i].Weight > sugs[j].Weight
+		if sugs[i].LearnedOn == 0 || sugs[j].LearnedOn == 0 {
+			return sugs[i].LearnedOn > sugs[j].LearnedOn
+		} else {
+			return sugs[i].Weight > sugs[j].Weight
+		}
 	})
 	return sugs
 }
@@ -261,6 +265,8 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	if len(exactMatches) == 0 {
 		tokenSugs := varnam.tokensToSuggestions(tokens, false, false)
 		sugs = append(sugs, tokenSugs...)
+	} else {
+		sugs = append(sugs, exactMatches...)
 	}
 
 	result.ExactMatch = sortSuggestions(exactMatches)

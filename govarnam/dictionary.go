@@ -124,14 +124,13 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 			if i == 0 {
 				for _, possibility := range t.symbols {
 					// Weight has no use in dictionary lookup
-					value := getSymbolValue(possibility, 0)
+					sug := Suggestion{getSymbolValue(possibility, 0), 0, 0}
+					results = append(results, sug)
 
-					search := []string{value}
+					search := []string{sug.Word}
 					searchResults := varnam.searchDictionary(search, false)
 
 					if len(searchResults) > 0 {
-						sug := Suggestion{value, 0, 0}
-						results = append(results, sug)
 						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
 					}
 				}
