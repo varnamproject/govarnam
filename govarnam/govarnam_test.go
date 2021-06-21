@@ -3,6 +3,7 @@ package govarnam
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"path"
 	"reflect"
 	"runtime"
@@ -43,7 +44,7 @@ func setUp(langCode string) {
 }
 
 func tearDown() {
-	// os.RemoveAll(dictDir)
+	os.RemoveAll(dictDir)
 }
 
 func TestGreedyTokenizer(t *testing.T) {
@@ -62,6 +63,21 @@ func TestLearn(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മലയലം")
 	varnam.Learn("മലയാളം")
 	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മലയാളം")
+	assertEqual(t, varnam.Transliterate("malayalaththil").Suggestions[0].Word, "മലയാളത്തിൽ")
+}
+
+func TestLearnPattern(t *testing.T) {
+	assertEqual(t, varnam.Transliterate("india").Suggestions[0].Word, "ഇണ്ടി")
+	varnam.Train("india", "ഇന്ത്യ")
+	assertEqual(t, varnam.Transliterate("india").Suggestions[0].Word, "ഇന്ത്യ")
+	assertEqual(t, varnam.Transliterate("indiayil").Suggestions[0].Word, "ഇന്ത്യയിൽ")
+
+	// Word with virama at end
+	assertEqual(t, varnam.Transliterate("college").Suggestions[0].Word, "കൊല്ലെഗെ")
+	varnam.Train("college", "കോളേജ്")
+	assertEqual(t, varnam.Transliterate("college").Suggestions[0].Word, "കോളേജ്")
+	assertEqual(t, varnam.Transliterate("collegeil").Suggestions[0].Word, "കോളേജിൽ")
+	// assertEqual(t, varnam.Transliterate("collegil").Suggestions[0].Word, "കോളേജിൽ")
 }
 
 func TestMain(m *testing.M) {
