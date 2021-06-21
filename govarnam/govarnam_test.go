@@ -64,9 +64,11 @@ func TestLearn(t *testing.T) {
 	varnam.Learn("മലയാളം")
 	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മലയാളം")
 	assertEqual(t, varnam.Transliterate("malayalaththil").Suggestions[0].Word, "മലയാളത്തിൽ")
+	assertEqual(t, varnam.Transliterate("malayaalar").Suggestions[0].Word, "മലയാളർ")
+	assertEqual(t, varnam.Transliterate("malaykk").Suggestions[0].Word, "മലയ്ക്ക്")
 }
 
-func TestLearnPattern(t *testing.T) {
+func TestTrain(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("india").Suggestions[0].Word, "ഇണ്ടി")
 	varnam.Train("india", "ഇന്ത്യ")
 	assertEqual(t, varnam.Transliterate("india").Suggestions[0].Word, "ഇന്ത്യ")
@@ -78,6 +80,13 @@ func TestLearnPattern(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("college").Suggestions[0].Word, "കോളേജ്")
 	assertEqual(t, varnam.Transliterate("collegeil").Suggestions[0].Word, "കോളേജിൽ")
 	// assertEqual(t, varnam.Transliterate("collegil").Suggestions[0].Word, "കോളേജിൽ")
+}
+
+// Test zero width joiner/non-joiner things
+func TestZW(t *testing.T) {
+	assertEqual(t, varnam.Transliterate("thaazhvara").Suggestions[0].Word, "താഴ്വര")
+	// _ is ZWNJ
+	assertEqual(t, varnam.Transliterate("thaazh_vara").Suggestions[0].Word, "താഴ്‌വര")
 }
 
 func TestMain(m *testing.M) {
