@@ -6,6 +6,7 @@ import (
 	"path"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"testing"
 )
 
@@ -15,11 +16,12 @@ var (
 )
 
 // AssertEqual checks if values are equal
+// Thanks https://gist.github.com/samalba/6059502#gistcomment-2710184
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	if a == b {
 		return
 	}
-	// debug.PrintStack()
+	debug.PrintStack()
 	t.Errorf("Received %v (type %v), expected %v (type %v)", a, reflect.TypeOf(a), b, reflect.TypeOf(b))
 }
 

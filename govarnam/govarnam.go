@@ -163,9 +163,8 @@ func sortSuggestions(sugs []Suggestion) []Suggestion {
 	sort.SliceStable(sugs, func(i, j int) bool {
 		if sugs[i].LearnedOn == 0 || sugs[j].LearnedOn == 0 {
 			return sugs[i].LearnedOn > sugs[j].LearnedOn
-		} else {
-			return sugs[i].Weight > sugs[j].Weight
 		}
+		return sugs[i].Weight > sugs[j].Weight
 	})
 	return sugs
 }
