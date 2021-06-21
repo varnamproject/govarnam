@@ -175,11 +175,11 @@ func sortSuggestions(sugs []Suggestion) []Suggestion {
 	return sugs
 }
 
-// Transliterate a word
-func (varnam *Varnam) Transliterate(word string) TransliterationResult {
+// Returns tokens, exactMatches, dictionary results, greedy tokenized
+func (varnam *Varnam) transliterate(word string) ([]Token, []Suggestion, []Suggestion, []Suggestion) {
 	var (
-		results               []Suggestion
-		transliterationResult TransliterationResult
+		dictResults  []Suggestion
+		exactMatches []Suggestion
 	)
 
 	tokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
@@ -207,9 +207,9 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 		if dictSugs.exactMatch == false {
 			// These will be partial words
 			restOfWord := word[dictSugs.longestMatchPosition+1:]
-			results = varnam.tokenizeRestOfWord(restOfWord, dictSugs.sugs)
+			dictResults = varnam.tokenizeRestOfWord(restOfWord, dictSugs.sugs)
 		} else {
-			transliterationResult.ExactMatch = dictSugs.sugs
+			exactMatches = dictSugs.sugs
 
 			// Since partial words are in dictionary, exactMatch will be TRUE
 			// for pathway to a word. Hence we're calling this here
@@ -229,12 +229,12 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 			if match.Length < len(word) {
 				restOfWord := word[match.Length:]
 				filled := varnam.tokenizeRestOfWord(restOfWord, []Suggestion{match.Sug})
-				results = append(results, filled...)
+				dictResults = append(dictResults, filled...)
 			} else if match.Length == len(word) {
 				// Same length
-				transliterationResult.ExactMatch = append(transliterationResult.ExactMatch, match.Sug)
+				exactMatches = append(exactMatches, match.Sug)
 			} else {
-				results = append(results, match.Sug)
+				dictResults = append(dictResults, match.Sug)
 			}
 		}
 	}
@@ -248,23 +248,48 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 
 		for _, sugSet := range moreFromDict {
 			for _, sug := range sugSet {
-				results = append(results, sug)
+				dictResults = append(dictResults, sug)
 			}
 		}
 	}
 
-	if len(transliterationResult.ExactMatch) == 0 {
-		sugs := varnam.tokensToSuggestions(tokens, false, false)
-		results = append(results, sugs...)
+	// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
+	greedyTokenized := sortSuggestions(<-greedyTokenizedChan)
+
+	return tokens, exactMatches, dictResults, greedyTokenized
+}
+
+// Transliterate a word with all possibilities as results
+func (varnam *Varnam) Transliterate(word string) TransliterationResult {
+	var result TransliterationResult
+
+	tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(word)
+
+	sugs := dictResults
+
+	if len(exactMatches) == 0 {
+		tokenSugs := varnam.tokensToSuggestions(tokens, false, false)
+		sugs = append(sugs, tokenSugs...)
 	}
 
-	transliterationResult.ExactMatch = sortSuggestions(transliterationResult.ExactMatch)
-	transliterationResult.Suggestions = sortSuggestions(results)
+	result.ExactMatch = sortSuggestions(exactMatches)
+	result.Suggestions = sortSuggestions(sugs)
+	result.GreedyTokenized = sortSuggestions(greedyTokenized)
 
-	// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
-	transliterationResult.GreedyTokenized = sortSuggestions(<-greedyTokenizedChan)
+	return result
+}
 
-	return transliterationResult
+// TransliterateGreedy transliterate word with onlu greedy matches as result suggestions
+func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
+	var result TransliterationResult
+
+	_, exactMatches, dictResults, greedyTokenized := varnam.transliterate(word)
+
+	result.ExactMatch = sortSuggestions(exactMatches)
+	result.Suggestions = sortSuggestions(dictResults)
+	result.GreedyTokenized = sortSuggestions(greedyTokenized)
+
+	return result
 }
 
 // Init Initialize varnam

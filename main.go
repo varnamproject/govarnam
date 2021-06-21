@@ -17,6 +17,7 @@ func main() {
 	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
 
 	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
+	greedy := flag.Bool("greedy", false, "Show only exactly matched suggestions")
 
 	flag.Parse()
 
@@ -55,16 +56,25 @@ func main() {
 
 		fmt.Printf("Unlearnt %s", word)
 	} else {
-		results := varnam.Transliterate(args[0])
+		var results govarnam.TransliterationResult
+
+		if *greedy {
+			results = varnam.TransliterateGreedy(args[0])
+		} else {
+			results = varnam.Transliterate(args[0])
+		}
+
 		if len(results.ExactMatch) > 0 {
 			fmt.Println("Exact Matches")
 			for _, sug := range results.ExactMatch {
 				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 			}
 		}
-		fmt.Println("Suggestions")
-		for _, sug := range results.Suggestions {
-			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+		if len(results.Suggestions) > 0 {
+			fmt.Println("Suggestions")
+			for _, sug := range results.Suggestions {
+				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+			}
 		}
 		fmt.Println("Greedy Tokenized")
 		for _, sug := range results.GreedyTokenized {
