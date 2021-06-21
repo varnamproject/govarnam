@@ -124,9 +124,16 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 			if i == 0 {
 				for _, possibility := range t.token {
 					// Weight has no use in dictionary lookup
-					sug := Suggestion{possibility.value1, 0, 0}
-					results = append(results, sug)
-					tempFoundDictWords = append(tempFoundDictWords, sug)
+					value := getSymbolValue(possibility, 0)
+
+					search := []string{value}
+					searchResults := varnam.searchDictionary(search, false)
+
+					if len(searchResults) > 0 {
+						sug := Suggestion{value, 0, 0}
+						results = append(results, sug)
+						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
+					}
 				}
 			} else {
 				for j, result := range results {
@@ -137,7 +144,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 					till := result.Word
 
 					firstToken := t.token[0]
-					results[j].Word += firstToken.value1
+					results[j].Word += getSymbolValue(firstToken, i)
 
 					search := []string{results[j].Word}
 					searchResults := varnam.searchDictionary(search, false)
@@ -155,7 +162,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 							continue
 						}
 
-						newTill := till + possibility.value1
+						newTill := till + getSymbolValue(possibility, i)
 
 						search = []string{newTill}
 						searchResults = varnam.searchDictionary(search, false)
@@ -170,7 +177,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 				}
 			}
 		}
-		if i > 0 && len(tempFoundDictWords) > 0 {
+		if len(tempFoundDictWords) > 0 {
 			foundDictWords = tempFoundDictWords
 			foundPosition = t.position
 		}
