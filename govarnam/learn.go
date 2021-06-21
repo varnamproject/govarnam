@@ -48,11 +48,32 @@ func (varnam *Varnam) insertWord(word string, confidence int, partial bool) {
 	checkError(err)
 }
 
+// Sanitize a word, remove unwanted characters before learning
+func sanitizeWord(word string) string {
+	// Remove leading & trailing whitespaces
+	word = strings.TrimSpace(word)
+
+	// Remove leading ZWJ & ZWNJ
+	firstChar, size := getFirstCharacter(word)
+	if firstChar == ZWJ || firstChar == ZWNJ {
+		word = word[size:len(word)]
+	}
+
+	// Remove trailing ZWJ & ZWNJ
+	lastChar, size := getLastCharacter(word)
+	if lastChar == ZWJ || lastChar == ZWNJ {
+		word = word[0 : len(word)-size]
+	}
+
+	return word
+}
+
 // Learn a word. If already exist, increases confidence of the pathway to that word.
 // When learning a word, each path to that word is inserted into DB.
 // Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
 func (varnam *Varnam) Learn(word string) {
-	conjuncts := varnam.splitWordByConjunct(strings.TrimSpace(word))
+	word = sanitizeWord(word)
+	conjuncts := varnam.splitWordByConjunct(word)
 
 	if len(conjuncts) == 1 {
 		varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)

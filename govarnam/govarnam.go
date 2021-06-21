@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 	"sort"
-	"unicode/utf8"
 
 	// sqlite3
 	_ "github.com/mattn/go-sqlite3"
@@ -150,22 +149,6 @@ func (varnam *Varnam) tokensToSuggestions(tokens []Token, greedy bool, partial b
 func (varnam *Varnam) setLangRules() {
 	varnam.LangRules.IndicDigits = false
 	varnam.LangRules.Virama = varnam.searchSymbol("~", VARNAM_MATCH_EXACT)[0].value1
-}
-
-func getLastCharacter(input string) (string, int) {
-	r, size := utf8.DecodeLastRuneInString(input)
-	if r == utf8.RuneError && (size == 0 || size == 1) {
-		size = 0
-	}
-	return input[len(input)-size:], size
-}
-
-func (varnam *Varnam) removeLastVirama(input string) string {
-	char, size := getLastCharacter(input)
-	if char == varnam.LangRules.Virama {
-		return input[0 : len(input)-size]
-	}
-	return input
 }
 
 func sortSuggestions(sugs []Suggestion) []Suggestion {
