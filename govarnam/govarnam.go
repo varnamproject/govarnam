@@ -161,7 +161,7 @@ func (varnam *Varnam) setLangRules() {
 
 func sortSuggestions(sugs []Suggestion) []Suggestion {
 	sort.SliceStable(sugs, func(i, j int) bool {
-		if sugs[i].LearnedOn == 0 || sugs[j].LearnedOn == 0 {
+		if (sugs[i].LearnedOn == 0 || sugs[j].LearnedOn == 0) && !(sugs[i].LearnedOn == 0 && sugs[j].LearnedOn == 0) {
 			return sugs[i].LearnedOn > sugs[j].LearnedOn
 		}
 		return sugs[i].Weight > sugs[j].Weight
