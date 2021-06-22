@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"testing"
+	"time"
 )
 
 var (
@@ -61,19 +62,39 @@ func TestTokenizer(t *testing.T) {
 }
 
 func TestLearn(t *testing.T) {
+	// Before learning
 	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മാലയലം")
+
 	varnam.Learn("മലയാളം")
+
+	// After learning
 	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മലയാളം")
 	assertEqual(t, varnam.Transliterate("malayalaththil").Suggestions[0].Word, "മലയാളത്തിൽ")
 	assertEqual(t, varnam.Transliterate("malayaalar").Suggestions[0].Word, "മലയാളർ")
 	assertEqual(t, varnam.Transliterate("malaykk").Suggestions[0].Word, "മലയ്ക്ക്")
 
+	start := time.Now().UTC()
 	varnam.Learn("മലയാളത്തിൽ")
+	end := time.Now().UTC()
+
+	start1SecondBefore := time.Date(start.Year(), start.Month(), start.Day(), start.Hour(), start.Minute(), start.Second()-1, 0, start.Location())
+	end1SecondAfter := time.Date(end.Year(), end.Month(), end.Day(), end.Hour(), end.Minute(), end.Second()+1, 0, end.Location())
+
+	// varnam.Debug(true)
 	sugs := varnam.Transliterate("malayala").Suggestions
 
 	assertEqual(t, sugs[0], Suggestion{"മലയാളം", VARNAM_LEARNT_WORD_MIN_CONFIDENCE, sugs[0].LearnedOn})
-	assertEqual(t, sugs[1], Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_CONFIDENCE, sugs[0].LearnedOn})
 
+	// Check the time learnt is right (UTC) ?
+	learnedOn := time.Unix(int64(sugs[1].LearnedOn), 0)
+
+	if !learnedOn.After(start1SecondBefore) || !learnedOn.Before(end1SecondAfter) {
+		t.Errorf("Learn time %v (%v) not in between %v and %v", learnedOn, sugs[1].LearnedOn, start1SecondBefore, end1SecondAfter)
+	}
+
+	assertEqual(t, sugs[1], Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_CONFIDENCE, sugs[1].LearnedOn})
+
+	// Learn the word again
 	// This word will now be at the top
 	// Test if confidence has increased by one now
 	varnam.Learn("മലയാളത്തിൽ")

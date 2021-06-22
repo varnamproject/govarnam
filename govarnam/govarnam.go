@@ -241,9 +241,7 @@ func (varnam *Varnam) transliterate(word string) ([]Token, []Suggestion, []Sugge
 		}
 
 		for _, sugSet := range moreFromDict {
-			for _, sug := range sugSet {
-				dictResults = append(dictResults, sug)
-			}
+			dictResults = append(dictResults, sugSet...)
 		}
 	}
 
