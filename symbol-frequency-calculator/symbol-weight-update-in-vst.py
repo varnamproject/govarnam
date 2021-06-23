@@ -23,8 +23,6 @@ with open(file, "r", encoding="utf8", errors='ignore') as f:
         word, frequency = line.split(" ")
         freqs[word] = int(frequency)
 
-print(freqs)
-
 patternAndSymbols = {}
 for pattern, symbol in patternsAndSymbols:
     if pattern not in patternAndSymbols:
@@ -34,12 +32,20 @@ for pattern, symbol in patternsAndSymbols:
 
 for pattern, symbols in patternAndSymbols.items():
     ranks = {}
+
+    s = 0
     for symbol, freq in symbols:
-        ranks[symbol] = int(freq)
+        s += freq
+
+    if s == 0:
+        continue
+    
+    for symbol, freq in symbols:
+        ranks[symbol] = int((int(freq) / s) * 100)
 
     ranks = dict(sorted(ranks.items(), key=lambda item: item[1], reverse=True))
-    rank = 0
-    for symbol, _ in ranks.items():
+
+    for symbol, rank in ranks.items():
         print(pattern, rank, symbol)
 
         cur.execute("UPDATE symbols SET weight = ? WHERE pattern = ? AND value1 = ?", (rank, pattern, symbol))
