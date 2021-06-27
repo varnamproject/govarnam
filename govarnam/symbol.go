@@ -58,9 +58,9 @@ func (varnam *Varnam) searchSymbol(ch string, matchType int) []Symbol {
 	)
 
 	if matchType == VARNAM_MATCH_ALL {
-		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND priority >= 0", ch)
+		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? ORDER BY match_type ASC, weight DESC", ch)
 	} else {
-		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND priority >= 0 AND match_type = ?", ch, matchType)
+		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
 	}
 
 	if err != nil {
@@ -84,6 +84,7 @@ func (varnam *Varnam) searchSymbol(ch string, matchType int) []Symbol {
 	return results
 }
 
+// Convert a string into Tokens for later processing
 func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 	var results []Token
 
@@ -98,7 +99,7 @@ func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 
 		matches := varnam.searchSymbol(sequence, matchType)
 
-		if varnam.debug {
+		if varnam.Debug {
 			fmt.Println(sequence, matches)
 		}
 
@@ -139,14 +140,14 @@ func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 
 // Tokenize end part of a word and append it to results
 func (varnam *Varnam) tokenizeRestOfWord(word string, results []Suggestion) []Suggestion {
-	if varnam.debug {
+	if varnam.Debug {
 		fmt.Printf("Tokenizing %s\n", word)
 	}
 
-	restOfWordTokens := varnam.tokenizeWord(word, VARNAM_MATCH_EXACT)
-	restOfWordSugs := varnam.tokensToSuggestions(restOfWordTokens, true, true)
+	restOfWordTokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
+	restOfWordSugs := varnam.tokensToSuggestions(restOfWordTokens, true)
 
-	if varnam.debug {
+	if varnam.Debug {
 		fmt.Println("Tokenized:", restOfWordSugs)
 	}
 
@@ -223,4 +224,23 @@ func getSymbolValue(symbol Symbol, position int) string {
 	} else {
 		return symbol.value1 // ആ
 	}
+}
+
+// Remove non-exact matching tokens
+func removeNonExactTokens(tokens []Token) []Token {
+	// Remove non-exact symbols
+	for i, token := range tokens {
+		var reducedSymbols []Symbol
+		for _, symbol := range token.symbols {
+			if symbol.matchType == VARNAM_MATCH_EXACT {
+				reducedSymbols = append(reducedSymbols, symbol)
+			} else {
+				// If a possibility result, then rest of them will also be same
+				// so save time by skipping rest
+				break
+			}
+		}
+		tokens[i].symbols = reducedSymbols
+	}
+	return tokens
 }

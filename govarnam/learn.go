@@ -84,7 +84,7 @@ func (varnam *Varnam) Learn(word string) {
 				continue
 			}
 			sequence += ch
-			if varnam.debug {
+			if varnam.Debug {
 				fmt.Println(sequence)
 			}
 			if i+1 == len(conjuncts) {
@@ -107,7 +107,7 @@ func (varnam *Varnam) Unlearn(word string) {
 	for i := range conjuncts {
 		// Loop will be going from full string to the first conjunct
 		sequence := strings.Join(conjuncts[0:len(conjuncts)-i], "")
-		if varnam.debug {
+		if varnam.Debug {
 			fmt.Println(sequence)
 		}
 
@@ -134,7 +134,7 @@ func (varnam *Varnam) Unlearn(word string) {
 
 			// No need to remove from `patterns_content` since FOREIGN KEY ON DELETE CASCADE will work
 
-			if varnam.debug {
+			if varnam.Debug {
 				fmt.Printf("Removed %s\n", sequence)
 			}
 		}

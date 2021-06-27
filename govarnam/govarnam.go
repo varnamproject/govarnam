@@ -6,11 +6,13 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strings"
 
 	// sqlite3
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// LangRules language reulated config
 type LangRules struct {
 	Virama      string
 	IndicDigits bool
@@ -18,10 +20,11 @@ type LangRules struct {
 
 // Varnam config
 type Varnam struct {
-	vstConn   *sql.DB
-	dictConn  *sql.DB
-	LangRules LangRules
-	debug     bool
+	vstConn          *sql.DB
+	dictConn         *sql.DB
+	LangRules        LangRules
+	Debug            bool
+	SuggestionsLimit int
 }
 
 // Suggestion suggestion
@@ -38,13 +41,17 @@ type TransliterationResult struct {
 	GreedyTokenized []Suggestion
 }
 
-func (varnam *Varnam) getNewValueAndWeight(weight int, symbol Symbol, previousCharacter string, tokensLength int, position int) (string, int) {
+func getWeight(symbol Symbol) int {
+	return symbol.weight + (VARNAM_MATCH_POSSIBILITY-symbol.matchType)*100
+}
+
+func (varnam *Varnam) getNewValueAndWeight(weight int, symbol Symbol, previousCharacter string, position int) (string, int) {
 	/**
 	 * Weight priority:
 	 * 1. Position of character in string
 	 * 2. Symbol's probability occurence
 	 */
-	newWeight := weight - symbol.weight + (tokensLength - position) + (VARNAM_MATCH_POSSIBILITY - symbol.matchType)
+	newWeight := weight + getWeight(symbol)
 
 	var value string
 
@@ -70,91 +77,135 @@ func (varnam *Varnam) getNewValueAndWeight(weight int, symbol Symbol, previousCh
  * greed - Set to true for getting only VARNAM_MATCH_EXACT suggestions.
  * partial - set true if only a part of a word is being tokenized and not an entire word
  */
-func (varnam *Varnam) tokensToSuggestions(tokens []Token, greedy bool, partial bool) []Suggestion {
+func (varnam *Varnam) tokensToSuggestions(inputTokens []Token, partial bool) []Suggestion {
 	var results []Suggestion
 
-	for i, t := range tokens {
-		if t.tokenType == VARNAM_TOKEN_SYMBOL {
-			var state int
-			if i == 0 {
-				state = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
-			} else if i+1 == len(tokens) {
-				state = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
-			} else {
-				state = VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
+	tokens := make([]Token, len(inputTokens))
+	copy(tokens, inputTokens)
+
+	// First, remove less weighted symbols
+	for i, token := range tokens {
+		var reducedSymbols []Symbol
+		for _, symbol := range token.symbols {
+			reducedSymbols = append(reducedSymbols, symbol)
+
+			// TODO should 10% be fixed for all languages ?
+			// Because this may differ according to data source
+			// from where symbol frequency was found out
+			if getWeight(symbol) < 10 {
+				break
 			}
+		}
+		tokens[i].symbols = reducedSymbols
+	}
 
-			if i == 0 {
-				for _, possibility := range t.symbols {
-					if greedy && possibility.matchType == VARNAM_MATCH_POSSIBILITY {
-						continue
-					}
+	addWord := func(word []string, weight int) {
+		weight = weight / 100
+		results = append(results, Suggestion{strings.Join(word, ""), weight, 0})
+	}
 
-					if possibility.acceptCondition != VARNAM_TOKEN_ACCEPT_ALL && possibility.acceptCondition != state {
-						continue
-					}
+	// Tracks index of each token possibilities
+	// -----
+	// Suppose input is "vardhichu". We will try each possibilities of each token
+	// The index of these possibilities is tracked here
+	// [0 0 0 0] => വ ർ ധി ചു
+	// [0 0 0 1] => വ ർ ധി ച്ചു
+	// [0 0 1 0] => വ ർ ഥി ചു
+	// [0 0 1 1] => വ ർ ഥി ച്ചു
+	tokenPositions := make([]int, len(tokens))
 
-					var value string
-					if partial {
-						value = getSymbolValue(possibility, 1)
+	// We go right to left.
+	// We try possibilities from the last character (k) where there are multiple possibilities.
+	// if it's over we shift the possibility on left, so on and on
+	k := len(tokens) - 1
+
+	i := 0
+	for i >= 0 {
+		if tokens[i].tokenType == VARNAM_TOKEN_SYMBOL && len(tokens[i].symbols)-1 > tokenPositions[i] {
+			k = i
+			break
+		}
+		i--
+	}
+
+	for len(results) < varnam.SuggestionsLimit {
+		// One loop will make one word
+		word := make([]string, len(tokens))
+		weight := 0
+
+		// i is the character position we're making
+		i := len(tokens) - 1
+		for i >= 0 {
+			t := tokens[i]
+			if t.tokenType == VARNAM_TOKEN_SYMBOL {
+				symbol := t.symbols[tokenPositions[i]]
+
+				if symbol.acceptCondition != VARNAM_TOKEN_ACCEPT_ALL {
+					var state int
+					if i == 0 {
+						state = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
+					} else if i == len(tokens)-1 {
+						state = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
 					} else {
-						value = getSymbolValue(possibility, 0)
+						state = VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
 					}
-
-					sug := Suggestion{value, VARNAM_TOKEN_BASIC_WEIGHT - possibility.weight, 0}
-					results = append(results, sug)
-				}
-			} else {
-				for j, result := range results {
-					till := result.Word
-					tillWeight := result.Weight
-
-					/*
-						^ Copied the result first.
-						Then, add first symbol to the result
-					*/
-					firstSymbol := t.symbols[0]
-
-					lastChar, _ := getLastCharacter(till)
-					newValue, newWeight := varnam.getNewValueAndWeight(results[j].Weight, firstSymbol, lastChar, len(tokens), i)
-
-					results[j].Word += newValue
-					results[j].Weight = newWeight
-
-					/*
-						Go through rest of symbol possibilities, make new result
-						and add it to the results list
-					*/
-					for k, symbol := range t.symbols {
-						if k == 0 || (greedy && symbol.matchType == VARNAM_MATCH_POSSIBILITY) {
-							continue
-						}
-
-						if symbol.acceptCondition != VARNAM_TOKEN_ACCEPT_ALL && symbol.acceptCondition != state {
-							continue
-						}
-
-						lastChar, _ := getLastCharacter(till)
-						newValue, newWeight := varnam.getNewValueAndWeight(tillWeight, symbol, lastChar, len(tokens), i)
-
-						newTill := till + newValue
-
-						sug := Suggestion{newTill, newWeight, 0}
-						results = append(results, sug)
+					if symbol.acceptCondition != state {
+						i--
+						continue
 					}
 				}
+
+				symbolWeight := getWeight(symbol)
+
+				var value string
+				if partial {
+					value = getSymbolValue(symbol, 1)
+				} else {
+					value = getSymbolValue(symbol, 0)
+				}
+
+				word[i] = value
+				weight += symbolWeight
+			} else if t.tokenType == VARNAM_TOKEN_CHAR {
+				word[i] = *t.character
 			}
-		} else if t.tokenType == VARNAM_TOKEN_CHAR {
-			for i := range results {
-				results[i].Word += *t.character
+			i--
+		}
+
+		fmt.Println(k, tokenPositions, tokens[k].symbols)
+
+		// If no more possibilites, go to the next one
+		if tokenPositions[k] >= len(tokens[k].symbols)-1 {
+			// Reset the currently permuted position
+			tokenPositions[k] = 0
+
+			// Find the next place where there are more possibilities
+			i := k - 1
+			for i >= 0 {
+				if tokens[i].tokenType == VARNAM_TOKEN_SYMBOL && len(tokens[i].symbols)-1 > tokenPositions[i] {
+					// Set the newly gonna permuting position
+					tokenPositions[i]++
+					break
+				} else {
+					tokenPositions[i] = 0
+				}
+				i--
 			}
+			addWord(word, weight)
+			if i < 0 {
+				break
+			}
+		} else {
+			tokenPositions[k]++
+			addWord(word, weight)
 		}
 	}
 
 	return results
 }
 
-func (varnam *Varnam) setLangRules() {
+func (varnam *Varnam) setDefaultConfig() {
+	varnam.SuggestionsLimit = 10
 	varnam.LangRules.IndicDigits = false
 	varnam.LangRules.Virama = varnam.searchSymbol("~", VARNAM_MATCH_EXACT)[0].value1
 }
@@ -189,11 +240,11 @@ func (varnam *Varnam) transliterate(word string) ([]Token, []Suggestion, []Sugge
 
 	go varnam.channelGetFromDictionary(tokens, dictSugsChan)
 	go varnam.channelGetFromPatternDictionary(word, patternDictSugsChan)
-	go varnam.channelTokensToSuggestions(tokens, true, false, greedyTokenizedChan)
+	go varnam.channelTokensToGreedySuggestions(tokens, greedyTokenizedChan)
 
 	dictSugs := <-dictSugsChan
 
-	if varnam.debug {
+	if varnam.Debug {
 		fmt.Println("Dictionary results:", dictSugs)
 	}
 
@@ -215,7 +266,7 @@ func (varnam *Varnam) transliterate(word string) ([]Token, []Suggestion, []Sugge
 	patternDictSugs := <-patternDictSugsChan
 
 	if len(patternDictSugs) > 0 {
-		if varnam.debug {
+		if varnam.Debug {
 			fmt.Println("Pattern dictionary results:", patternDictSugs)
 		}
 
@@ -236,7 +287,7 @@ func (varnam *Varnam) transliterate(word string) ([]Token, []Suggestion, []Sugge
 	if triggeredGetMoreFromDict {
 		moreFromDict := <-moreFromDictChan
 
-		if varnam.debug {
+		if varnam.Debug {
 			fmt.Println("More dictionary results:", moreFromDict)
 		}
 
@@ -260,7 +311,7 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	sugs := dictResults
 
 	if len(exactMatches) == 0 {
-		tokenSugs := varnam.tokensToSuggestions(tokens, false, false)
+		tokenSugs := varnam.tokensToSuggestions(tokens, false)
 		sugs = append(sugs, tokenSugs...)
 	} else {
 		sugs = append(sugs, exactMatches...)
@@ -273,7 +324,7 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	return result
 }
 
-// TransliterateGreedy transliterate word with onlu greedy matches as result suggestions
+// TransliterateGreedy transliterate word without all possible suggestions in result
 func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
 	var result TransliterationResult
 
@@ -291,7 +342,7 @@ func Init(vstPath string, dictPath string) Varnam {
 	varnam := Varnam{}
 	varnam.openVST(vstPath)
 	varnam.openDict(dictPath)
-	varnam.setLangRules()
+	varnam.setDefaultConfig()
 	return varnam
 }
 
@@ -334,11 +385,6 @@ func dirExists(loc string) bool {
 		return false
 	}
 	return info.IsDir()
-}
-
-// Debug turn on or off debug messages
-func (varnam *Varnam) Debug(val bool) {
-	varnam.debug = val
 }
 
 // Close close db connections

@@ -28,7 +28,7 @@ func main() {
 		return
 	}
 
-	varnam.Debug(*debugFlag)
+	varnam.Debug = *debugFlag
 	varnam.LangRules.IndicDigits = *indicDigitsFlag
 
 	args := flag.Args()
