@@ -14,14 +14,14 @@ file = sys.argv[2]
 con = sqlite3.connect(db)
 cur = con.cursor()
 
-cur.execute("SELECT pattern, value1 FROM symbols WHERE pattern IN (SELECT pattern from symbols GROUP by pattern HAVING COUNT(pattern) > 1)")
+cur.execute("SELECT pattern, value1 FROM symbols WHERE match_type = 2 AND pattern IN (SELECT pattern from symbols GROUP by pattern HAVING COUNT(pattern) > 1)")
 patternsAndSymbols = cur.fetchall()
 
 freqs = {}
 with open(file, "r", encoding="utf8", errors='ignore') as f:
     for line in f:
-        word, frequency = line.split(" ")
-        freqs[word] = int(frequency)
+        symbol, frequency = line.split(" ")
+        freqs[symbol] = int(frequency)
 
 patternAndSymbols = {}
 for pattern, symbol in patternsAndSymbols:
@@ -37,10 +37,9 @@ for pattern, symbols in patternAndSymbols.items():
     for symbol, freq in symbols:
         s += freq
 
-    if s == 0:
-        continue
-    
     for symbol, freq in symbols:
+        if freq == 0:
+            continue
         ranks[symbol] = int((int(freq) / s) * 100)
 
     ranks = dict(sorted(ranks.items(), key=lambda item: item[1], reverse=True))
