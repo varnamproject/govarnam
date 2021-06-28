@@ -55,7 +55,7 @@ func (varnam *Varnam) tokensToSuggestions(tokens []Token, partial bool) []Sugges
 			// TODO should 10% be fixed for all languages ?
 			// Because this may differ according to data source
 			// from where symbol frequency was found out
-			if getSymbolWeight(symbol) < 1 {
+			if getSymbolWeight(symbol) < 10 {
 				break
 			}
 			reducedSymbols = append(reducedSymbols, symbol)
@@ -64,6 +64,7 @@ func (varnam *Varnam) tokensToSuggestions(tokens []Token, partial bool) []Sugges
 	}
 
 	addWord := func(word []string, weight int) {
+		// TODO avoid division, performance improvement ?
 		weight = weight / 100
 		results = append(results, Suggestion{strings.Join(word, ""), weight, 0})
 	}
