@@ -73,12 +73,12 @@ func TestTokenizer(t *testing.T) {
 
 func TestLearn(t *testing.T) {
 	// Non language word
-	assertEqual(t, varnam.Learn("Шаблон"), false)
+	assertEqual(t, varnam.Learn("Шаблон", 0), false)
 
 	// Before learning
 	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മലയലം")
 
-	varnam.Learn("മലയാളം")
+	varnam.Learn("മലയാളം", 0)
 
 	// After learning
 	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മലയാളം")
@@ -87,7 +87,7 @@ func TestLearn(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("malaykk").Suggestions[0].Word, "മലയ്ക്ക്")
 
 	start := time.Now().UTC()
-	varnam.Learn("മലയാളത്തിൽ")
+	varnam.Learn("മലയാളത്തിൽ", 0)
 	end := time.Now().UTC()
 
 	start1SecondBefore := time.Date(start.Year(), start.Month(), start.Day(), start.Hour(), start.Minute(), start.Second()-1, 0, start.Location())
@@ -110,7 +110,7 @@ func TestLearn(t *testing.T) {
 	// Learn the word again
 	// This word will now be at the top
 	// Test if confidence has increased by one now
-	varnam.Learn("മലയാളത്തിൽ")
+	varnam.Learn("മലയാളത്തിൽ", 0)
 	sug := varnam.Transliterate("malayala").Suggestions[0]
 	assertEqual(t, sug, Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_CONFIDENCE + 1, sug.LearnedOn})
 
