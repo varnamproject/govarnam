@@ -1,9 +1,12 @@
 package govarnam
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -25,11 +28,15 @@ func checkError(err error) {
 // Partial - Whether the word is not a real word, but only part of a pathway to a word
 func (varnam *Varnam) insertWord(word string, confidence int, partial bool) {
 	var query string
+
 	if partial {
 		query = "INSERT OR IGNORE INTO words(word, confidence, learned_on) VALUES (trim(?), ?, NULL)"
 	} else {
+		// The learned_on value determines whether it's a complete
+		// word or just partial, i.e part of a path to a word
 		query = "INSERT OR IGNORE INTO words(word, confidence, learned_on) VALUES (trim(?), ?, strftime('%s', 'now'))"
 	}
+
 	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
@@ -38,7 +45,12 @@ func (varnam *Varnam) insertWord(word string, confidence int, partial bool) {
 	_, err = stmt.ExecContext(ctx, word, confidence)
 	checkError(err)
 
-	query = "UPDATE words SET confidence = confidence + 1 WHERE word = ?"
+	if partial {
+		query = "UPDATE words SET confidence = confidence + 1 WHERE word = ?"
+	} else {
+		query = "UPDATE words SET confidence = confidence + 1, learned_on = strftime('%s', 'now') WHERE word = ?"
+	}
+
 	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelfunc()
 	stmt, err = varnam.dictConn.PrepareContext(ctx, query)
@@ -71,9 +83,9 @@ func sanitizeWord(word string) string {
 // Learn a word. If already exist, increases confidence of the pathway to that word.
 // When learning a word, each path to that word is inserted into DB.
 // Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
-func (varnam *Varnam) Learn(word string) bool {
+func (varnam *Varnam) Learn(word string, confidence int) bool {
 	word = sanitizeWord(word)
-	conjuncts := varnam.splitWordByConjunct(word)
+	conjuncts, _ := varnam.splitWordByConjunct(word)
 
 	if len(conjuncts) == 0 {
 		return false
@@ -88,11 +100,20 @@ func (varnam *Varnam) Learn(word string) bool {
 			}
 			sequence += ch
 			if varnam.Debug {
-				fmt.Println(sequence)
+				fmt.Println("Learning", sequence)
 			}
 			if i+1 == len(conjuncts) {
 				// The word. The final word should have the highest confidence
-				varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
+
+				var weight int
+
+				// -1 because insertWord will increment one
+				if confidence == 0 {
+					weight = VARNAM_LEARNT_WORD_MIN_CONFIDENCE - 1
+				} else {
+					weight = confidence - 1
+				}
+				varnam.insertWord(sequence, weight, false)
 			} else {
 				// Partial word. Part of pathway to the word to be learnt
 				varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-i), true)
@@ -103,8 +124,12 @@ func (varnam *Varnam) Learn(word string) bool {
 }
 
 // Unlearn a word, remove from words DB and pattern if there is
-func (varnam *Varnam) Unlearn(word string) {
-	conjuncts := varnam.splitWordByConjunct(strings.TrimSpace(word))
+func (varnam *Varnam) Unlearn(word string) bool {
+	conjuncts, _ := varnam.splitWordByConjunct(strings.TrimSpace(word))
+
+	if len(conjuncts) == 0 {
+		return false
+	}
 
 	varnam.dictConn.Exec("PRAGMA foreign_keys = ON")
 
@@ -145,11 +170,12 @@ func (varnam *Varnam) Unlearn(word string) {
 	}
 
 	varnam.dictConn.Exec("PRAGMA foreign_keys = OFF")
+	return true
 }
 
 // Train a word with a particular pattern. Pattern => word
 func (varnam *Varnam) Train(pattern string, word string) error {
-	varnam.Learn(word)
+	varnam.Learn(word, 0)
 
 	wordInfo := varnam.getWordInfo(word)
 
@@ -188,4 +214,71 @@ func (varnam *Varnam) getWordInfo(word string) *WordInfo {
 		return &wordInfo
 	}
 	return nil
+}
+
+// LearnFromFile Learn all words in a file
+func (varnam *Varnam) LearnFromFile(file io.Reader) {
+	// io.Reader is a stream, so only one time iteration possible
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanWords)
+
+	// First, see if this is a frequency report file
+	// A frequency report file has the format :
+	//    word frequency
+	// Here the frequency will be the confidence
+	frequencyReport := false
+
+	word := ""
+	count := 0
+	for scanner.Scan() {
+		curWord := scanner.Text()
+
+		if count <= 1 {
+			// Check the first 2 words. If it's of format <word frequency
+			// Then treat rest of words as frequency report
+			if count == 0 {
+				word = curWord
+				count++
+				continue
+			}
+
+			confidence, err := strconv.Atoi(curWord)
+			if err == nil {
+				// It's a number
+				frequencyReport = true
+				varnam.Learn(word, confidence)
+				word = ""
+			} else {
+				// Not a frequency report, so attempt to leatn those 2 words
+				varnam.Learn(word, 0)
+				varnam.Learn(curWord, 0)
+			}
+
+			if varnam.Debug {
+				fmt.Println("Frequency report :", frequencyReport)
+			}
+		} else if frequencyReport {
+			if word == "" {
+				word = curWord
+			} else {
+				confidence, err := strconv.Atoi(curWord)
+
+				if err == nil {
+					varnam.Learn(word, confidence)
+					count++
+				}
+				word = ""
+			}
+		} else {
+			varnam.Learn(curWord, 0)
+			count++
+		}
+		if count%500 == 0 {
+			fmt.Printf("Learnt %d words\n", count)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"gitlab.com/subins2000/govarnam/govarnam"
 )
@@ -15,6 +16,8 @@ func main() {
 	learnFlag := flag.Bool("learn", false, "Learn a word")
 	unlearnFlag := flag.Bool("unlearn", false, "Unlearn a word")
 	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
+
+	learnFromFileFlag := flag.Bool("learn-from-file", false, "Learn words in a file")
 
 	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
 	greedy := flag.Bool("greedy", false, "Show only exactly matched suggestions")
@@ -46,7 +49,7 @@ func main() {
 	} else if *learnFlag {
 		word := args[0]
 
-		if varnam.Learn(word) {
+		if varnam.Learn(word, 0) {
 			fmt.Printf("Learnt %s\n", word)
 		} else {
 			fmt.Printf("Couldn't learn %s", word)
@@ -54,9 +57,19 @@ func main() {
 	} else if *unlearnFlag {
 		word := args[0]
 
-		varnam.Unlearn(word)
+		if varnam.Unlearn(word) {
+			fmt.Printf("Unlearnt %s\n", word)
+		} else {
+			fmt.Printf("Couldn't learn %s", word)
+		}
+	} else if *learnFromFileFlag {
+		file, err := os.Open(args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
 
-		fmt.Printf("Unlearnt %s\n", word)
+		varnam.LearnFromFile(file)
 	} else {
 		var results govarnam.TransliterationResult
 

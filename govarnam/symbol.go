@@ -174,11 +174,14 @@ func (varnam *Varnam) tokenizeRestOfWord(word string, results []Suggestion) []Su
 }
 
 // Split a word into conjuncts
-func (varnam *Varnam) splitWordByConjunct(input string) []string {
+func (varnam *Varnam) splitWordByConjunct(input string) ([]string, error) {
 	var results []string
 
 	var prevSequenceMatch string
 	var sequence string
+
+	// Not using len() because it will be wrong for non ASCII characters
+	var sequenceLength int
 
 	word := []rune(input)
 
@@ -187,13 +190,14 @@ func (varnam *Varnam) splitWordByConjunct(input string) []string {
 		ch := string(word[i])
 
 		sequence += ch
+		sequenceLength++
 
 		if !varnam.symbolExist(sequence) {
 			// No more matches
 
-			if len(sequence) == 1 {
-				// No matches for a single char, add it
-				results = append(results, sequence)
+			if sequenceLength == 1 {
+				// Has non language characters, give error
+				return []string{}, fmt.Errorf("Has non language characters")
 			} else if len(prevSequenceMatch) > 0 {
 				// Backtrack and add the previous sequence matches
 				i--
@@ -201,6 +205,7 @@ func (varnam *Varnam) splitWordByConjunct(input string) []string {
 			}
 
 			sequence = ""
+			sequenceLength = 0
 		} else {
 			if i == len(word)-1 {
 				// Last character
@@ -211,7 +216,7 @@ func (varnam *Varnam) splitWordByConjunct(input string) []string {
 		}
 		i++
 	}
-	return results
+	return results, nil
 }
 
 func getSymbolValue(symbol Symbol, position int) string {
