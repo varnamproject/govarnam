@@ -41,40 +41,8 @@ type TransliterationResult struct {
 	GreedyTokenized []Suggestion
 }
 
-func getWeight(symbol Symbol) int {
-	return symbol.weight + (VARNAM_MATCH_POSSIBILITY-symbol.matchType)*100
-}
-
-func (varnam *Varnam) getNewValueAndWeight(weight int, symbol Symbol, previousCharacter string, position int) (string, int) {
-	/**
-	 * Weight priority:
-	 * 1. Position of character in string
-	 * 2. Symbol's probability occurence
-	 */
-	newWeight := weight + getWeight(symbol)
-
-	var value string
-
-	if symbol.generalType == VARNAM_SYMBOL_VIRAMA {
-		/*
-			we are resolving a virama. If the output ends with a virama already,
-			add a ZWNJ to it, so that following character will not be combined.
-			If output does not end with virama, add a virama and ZWNJ
-		*/
-		if previousCharacter == varnam.LangRules.Virama {
-			value = ZWNJ
-		} else {
-			value = getSymbolValue(symbol, position) + ZWNJ
-		}
-	} else {
-		value = getSymbolValue(symbol, position)
-	}
-
-	return value, newWeight
-}
-
 /**
- * greed - Set to true for getting only VARNAM_MATCH_EXACT suggestions.
+ * Convert tokens into suggestions.
  * partial - set true if only a part of a word is being tokenized and not an entire word
  */
 func (varnam *Varnam) tokensToSuggestions(inputTokens []Token, partial bool) []Suggestion {
@@ -87,14 +55,13 @@ func (varnam *Varnam) tokensToSuggestions(inputTokens []Token, partial bool) []S
 	for i, token := range tokens {
 		var reducedSymbols []Symbol
 		for _, symbol := range token.symbols {
-			reducedSymbols = append(reducedSymbols, symbol)
-
 			// TODO should 10% be fixed for all languages ?
 			// Because this may differ according to data source
 			// from where symbol frequency was found out
-			if getWeight(symbol) < 10 {
+			if getSymbolWeight(symbol) < 1 {
 				break
 			}
+			reducedSymbols = append(reducedSymbols, symbol)
 		}
 		tokens[i].symbols = reducedSymbols
 	}
@@ -119,7 +86,7 @@ func (varnam *Varnam) tokensToSuggestions(inputTokens []Token, partial bool) []S
 	// if it's over we shift the possibility on left, so on and on
 	k := len(tokens) - 1
 
-	i := 0
+	i := k
 	for i >= 0 {
 		if tokens[i].tokenType == VARNAM_TOKEN_SYMBOL && len(tokens[i].symbols)-1 > tokenPositions[i] {
 			k = i
@@ -155,24 +122,44 @@ func (varnam *Varnam) tokensToSuggestions(inputTokens []Token, partial bool) []S
 					}
 				}
 
-				symbolWeight := getWeight(symbol)
+				var (
+					symbolValue  string
+					symbolWeight int
+				)
 
-				var value string
-				if partial {
-					value = getSymbolValue(symbol, 1)
+				if i == 0 {
+					if partial {
+						// Since partial, the first character is not
+						// the first character of word
+						symbolValue = getSymbolValue(symbol, 1)
+						symbolWeight = getSymbolWeight(symbol)
+					} else {
+						symbolValue = getSymbolValue(symbol, 0)
+						symbolWeight = getSymbolWeight(symbol)
+					}
+				} else if symbol.generalType == VARNAM_SYMBOL_VIRAMA {
+					/*
+						we are resolving a virama. If the output ends with a virama already,
+						add a ZWNJ to it, so that following character will not be combined.
+						If output does not end with virama, add a virama and ZWNJ
+					*/
+					previousCharacter := word[i-1]
+					if previousCharacter == varnam.LangRules.Virama {
+						symbolValue = ZWNJ
+					} else {
+						symbolValue = getSymbolValue(symbol, i) + ZWNJ
+					}
 				} else {
-					value = getSymbolValue(symbol, 0)
+					symbolValue = getSymbolValue(symbol, i)
 				}
 
-				word[i] = value
+				word[i] = symbolValue
 				weight += symbolWeight
 			} else if t.tokenType == VARNAM_TOKEN_CHAR {
 				word[i] = *t.character
 			}
 			i--
 		}
-
-		fmt.Println(k, tokenPositions, tokens[k].symbols)
 
 		// If no more possibilites, go to the next one
 		if tokenPositions[k] >= len(tokens[k].symbols)-1 {

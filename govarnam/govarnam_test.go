@@ -55,7 +55,7 @@ func TestGreedyTokenizer(t *testing.T) {
 
 func TestTokenizer(t *testing.T) {
 	// The order of this will fail if VST weights change
-	expected := []string{"മാല", "മല", "മാള", "മള", "മാലാ", "മലാ", "മാളാ", "മളാ"}
+	expected := []string{"മല", "മള", "മലാ", "മളാ", "മാല", "മാള", "മാലാ", "മാളാ"}
 	for i, sug := range varnam.Transliterate("mala").Suggestions {
 		assertEqual(t, sug.Word, expected[i])
 	}
@@ -63,7 +63,7 @@ func TestTokenizer(t *testing.T) {
 
 func TestLearn(t *testing.T) {
 	// Before learning
-	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മാലയലം")
+	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മലയലം")
 
 	varnam.Learn("മലയാളം")
 
@@ -106,7 +106,7 @@ func TestLearn(t *testing.T) {
 }
 
 func TestTrain(t *testing.T) {
-	assertEqual(t, varnam.Transliterate("india").Suggestions[0].Word, "ഇണ്ടി")
+	assertEqual(t, varnam.Transliterate("india").Suggestions[0].Word, "ഇന്ദി")
 	varnam.Train("india", "ഇന്ത്യ")
 	assertEqual(t, varnam.Transliterate("india").Suggestions[0].Word, "ഇന്ത്യ")
 	assertEqual(t, varnam.Transliterate("indiayil").Suggestions[0].Word, "ഇന്ത്യയിൽ")

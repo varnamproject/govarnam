@@ -226,6 +226,10 @@ func getSymbolValue(symbol Symbol, position int) string {
 	}
 }
 
+func getSymbolWeight(symbol Symbol) int {
+	return symbol.weight + (VARNAM_MATCH_POSSIBILITY-symbol.matchType)*100
+}
+
 // Remove non-exact matching tokens
 func removeNonExactTokens(tokens []Token) []Token {
 	// Remove non-exact symbols
