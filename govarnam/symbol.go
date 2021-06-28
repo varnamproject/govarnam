@@ -110,7 +110,7 @@ func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 				// No matches for a single char, add it
 				token := Token{VARNAM_TOKEN_CHAR, matches, i, &ch}
 				results = append(results, token)
-			} else {
+			} else if len(prevSequenceMatches) > 0 {
 				// Backtrack and add the previous sequence matches
 				i--
 				token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, nil}
@@ -194,7 +194,7 @@ func (varnam *Varnam) splitWordByConjunct(input string) []string {
 			if len(sequence) == 1 {
 				// No matches for a single char, add it
 				results = append(results, sequence)
-			} else {
+			} else if len(prevSequenceMatch) > 0 {
 				// Backtrack and add the previous sequence matches
 				i--
 				results = append(results, prevSequenceMatch)

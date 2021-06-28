@@ -71,11 +71,14 @@ func sanitizeWord(word string) string {
 // Learn a word. If already exist, increases confidence of the pathway to that word.
 // When learning a word, each path to that word is inserted into DB.
 // Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
-func (varnam *Varnam) Learn(word string) {
+func (varnam *Varnam) Learn(word string) bool {
 	word = sanitizeWord(word)
 	conjuncts := varnam.splitWordByConjunct(word)
 
-	if len(conjuncts) == 1 {
+	if len(conjuncts) == 0 {
+		return false
+	} else if len(conjuncts) == 1 {
+		// Forced learning of a single conjunct
 		varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
 	} else {
 		sequence := conjuncts[0]
@@ -96,6 +99,7 @@ func (varnam *Varnam) Learn(word string) {
 			}
 		}
 	}
+	return true
 }
 
 // Unlearn a word, remove from words DB and pattern if there is

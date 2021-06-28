@@ -214,6 +214,10 @@ func (varnam *Varnam) transliterate(word string) ([]Token, []Suggestion, []Sugge
 
 	tokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
 
+	if len(tokens) == 0 {
+		return tokens, exactMatches, dictResults, []Suggestion{}
+	}
+
 	/* Channels make things faster, getting from DB is time-consuming */
 
 	dictSugsChan := make(chan DictionaryResult)
@@ -295,11 +299,13 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 
 	sugs := dictResults
 
-	if len(exactMatches) == 0 {
-		tokenSugs := varnam.tokensToSuggestions(tokens, false)
-		sugs = append(sugs, tokenSugs...)
-	} else {
-		sugs = append(sugs, exactMatches...)
+	if len(tokens) != 0 {
+		if len(exactMatches) == 0 {
+			tokenSugs := varnam.tokensToSuggestions(tokens, false)
+			sugs = append(sugs, tokenSugs...)
+		} else {
+			sugs = append(sugs, exactMatches...)
+		}
 	}
 
 	result.ExactMatch = sortSuggestions(exactMatches)
