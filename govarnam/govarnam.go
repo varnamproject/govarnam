@@ -45,11 +45,8 @@ type TransliterationResult struct {
  * Convert tokens into suggestions.
  * partial - set true if only a part of a word is being tokenized and not an entire word
  */
-func (varnam *Varnam) tokensToSuggestions(inputTokens []Token, partial bool) []Suggestion {
+func (varnam *Varnam) tokensToSuggestions(tokens []Token, partial bool) []Suggestion {
 	var results []Suggestion
-
-	tokens := make([]Token, len(inputTokens))
-	copy(tokens, inputTokens)
 
 	// First, remove less weighted symbols
 	for i, token := range tokens {
