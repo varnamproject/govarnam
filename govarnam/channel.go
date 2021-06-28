@@ -1,7 +1,13 @@
 package govarnam
 
-func (varnam *Varnam) channelTokensToSuggestions(tokens []Token, greedy bool, partial bool, channel chan []Suggestion) {
-	channel <- varnam.tokensToSuggestions(tokens, greedy, partial)
+func (varnam *Varnam) channelTokensToGreedySuggestions(tokens []Token, channel chan []Suggestion) {
+	// Altering tokens directly will affect others
+	tokensCopy := make([]Token, len(tokens))
+	copy(tokensCopy, tokens)
+
+	tokensCopy = removeNonExactTokens(tokensCopy)
+	channel <- varnam.tokensToSuggestions(tokensCopy, false)
+
 	close(channel)
 }
 

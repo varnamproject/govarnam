@@ -71,11 +71,14 @@ func sanitizeWord(word string) string {
 // Learn a word. If already exist, increases confidence of the pathway to that word.
 // When learning a word, each path to that word is inserted into DB.
 // Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
-func (varnam *Varnam) Learn(word string) {
+func (varnam *Varnam) Learn(word string) bool {
 	word = sanitizeWord(word)
 	conjuncts := varnam.splitWordByConjunct(word)
 
-	if len(conjuncts) == 1 {
+	if len(conjuncts) == 0 {
+		return false
+	} else if len(conjuncts) == 1 {
+		// Forced learning of a single conjunct
 		varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
 	} else {
 		sequence := conjuncts[0]
@@ -84,7 +87,7 @@ func (varnam *Varnam) Learn(word string) {
 				continue
 			}
 			sequence += ch
-			if varnam.debug {
+			if varnam.Debug {
 				fmt.Println(sequence)
 			}
 			if i+1 == len(conjuncts) {
@@ -96,6 +99,7 @@ func (varnam *Varnam) Learn(word string) {
 			}
 		}
 	}
+	return true
 }
 
 // Unlearn a word, remove from words DB and pattern if there is
@@ -107,7 +111,7 @@ func (varnam *Varnam) Unlearn(word string) {
 	for i := range conjuncts {
 		// Loop will be going from full string to the first conjunct
 		sequence := strings.Join(conjuncts[0:len(conjuncts)-i], "")
-		if varnam.debug {
+		if varnam.Debug {
 			fmt.Println(sequence)
 		}
 
@@ -134,7 +138,7 @@ func (varnam *Varnam) Unlearn(word string) {
 
 			// No need to remove from `patterns_content` since FOREIGN KEY ON DELETE CASCADE will work
 
-			if varnam.debug {
+			if varnam.Debug {
 				fmt.Printf("Removed %s\n", sequence)
 			}
 		}

@@ -28,7 +28,7 @@ func main() {
 		return
 	}
 
-	varnam.Debug(*debugFlag)
+	varnam.Debug = *debugFlag
 	varnam.LangRules.IndicDigits = *indicDigitsFlag
 
 	args := flag.Args()
@@ -46,15 +46,17 @@ func main() {
 	} else if *learnFlag {
 		word := args[0]
 
-		varnam.Learn(word)
-
-		fmt.Printf("Learnt %s", word)
+		if varnam.Learn(word) {
+			fmt.Printf("Learnt %s\n", word)
+		} else {
+			fmt.Printf("Couldn't learn %s", word)
+		}
 	} else if *unlearnFlag {
 		word := args[0]
 
 		varnam.Unlearn(word)
 
-		fmt.Printf("Unlearnt %s", word)
+		fmt.Printf("Unlearnt %s\n", word)
 	} else {
 		var results govarnam.TransliterationResult
 
