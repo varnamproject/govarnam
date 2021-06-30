@@ -1,6 +1,7 @@
 package govarnam
 
 import (
+	"context"
 	sql "database/sql"
 	"fmt"
 	"os"
@@ -190,9 +191,11 @@ func (varnam *Varnam) tokensToSuggestions(tokens []Token, partial bool) []Sugges
 }
 
 func (varnam *Varnam) setDefaultConfig() {
+	ctx := context.Background()
+
 	varnam.SuggestionsLimit = 10
 	varnam.LangRules.IndicDigits = false
-	varnam.LangRules.Virama = varnam.searchSymbol("~", VARNAM_MATCH_EXACT)[0].value1
+	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT)[0].value1
 }
 
 func sortSuggestions(sugs []Suggestion) []Suggestion {
@@ -206,96 +209,79 @@ func sortSuggestions(sugs []Suggestion) []Suggestion {
 }
 
 // Returns tokens, exactMatches, dictionary results, greedy tokenized
-func (varnam *Varnam) transliterate(word string) ([]Token, []Suggestion, []Suggestion, []Suggestion) {
+func (varnam *Varnam) transliterate(ctx context.Context, word string) ([]Token, []Suggestion, []Suggestion, []Suggestion) {
 	var (
-		dictResults  []Suggestion
-		exactMatches []Suggestion
+		dictResults     []Suggestion
+		exactMatches    []Suggestion
+		greedyTokenized []Suggestion
 	)
 
-	tokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
+	tokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL)
 
 	if len(tokens) == 0 {
-		return tokens, exactMatches, dictResults, []Suggestion{}
+		return tokens, exactMatches, dictResults, greedyTokenized
 	}
 
 	/* Channels make things faster, getting from DB is time-consuming */
 
-	dictSugsChan := make(chan DictionaryResult)
-	patternDictSugsChan := make(chan []PatternDictionarySuggestion)
+	dictSugsChan := make(chan channelDictionaryResult)
+	patternDictSugsChan := make(chan channelDictionaryResult)
 	greedyTokenizedChan := make(chan []Suggestion)
 
-	moreFromDictChan := make(chan [][]Suggestion)
-	triggeredGetMoreFromDict := false
+	go varnam.channelGetFromDictionary(ctx, word, tokens, dictSugsChan)
+	go varnam.channelGetFromPatternDictionary(ctx, word, patternDictSugsChan)
+	go varnam.channelTokensToGreedySuggestions(ctx, tokens, greedyTokenizedChan)
 
-	go varnam.channelGetFromDictionary(tokens, dictSugsChan)
-	go varnam.channelGetFromPatternDictionary(word, patternDictSugsChan)
-	go varnam.channelTokensToGreedySuggestions(tokens, greedyTokenizedChan)
+	select {
+	case channelDictResult := <-dictSugsChan:
+		exactMatches = append(exactMatches, channelDictResult.exactMatches...)
+		dictResults = append(dictResults, channelDictResult.suggestions...)
 
-	dictSugs := <-dictSugsChan
+		channelPatternDictResult := <-patternDictSugsChan
+		exactMatches = append(exactMatches, channelPatternDictResult.exactMatches...)
+		dictResults = append(dictResults, channelPatternDictResult.suggestions...)
 
-	if varnam.Debug {
-		fmt.Println("Dictionary results:", dictSugs)
+		// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
+		greedyTokenizedResult := <-greedyTokenizedChan
+		greedyTokenized = sortSuggestions(greedyTokenizedResult)
+
+		return tokens, exactMatches, dictResults, greedyTokenized
+
+	case <-ctx.Done():
+		return tokens, exactMatches, dictResults, greedyTokenized
 	}
-
-	if len(dictSugs.sugs) > 0 {
-		if dictSugs.exactMatch == false {
-			// These will be partial words
-			restOfWord := word[dictSugs.longestMatchPosition+1:]
-			dictResults = varnam.tokenizeRestOfWord(restOfWord, dictSugs.sugs)
-		} else {
-			exactMatches = dictSugs.sugs
-
-			// Since partial words are in dictionary, exactMatch will be TRUE
-			// for pathway to a word. Hence we're calling this here
-			go varnam.channelGetMoreFromDictionary(dictSugs.sugs, moreFromDictChan)
-			triggeredGetMoreFromDict = true
-		}
-	}
-
-	patternDictSugs := <-patternDictSugsChan
-
-	if len(patternDictSugs) > 0 {
-		if varnam.Debug {
-			fmt.Println("Pattern dictionary results:", patternDictSugs)
-		}
-
-		for _, match := range patternDictSugs {
-			if match.Length < len(word) {
-				restOfWord := word[match.Length:]
-				filled := varnam.tokenizeRestOfWord(restOfWord, []Suggestion{match.Sug})
-				dictResults = append(dictResults, filled...)
-			} else if match.Length == len(word) {
-				// Same length
-				exactMatches = append(exactMatches, match.Sug)
-			} else {
-				dictResults = append(dictResults, match.Sug)
-			}
-		}
-	}
-
-	if triggeredGetMoreFromDict {
-		moreFromDict := <-moreFromDictChan
-
-		if varnam.Debug {
-			fmt.Println("More dictionary results:", moreFromDict)
-		}
-
-		for _, sugSet := range moreFromDict {
-			dictResults = append(dictResults, sugSet...)
-		}
-	}
-
-	// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
-	greedyTokenized := sortSuggestions(<-greedyTokenizedChan)
-
-	return tokens, exactMatches, dictResults, greedyTokenized
 }
 
 // Transliterate a word with all possibilities as results
 func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	var result TransliterationResult
 
-	tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(word)
+	ctx := context.Background()
+	tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
+
+	sugs := dictResults
+
+	if len(tokens) != 0 {
+		if len(exactMatches) == 0 {
+			tokenSugs := varnam.tokensToSuggestions(tokens, false)
+			sugs = append(sugs, tokenSugs...)
+		} else {
+			sugs = append(sugs, exactMatches...)
+		}
+	}
+
+	result.ExactMatch = sortSuggestions(exactMatches)
+	result.Suggestions = sortSuggestions(sugs)
+	result.GreedyTokenized = sortSuggestions(greedyTokenized)
+
+	return result
+}
+
+// TransliterateWithContext Use Go context
+func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string) TransliterationResult {
+	var result TransliterationResult
+
+	tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
 
 	sugs := dictResults
 
@@ -319,7 +305,8 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
 	var result TransliterationResult
 
-	_, exactMatches, dictResults, greedyTokenized := varnam.transliterate(word)
+	ctx := context.Background()
+	_, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
 
 	result.ExactMatch = sortSuggestions(exactMatches)
 	result.Suggestions = sortSuggestions(dictResults)
