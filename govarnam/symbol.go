@@ -1,6 +1,7 @@
 package govarnam
 
 import (
+	"context"
 	sql "database/sql"
 	"fmt"
 	"log"
@@ -51,24 +52,24 @@ func (varnam *Varnam) symbolExist(ch string) bool {
 	return count != 0
 }
 
-func (varnam *Varnam) searchSymbol(ch string, matchType int) []Symbol {
+func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int) []Symbol {
 	var (
-		rows *sql.Rows
-		err  error
+		rows    *sql.Rows
+		err     error
+		results []Symbol
 	)
 
 	if matchType == VARNAM_MATCH_ALL {
-		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? ORDER BY match_type ASC, weight DESC", ch)
+		rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? ORDER BY match_type ASC, weight DESC", ch)
 	} else {
-		rows, err = varnam.vstConn.Query("SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
+		rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
 	}
 
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return results
 	}
 	defer rows.Close()
-
-	var results []Symbol
 
 	for rows.Next() {
 		var item Symbol
@@ -78,14 +79,14 @@ func (varnam *Varnam) searchSymbol(ch string, matchType int) []Symbol {
 
 	err = rows.Err()
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return results
 }
 
 // Convert a string into Tokens for later processing
-func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
+func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType int) []Token {
 	var results []Token
 
 	var prevSequenceMatches []Symbol
@@ -97,7 +98,7 @@ func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 
 		sequence += ch
 
-		matches := varnam.searchSymbol(sequence, matchType)
+		matches := varnam.searchSymbol(ctx, sequence, matchType)
 
 		if varnam.Debug {
 			fmt.Println(sequence, matches)
@@ -139,13 +140,13 @@ func (varnam *Varnam) tokenizeWord(word string, matchType int) []Token {
 }
 
 // Tokenize end part of a word and append it to results
-func (varnam *Varnam) tokenizeRestOfWord(word string, results []Suggestion) []Suggestion {
+func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, results []Suggestion) []Suggestion {
 	if varnam.Debug {
 		fmt.Printf("Tokenizing %s\n", word)
 	}
 
-	restOfWordTokens := varnam.tokenizeWord(word, VARNAM_MATCH_ALL)
-	restOfWordSugs := varnam.tokensToSuggestions(restOfWordTokens, true)
+	restOfWordTokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL)
+	restOfWordSugs := varnam.tokensToSuggestions(ctx, restOfWordTokens, true)
 
 	if varnam.Debug {
 		fmt.Println("Tokenized:", restOfWordSugs)

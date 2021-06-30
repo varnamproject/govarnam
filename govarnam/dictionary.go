@@ -56,11 +56,14 @@ func makeDictionary(dictPath string) {
 }
 
 // all - Search for words starting with the word
-func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
+func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all bool) []Suggestion {
 	likes := ""
 
-	var vals []interface{}
-	var query string
+	var (
+		vals    []interface{}
+		query   string
+		results []Suggestion
+	)
 
 	if all == true {
 		// _% means a wildcard with a sequence of 1 or more
@@ -88,13 +91,14 @@ func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
 		query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT 5"
 	}
 
-	rows, err := varnam.dictConn.Query(query, vals...)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
+	rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
 
-	var results []Suggestion
+	if err != nil {
+		log.Print(err)
+		return results
+	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		var item Suggestion
@@ -104,13 +108,14 @@ func (varnam *Varnam) searchDictionary(words []string, all bool) []Suggestion {
 
 	err = rows.Err()
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return results
 	}
 
 	return results
 }
 
-func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
+func (varnam *Varnam) getFromDictionary(ctx context.Context, tokens []Token) DictionaryResult {
 	// This is a temporary storage for tokenized words
 	// Similar to usage in tokenizeWord
 	var results []Suggestion
@@ -128,7 +133,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 					results = append(results, sug)
 
 					search := []string{sug.Word}
-					searchResults := varnam.searchDictionary(search, false)
+					searchResults := varnam.searchDictionary(ctx, search, false)
 
 					if len(searchResults) > 0 {
 						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
@@ -146,7 +151,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 					results[j].Word += getSymbolValue(firstSymbol, i)
 
 					search := []string{results[j].Word}
-					searchResults := varnam.searchDictionary(search, false)
+					searchResults := varnam.searchDictionary(ctx, search, false)
 
 					if len(searchResults) > 0 {
 						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
@@ -164,7 +169,7 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 						newTill := till + getSymbolValue(symbol, i)
 
 						search = []string{newTill}
-						searchResults = varnam.searchDictionary(search, false)
+						searchResults = varnam.searchDictionary(ctx, search, false)
 
 						if len(searchResults) > 0 {
 							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
@@ -185,11 +190,11 @@ func (varnam *Varnam) getFromDictionary(tokens []Token) DictionaryResult {
 	return DictionaryResult{foundDictWords, foundPosition == tokens[len(tokens)-1].position, foundPosition}
 }
 
-func (varnam *Varnam) getMoreFromDictionary(words []Suggestion) [][]Suggestion {
+func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggestion) [][]Suggestion {
 	var results [][]Suggestion
 	for _, sug := range words {
 		search := []string{sug.Word}
-		searchResults := varnam.searchDictionary(search, true)
+		searchResults := varnam.searchDictionary(ctx, search, true)
 		results = append(results, searchResults)
 	}
 	return results
@@ -199,14 +204,17 @@ func (varnam *Varnam) getMoreFromDictionary(words []Suggestion) [][]Suggestion {
 // Gets incomplete matches.
 // Eg: If pattern = "chin", will return "china"
 // TODO better function name ? Ambiguous ?
-func (varnam *Varnam) getTrailingFromPatternDictionary(pattern string) []Suggestion {
-	rows, err := varnam.dictConn.Query("SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns_content WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
+func (varnam *Varnam) getTrailingFromPatternDictionary(ctx context.Context, pattern string) []Suggestion {
 	var results []Suggestion
+
+	rows, err := varnam.dictConn.QueryContext(ctx, "SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns_content WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
+
+	if err != nil {
+		log.Print(err)
+		return results
+	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		var item Suggestion
@@ -217,7 +225,7 @@ func (varnam *Varnam) getTrailingFromPatternDictionary(pattern string) []Suggest
 
 	err = rows.Err()
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return results
@@ -225,15 +233,18 @@ func (varnam *Varnam) getTrailingFromPatternDictionary(pattern string) []Suggest
 
 // Gets incomplete and complete matches from pattern dictionary
 // Eg: If pattern = "chin" or "chinayil", will return "china"
-func (varnam *Varnam) getFromPatternDictionary(pattern string) []PatternDictionarySuggestion {
-	// TODO better optimized query. Use JOIN maybe
-	rows, err := varnam.dictConn.Query("SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT 10", pattern, pattern+"%")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
+func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern string) []PatternDictionarySuggestion {
 	var results []PatternDictionarySuggestion
+
+	// TODO better optimized query. Use JOIN maybe
+	rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT 10", pattern, pattern+"%")
+
+	if err != nil {
+		log.Print(err)
+		return results
+	}
+
+	defer rows.Close()
 
 	for rows.Next() {
 		var item PatternDictionarySuggestion
@@ -244,7 +255,7 @@ func (varnam *Varnam) getFromPatternDictionary(pattern string) []PatternDictiona
 
 	err = rows.Err()
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return results
