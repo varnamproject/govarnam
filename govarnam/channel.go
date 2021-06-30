@@ -16,7 +16,7 @@ func (varnam *Varnam) channelTokensToGreedySuggestions(ctx context.Context, toke
 	copy(tokensCopy, tokens)
 
 	tokensCopy = removeNonExactTokens(tokensCopy)
-	channel <- varnam.tokensToSuggestions(tokensCopy, false)
+	channel <- varnam.tokensToSuggestions(ctx, tokensCopy, false)
 
 	close(channel)
 }

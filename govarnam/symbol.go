@@ -79,7 +79,7 @@ func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int
 
 	err = rows.Err()
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return results
@@ -146,7 +146,7 @@ func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, resul
 	}
 
 	restOfWordTokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL)
-	restOfWordSugs := varnam.tokensToSuggestions(restOfWordTokens, true)
+	restOfWordSugs := varnam.tokensToSuggestions(ctx, restOfWordTokens, true)
 
 	if varnam.Debug {
 		fmt.Println("Tokenized:", restOfWordSugs)
