@@ -27,11 +27,22 @@ type LangRules struct {
 
 // Varnam config
 type Varnam struct {
-	vstConn          *sql.DB
-	dictConn         *sql.DB
-	LangRules        LangRules
-	Debug            bool
-	SuggestionsLimit int
+	vstConn   *sql.DB
+	dictConn  *sql.DB
+	LangRules LangRules
+	Debug     bool
+
+	// Maximum suggestions to obtain from dictionary
+	DictionarySuggestionsLimit int
+
+	// Maximum suggestions to be made from tokenizer
+	TokenizerSuggestionsLimit int
+
+	// Always include tokenizer made suggestions.
+	// This may give bad results and suggestion list will be long
+	TokenizerSuggestionsAlways bool
+
+	// See setDefaultConfig() for the default values
 }
 
 // Suggestion suggestion
@@ -106,7 +117,7 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokens []Token, p
 			i--
 		}
 
-		for len(results) < varnam.SuggestionsLimit {
+		for len(results) < varnam.TokenizerSuggestionsLimit {
 			// One loop will make one word
 			word := make([]string, len(tokens))
 			weight := 0
@@ -206,7 +217,10 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokens []Token, p
 func (varnam *Varnam) setDefaultConfig() {
 	ctx := context.Background()
 
-	varnam.SuggestionsLimit = 10
+	varnam.DictionarySuggestionsLimit = 5
+	varnam.TokenizerSuggestionsLimit = 10
+	varnam.TokenizerSuggestionsAlways = true
+
 	varnam.LangRules.IndicDigits = false
 	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT)[0].value1
 }
@@ -286,8 +300,10 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	if len(tokens) != 0 {
 		sugs = append(sugs, exactMatches...)
 
-		tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
-		sugs = append(sugs, tokenSugs...)
+		if len(exactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
+			tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
+			sugs = append(sugs, tokenSugs...)
+		}
 	}
 
 	result.ExactMatch = sortSuggestions(exactMatches)
@@ -314,8 +330,10 @@ func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string)
 		if len(tokens) != 0 {
 			sugs = append(sugs, exactMatches...)
 
-			tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
-			sugs = append(sugs, tokenSugs...)
+			if len(exactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
+				tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
+				sugs = append(sugs, tokenSugs...)
+			}
 		}
 
 		result.ExactMatch = sortSuggestions(exactMatches)

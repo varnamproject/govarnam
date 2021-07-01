@@ -90,10 +90,11 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 		}
 
 		if all == true {
-			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " AND learned_on > 0 ORDER BY confidence DESC LIMIT 5"
+			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " AND learned_on > 0 ORDER BY confidence DESC LIMIT ?"
 		} else {
-			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT 5"
+			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT ?"
 		}
+		vals = append(vals, varnam.DictionarySuggestionsLimit)
 
 		rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
 
