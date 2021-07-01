@@ -1,5 +1,11 @@
 package main
 
+/**
+ * govarnam - An Indian language transliteration library
+ * Copyright Subin Siby, 2021
+ * Licensed under AGPL-3.0-only
+ */
+
 import (
 	"flag"
 	"fmt"
