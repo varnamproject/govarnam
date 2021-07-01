@@ -92,7 +92,7 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 		if all == true {
 			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " AND learned_on > 0 ORDER BY confidence DESC LIMIT ?"
 		} else {
-			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT ?"
+			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT 5"
 		}
 		vals = append(vals, varnam.DictionarySuggestionsLimit)
 
@@ -269,7 +269,7 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 		return results
 	default:
 		// TODO better optimized query. Use JOIN maybe
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT 10", pattern, pattern+"%")
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.DictionarySuggestionsLimit)
 
 		if err != nil {
 			log.Print(err)
