@@ -59,119 +59,136 @@ func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int
 		results []Symbol
 	)
 
-	if matchType == VARNAM_MATCH_ALL {
-		rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? ORDER BY match_type ASC, weight DESC", ch)
-	} else {
-		rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
-	}
+	select {
+	case <-ctx.Done():
+		return results
+	default:
 
-	if err != nil {
-		log.Print(err)
+		if matchType == VARNAM_MATCH_ALL {
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? ORDER BY match_type ASC, weight DESC", ch)
+		} else {
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
+		}
+
+		if err != nil {
+			log.Print(err)
+			return results
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var item Symbol
+			rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
+			results = append(results, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err)
+		}
+
 		return results
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var item Symbol
-		rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
-		results = append(results, item)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		log.Print(err)
-	}
-
-	return results
 }
 
 // Convert a string into Tokens for later processing
 func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType int) []Token {
 	var results []Token
 
-	var prevSequenceMatches []Symbol
-	var sequence string
+	select {
+	case <-ctx.Done():
+		return results
+	default:
 
-	i := 0
-	for i < len(word) {
-		ch := string(word[i])
+		var prevSequenceMatches []Symbol
+		var sequence string
 
-		sequence += ch
+		i := 0
+		for i < len(word) {
+			ch := string(word[i])
 
-		matches := varnam.searchSymbol(ctx, sequence, matchType)
+			sequence += ch
 
-		if varnam.Debug {
-			fmt.Println(sequence, matches)
-		}
+			matches := varnam.searchSymbol(ctx, sequence, matchType)
 
-		if len(matches) == 0 {
-			// No more matches
-
-			if len(sequence) == 1 {
-				// No matches for a single char, add it
-				token := Token{VARNAM_TOKEN_CHAR, matches, i, &ch}
-				results = append(results, token)
-			} else if len(prevSequenceMatches) > 0 {
-				// Backtrack and add the previous sequence matches
-				i--
-				token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, nil}
-				results = append(results, token)
+			if varnam.Debug {
+				fmt.Println(sequence, matches)
 			}
 
-			sequence = ""
-		} else {
-			if matches[0].generalType == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
-				// Skip numbers
-				token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, &ch}
-				results = append(results, token)
+			if len(matches) == 0 {
+				// No more matches
+
+				if len(sequence) == 1 {
+					// No matches for a single char, add it
+					token := Token{VARNAM_TOKEN_CHAR, matches, i, &ch}
+					results = append(results, token)
+				} else if len(prevSequenceMatches) > 0 {
+					// Backtrack and add the previous sequence matches
+					i--
+					token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, nil}
+					results = append(results, token)
+				}
 
 				sequence = ""
-			} else if i == len(word)-1 {
-				// Last character
-				token := Token{VARNAM_TOKEN_SYMBOL, matches, i, nil}
-				results = append(results, token)
 			} else {
-				prevSequenceMatches = matches
+				if matches[0].generalType == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
+					// Skip numbers
+					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, &ch}
+					results = append(results, token)
+
+					sequence = ""
+				} else if i == len(word)-1 {
+					// Last character
+					token := Token{VARNAM_TOKEN_SYMBOL, matches, i, nil}
+					results = append(results, token)
+				} else {
+					prevSequenceMatches = matches
+				}
 			}
+			i++
 		}
-		i++
+		return results
 	}
-	return results
 }
 
 // Tokenize end part of a word and append it to results
 func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, results []Suggestion) []Suggestion {
-	if varnam.Debug {
-		fmt.Printf("Tokenizing %s\n", word)
-	}
+	select {
+	case <-ctx.Done():
+		return results
+	default:
+		if varnam.Debug {
+			fmt.Printf("Tokenizing %s\n", word)
+		}
 
-	restOfWordTokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL)
-	restOfWordSugs := varnam.tokensToSuggestions(ctx, restOfWordTokens, true)
+		restOfWordTokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL)
+		restOfWordSugs := varnam.tokensToSuggestions(ctx, restOfWordTokens, true)
 
-	if varnam.Debug {
-		fmt.Println("Tokenized:", restOfWordSugs)
-	}
+		if varnam.Debug {
+			fmt.Println("Tokenized:", restOfWordSugs)
+		}
 
-	if len(restOfWordSugs) > 0 {
-		for j, result := range results {
-			till := varnam.removeLastVirama(result.Word)
-			tillWeight := result.Weight
+		if len(restOfWordSugs) > 0 {
+			for j, result := range results {
+				till := varnam.removeLastVirama(result.Word)
+				tillWeight := result.Weight
 
-			firstSug := restOfWordSugs[0]
-			results[j].Word = varnam.removeLastVirama(results[j].Word) + firstSug.Word
-			results[j].Weight += firstSug.Weight
+				firstSug := restOfWordSugs[0]
+				results[j].Word = varnam.removeLastVirama(results[j].Word) + firstSug.Word
+				results[j].Weight += firstSug.Weight
 
-			for k, sug := range restOfWordSugs {
-				if k == 0 {
-					continue
+				for k, sug := range restOfWordSugs {
+					if k == 0 {
+						continue
+					}
+					sug := Suggestion{till + sug.Word, tillWeight + sug.Weight, sug.LearnedOn}
+					results = append(results, sug)
 				}
-				sug := Suggestion{till + sug.Word, tillWeight + sug.Weight, sug.LearnedOn}
-				results = append(results, sug)
 			}
 		}
-	}
 
-	return results
+		return results
+	}
 }
 
 // Split a word into conjuncts

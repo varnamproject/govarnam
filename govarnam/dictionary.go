@@ -65,139 +65,161 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 		results []Suggestion
 	)
 
-	if all == true {
-		// _% means a wildcard with a sequence of 1 or more
-		// % means 0 or more and would include the word itself
-		vals = append(vals, words[0]+"_%")
-	} else {
-		vals = append(vals, words[0])
-	}
-
-	for i, word := range words {
-		if i == 0 {
-			continue
-		}
-		likes += "OR word LIKE ? "
+	select {
+	case <-ctx.Done():
+		return results
+	default:
 		if all == true {
-			vals = append(vals, word+"_%")
+			// _% means a wildcard with a sequence of 1 or more
+			// % means 0 or more and would include the word itself
+			vals = append(vals, words[0]+"_%")
 		} else {
-			vals = append(vals, word)
+			vals = append(vals, words[0])
 		}
-	}
 
-	if all == true {
-		query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " AND learned_on > 0 ORDER BY confidence DESC LIMIT 5"
-	} else {
-		query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT 5"
-	}
+		for i, word := range words {
+			if i == 0 {
+				continue
+			}
+			likes += "OR word LIKE ? "
+			if all == true {
+				vals = append(vals, word+"_%")
+			} else {
+				vals = append(vals, word)
+			}
+		}
 
-	rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
+		if all == true {
+			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " AND learned_on > 0 ORDER BY confidence DESC LIMIT 5"
+		} else {
+			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT 5"
+		}
 
-	if err != nil {
-		log.Print(err)
+		rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
+
+		if err != nil {
+			log.Print(err)
+			return results
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+			var item Suggestion
+			rows.Scan(&item.Word, &item.Weight, &item.LearnedOn)
+			results = append(results, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err)
+			return results
+		}
+
 		return results
 	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var item Suggestion
-		rows.Scan(&item.Word, &item.Weight, &item.LearnedOn)
-		results = append(results, item)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		log.Print(err)
-		return results
-	}
-
-	return results
 }
 
 func (varnam *Varnam) getFromDictionary(ctx context.Context, tokens []Token) DictionaryResult {
-	// This is a temporary storage for tokenized words
-	// Similar to usage in tokenizeWord
-	var results []Suggestion
+	var endResult DictionaryResult
 
-	foundPosition := 0
-	var foundDictWords []Suggestion
+	select {
+	case <-ctx.Done():
+		return endResult
+	default:
+		// This is a temporary storage for tokenized words
+		// Similar to usage in tokenizeWord
+		var results []Suggestion
 
-	for i, t := range tokens {
-		var tempFoundDictWords []Suggestion
-		if t.tokenType == VARNAM_TOKEN_SYMBOL {
-			if i == 0 {
-				for _, possibility := range t.symbols {
-					// Weight has no use in dictionary lookup
-					sug := Suggestion{getSymbolValue(possibility, 0), 0, 0}
-					results = append(results, sug)
+		foundPosition := 0
+		var foundDictWords []Suggestion
 
-					search := []string{sug.Word}
-					searchResults := varnam.searchDictionary(ctx, search, false)
+		for i, t := range tokens {
+			var tempFoundDictWords []Suggestion
+			if t.tokenType == VARNAM_TOKEN_SYMBOL {
+				if i == 0 {
+					for _, possibility := range t.symbols {
+						// Weight has no use in dictionary lookup
+						sug := Suggestion{getSymbolValue(possibility, 0), 0, 0}
+						results = append(results, sug)
 
-					if len(searchResults) > 0 {
-						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
-					}
-				}
-			} else {
-				for j, result := range results {
-					if result.Weight == -1 {
-						continue
-					}
-
-					till := result.Word
-
-					firstSymbol := t.symbols[0]
-					results[j].Word += getSymbolValue(firstSymbol, i)
-
-					search := []string{results[j].Word}
-					searchResults := varnam.searchDictionary(ctx, search, false)
-
-					if len(searchResults) > 0 {
-						tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
-					} else {
-						// No need of processing this anymore.
-						// Weight is used as a flag here to skip some results
-						results[j].Weight = -1
-					}
-
-					for k, symbol := range t.symbols {
-						if k == 0 {
-							continue
-						}
-
-						newTill := till + getSymbolValue(symbol, i)
-
-						search = []string{newTill}
-						searchResults = varnam.searchDictionary(ctx, search, false)
+						search := []string{sug.Word}
+						searchResults := varnam.searchDictionary(ctx, search, false)
 
 						if len(searchResults) > 0 {
 							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
+						}
+					}
+				} else {
+					for j, result := range results {
+						if result.Weight == -1 {
+							continue
+						}
 
-							sug := Suggestion{newTill, 0, 0}
-							results = append(results, sug)
+						till := result.Word
+
+						firstSymbol := t.symbols[0]
+						results[j].Word += getSymbolValue(firstSymbol, i)
+
+						search := []string{results[j].Word}
+						searchResults := varnam.searchDictionary(ctx, search, false)
+
+						if len(searchResults) > 0 {
+							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
+						} else {
+							// No need of processing this anymore.
+							// Weight is used as a flag here to skip some results
+							results[j].Weight = -1
+						}
+
+						for k, symbol := range t.symbols {
+							if k == 0 {
+								continue
+							}
+
+							newTill := till + getSymbolValue(symbol, i)
+
+							search = []string{newTill}
+							searchResults = varnam.searchDictionary(ctx, search, false)
+
+							if len(searchResults) > 0 {
+								tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
+
+								sug := Suggestion{newTill, 0, 0}
+								results = append(results, sug)
+							}
 						}
 					}
 				}
 			}
+			if len(tempFoundDictWords) > 0 {
+				foundDictWords = tempFoundDictWords
+				foundPosition = t.position
+			}
 		}
-		if len(tempFoundDictWords) > 0 {
-			foundDictWords = tempFoundDictWords
-			foundPosition = t.position
-		}
-	}
 
-	return DictionaryResult{foundDictWords, foundPosition == tokens[len(tokens)-1].position, foundPosition}
+		endResult.sugs = foundDictWords
+		endResult.exactMatch = foundPosition == tokens[len(tokens)-1].position
+		endResult.longestMatchPosition = foundPosition
+
+		return endResult
+	}
 }
 
 func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggestion) [][]Suggestion {
 	var results [][]Suggestion
-	for _, sug := range words {
-		search := []string{sug.Word}
-		searchResults := varnam.searchDictionary(ctx, search, true)
-		results = append(results, searchResults)
+
+	select {
+	case <-ctx.Done():
+		return results
+	default:
+		for _, sug := range words {
+			search := []string{sug.Word}
+			searchResults := varnam.searchDictionary(ctx, search, true)
+			results = append(results, searchResults)
+		}
+		return results
 	}
-	return results
 }
 
 // A simpler function to get matches from pattern dictionary
@@ -207,28 +229,33 @@ func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggest
 func (varnam *Varnam) getTrailingFromPatternDictionary(ctx context.Context, pattern string) []Suggestion {
 	var results []Suggestion
 
-	rows, err := varnam.dictConn.QueryContext(ctx, "SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns_content WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
+	select {
+	case <-ctx.Done():
+		return results
+	default:
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns_content WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
 
-	if err != nil {
-		log.Print(err)
+		if err != nil {
+			log.Print(err)
+			return results
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+			var item Suggestion
+			rows.Scan(&item.Word, &item.Weight)
+			item.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
+			results = append(results, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err)
+		}
+
 		return results
 	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var item Suggestion
-		rows.Scan(&item.Word, &item.Weight)
-		item.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
-		results = append(results, item)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		log.Print(err)
-	}
-
-	return results
 }
 
 // Gets incomplete and complete matches from pattern dictionary
@@ -236,27 +263,32 @@ func (varnam *Varnam) getTrailingFromPatternDictionary(ctx context.Context, patt
 func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern string) []PatternDictionarySuggestion {
 	var results []PatternDictionarySuggestion
 
-	// TODO better optimized query. Use JOIN maybe
-	rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT 10", pattern, pattern+"%")
+	select {
+	case <-ctx.Done():
+		return results
+	default:
+		// TODO better optimized query. Use JOIN maybe
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT 10", pattern, pattern+"%")
 
-	if err != nil {
-		log.Print(err)
+		if err != nil {
+			log.Print(err)
+			return results
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+			var item PatternDictionarySuggestion
+			rows.Scan(&item.Length, &item.Sug.Word, &item.Sug.Weight)
+			item.Sug.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
+			results = append(results, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err)
+		}
+
 		return results
 	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var item PatternDictionarySuggestion
-		rows.Scan(&item.Length, &item.Sug.Word, &item.Sug.Weight)
-		item.Sug.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
-		results = append(results, item)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		log.Print(err)
-	}
-
-	return results
 }

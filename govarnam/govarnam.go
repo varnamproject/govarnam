@@ -1,5 +1,11 @@
 package govarnam
 
+/**
+ * govarnam - An Indian language transliteration library
+ * Copyright Subin Siby, 2021
+ * Licensed under AGPL-3.0-only
+ */
+
 import (
 	"context"
 	sql "database/sql"
@@ -37,9 +43,10 @@ type Suggestion struct {
 
 // TransliterationResult result
 type TransliterationResult struct {
-	ExactMatch      []Suggestion
-	Suggestions     []Suggestion
-	GreedyTokenized []Suggestion
+	ExactMatch            []Suggestion
+	Suggestions           []Suggestion
+	GreedyTokenized       []Suggestion
+	DictionaryResultCount int
 }
 
 /**
@@ -58,10 +65,10 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokens []Token, p
 		for i, token := range tokens {
 			var reducedSymbols []Symbol
 			for _, symbol := range token.symbols {
-				// TODO should 10% be fixed for all languages ?
+				// TODO should 0 be fixed for all languages ?
 				// Because this may differ according to data source
 				// from where symbol frequency was found out
-				if getSymbolWeight(symbol) < 10 {
+				if getSymbolWeight(symbol) == 0 {
 					break
 				}
 				reducedSymbols = append(reducedSymbols, symbol)
@@ -220,41 +227,49 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) ([]Token, 
 		dictResults     []Suggestion
 		exactMatches    []Suggestion
 		greedyTokenized []Suggestion
+		tokens          []Token
 	)
 
-	tokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL)
-
-	if len(tokens) == 0 {
-		return tokens, exactMatches, dictResults, greedyTokenized
-	}
-
-	/* Channels make things faster, getting from DB is time-consuming */
-
-	dictSugsChan := make(chan channelDictionaryResult)
-	patternDictSugsChan := make(chan channelDictionaryResult)
-	greedyTokenizedChan := make(chan []Suggestion)
-
-	go varnam.channelGetFromDictionary(ctx, word, tokens, dictSugsChan)
-	go varnam.channelGetFromPatternDictionary(ctx, word, patternDictSugsChan)
-	go varnam.channelTokensToGreedySuggestions(ctx, tokens, greedyTokenizedChan)
+	tokensChan := make(chan []Token)
+	go varnam.channelTokenizeWord(ctx, word, VARNAM_MATCH_ALL, tokensChan)
 
 	select {
-	case channelDictResult := <-dictSugsChan:
-		exactMatches = append(exactMatches, channelDictResult.exactMatches...)
-		dictResults = append(dictResults, channelDictResult.suggestions...)
-
-		channelPatternDictResult := <-patternDictSugsChan
-		exactMatches = append(exactMatches, channelPatternDictResult.exactMatches...)
-		dictResults = append(dictResults, channelPatternDictResult.suggestions...)
-
-		// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
-		greedyTokenizedResult := <-greedyTokenizedChan
-		greedyTokenized = sortSuggestions(greedyTokenizedResult)
-
-		return tokens, exactMatches, dictResults, greedyTokenized
-
 	case <-ctx.Done():
 		return tokens, exactMatches, dictResults, greedyTokenized
+
+	case tokens = <-tokensChan:
+		if len(tokens) == 0 {
+			return tokens, exactMatches, dictResults, greedyTokenized
+		}
+
+		/* Channels make things faster, getting from DB is time-consuming */
+
+		dictSugsChan := make(chan channelDictionaryResult)
+		patternDictSugsChan := make(chan channelDictionaryResult)
+		greedyTokenizedChan := make(chan []Suggestion)
+
+		go varnam.channelGetFromDictionary(ctx, word, tokens, dictSugsChan)
+		go varnam.channelGetFromPatternDictionary(ctx, word, patternDictSugsChan)
+		go varnam.channelTokensToGreedySuggestions(ctx, tokens, greedyTokenizedChan)
+
+		select {
+		case <-ctx.Done():
+			return tokens, exactMatches, dictResults, greedyTokenized
+
+		case channelDictResult := <-dictSugsChan:
+			exactMatches = append(exactMatches, channelDictResult.exactMatches...)
+			dictResults = append(dictResults, channelDictResult.suggestions...)
+
+			channelPatternDictResult := <-patternDictSugsChan
+			exactMatches = append(exactMatches, channelPatternDictResult.exactMatches...)
+			dictResults = append(dictResults, channelPatternDictResult.suggestions...)
+
+			// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
+			greedyTokenizedResult := <-greedyTokenizedChan
+			greedyTokenized = sortSuggestions(greedyTokenizedResult)
+
+			return tokens, exactMatches, dictResults, greedyTokenized
+		}
 	}
 }
 
@@ -266,14 +281,13 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
 
 	sugs := dictResults
+	result.DictionaryResultCount = len(dictResults)
 
 	if len(tokens) != 0 {
-		if len(exactMatches) == 0 {
-			tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
-			sugs = append(sugs, tokenSugs...)
-		} else {
-			sugs = append(sugs, exactMatches...)
-		}
+		sugs = append(sugs, exactMatches...)
+
+		tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
+		sugs = append(sugs, tokenSugs...)
 	}
 
 	result.ExactMatch = sortSuggestions(exactMatches)
@@ -288,26 +302,26 @@ func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string)
 	var result TransliterationResult
 
 	select {
+	case <-ctx.Done():
+		return result
+
 	default:
 		tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
 
 		sugs := dictResults
+		result.DictionaryResultCount = len(dictResults)
 
 		if len(tokens) != 0 {
-			if len(exactMatches) == 0 {
-				tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
-				sugs = append(sugs, tokenSugs...)
-			} else {
-				sugs = append(sugs, exactMatches...)
-			}
+			sugs = append(sugs, exactMatches...)
+
+			tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
+			sugs = append(sugs, tokenSugs...)
 		}
 
 		result.ExactMatch = sortSuggestions(exactMatches)
 		result.Suggestions = sortSuggestions(sugs)
 		result.GreedyTokenized = sortSuggestions(greedyTokenized)
 
-		return result
-	case <-ctx.Done():
 		return result
 	}
 }
@@ -322,6 +336,7 @@ func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
 	result.ExactMatch = sortSuggestions(exactMatches)
 	result.Suggestions = sortSuggestions(dictResults)
 	result.GreedyTokenized = sortSuggestions(greedyTokenized)
+	result.DictionaryResultCount = len(dictResults)
 
 	return result
 }
