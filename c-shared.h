@@ -3,6 +3,10 @@
 
 #include "c-shared-varray.h"
 
+#define VARNAM_SUCCESS 0
+#define VARNAM_MISUSE  1
+#define VARNAM_ERROR   2
+
 typedef struct Suggestion_t {
   char* Word;
   int Weight;
@@ -16,12 +20,8 @@ typedef struct TransliterationResult_t {
   int DictionaryResultCount;
 } TransliterationResult;
 
-typedef TransliterationResult TransliterationResult;
+Suggestion* makeSuggestion(char* word, int weight, int learned_on);
 
-typedef void (*TransliterateCallbackFn)(TransliterationResult* result);
-
-void callTransliterateCallback(TransliterateCallbackFn func, varray* exact_match, varray* suggestions, varray* greedy_tokenized, int dictionary_result_count);
-
-extern  Suggestion* makeSuggestion(char* word, int weight, int learned_on);
+TransliterationResult* makeResult(varray* exact_match, varray* suggestions, varray* greedy_tokenized, int dictionary_result_count);
 
 #endif /* __C_SHARED_H__ */

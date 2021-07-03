@@ -83,12 +83,12 @@ func sanitizeWord(word string) string {
 // Learn a word. If already exist, increases confidence of the pathway to that word.
 // When learning a word, each path to that word is inserted into DB.
 // Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
-func (varnam *Varnam) Learn(word string, confidence int) bool {
+func (varnam *Varnam) Learn(word string, confidence int) error {
 	word = sanitizeWord(word)
 	conjuncts, _ := varnam.splitWordByConjunct(word)
 
 	if len(conjuncts) == 0 {
-		return false
+		return fmt.Errorf("Nothing to learn")
 	} else if len(conjuncts) == 1 {
 		// Forced learning of a single conjunct
 		varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
@@ -120,15 +120,15 @@ func (varnam *Varnam) Learn(word string, confidence int) bool {
 			}
 		}
 	}
-	return true
+	return nil
 }
 
 // Unlearn a word, remove from words DB and pattern if there is
-func (varnam *Varnam) Unlearn(word string) bool {
+func (varnam *Varnam) Unlearn(word string) error {
 	conjuncts, _ := varnam.splitWordByConjunct(strings.TrimSpace(word))
 
 	if len(conjuncts) == 0 {
-		return false
+		return fmt.Errorf("Nothing to unlearn")
 	}
 
 	varnam.dictConn.Exec("PRAGMA foreign_keys = ON")
@@ -170,7 +170,7 @@ func (varnam *Varnam) Unlearn(word string) bool {
 	}
 
 	varnam.dictConn.Exec("PRAGMA foreign_keys = OFF")
-	return true
+	return nil
 }
 
 // Train a word with a particular pattern. Pattern => word

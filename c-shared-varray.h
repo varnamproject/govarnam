@@ -15,13 +15,6 @@ typedef struct varray_t
     int index;
 } varray;
 
-typedef struct vpool_t
-{
-    varray *array;
-    int next_slot;
-    varray *free_pool;
-} vpool;
-
 VARNAM_EXPORT extern varray* 
 varray_init();
 
