@@ -9,7 +9,6 @@ Suggestion* makeSuggestion(char* word, int weight, int learned_on)
   sug->Word = word;
   sug->Weight = weight;
   sug->LearnedOn = learned_on;
-  printf("ccc");
   return sug;
 }
 
@@ -21,4 +20,27 @@ TransliterationResult* makeResult(varray* exact_match, varray* suggestions, varr
   result->GreedyTokenized = greedy_tokenized;
   result->DictionaryResultCount = dictionary_result_count;
   return result;
+}
+
+void destroySuggestion(void* pointer)
+{
+  if (pointer != NULL) {
+    Suggestion* sug = (Suggestion*) pointer;
+    free(sug->Word);
+    sug->Word = NULL;
+    free(sug);
+    sug = NULL;
+  }
+}
+
+void destroyTransliterationResult(TransliterationResult* result)
+{
+  varray_free(result->ExactMatch, &destroySuggestion);
+  varray_free(result->Suggestions, &destroySuggestion);
+  varray_free(result->GreedyTokenized, &destroySuggestion);
+  result->ExactMatch = NULL;
+  result->Suggestions = NULL;
+  result->GreedyTokenized = NULL;
+  free(result);
+  result = NULL;
 }

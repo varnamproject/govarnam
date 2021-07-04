@@ -24,4 +24,6 @@ Suggestion* makeSuggestion(char* word, int weight, int learned_on);
 
 TransliterationResult* makeResult(varray* exact_match, varray* suggestions, varray* greedy_tokenized, int dictionary_result_count);
 
+void destroyTransliterationResult(TransliterationResult*);
+
 #endif /* __C_SHARED_H__ */
