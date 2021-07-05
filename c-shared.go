@@ -10,8 +10,8 @@ package main
 import "C"
 import (
 	"context"
-	"fmt"
 	"log"
+	"sync"
 	"unsafe"
 
 	"gitlab.com/subins2000/govarnam/govarnam"
@@ -19,6 +19,7 @@ import (
 
 var backgroundContext = context.Background()
 var cancelFuncs = map[C.int]interface{}{}
+var cancelFuncsMapMutex = sync.RWMutex{}
 
 func checkError(err error) C.int {
 	if err != nil {
@@ -148,23 +149,33 @@ func varnam_get_last_error(varnamHandleID C.int) *C.char {
 //export varnam_transliterate_with_id
 func varnam_transliterate_with_id(varnamHandleID C.int, id C.int, word *C.char) *C.struct_TransliterationResult_t {
 	ctx, cancel := context.WithCancel(backgroundContext)
-	cancelFuncs[id] = cancel
+
+	cancelFuncsMapMutex.Lock()
+	cancelFuncs[id] = &cancel
+	cancelFuncsMapMutex.Unlock()
+
+	channel := make(chan govarnam.TransliterationResult)
+
+	go getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word), channel)
 
 	select {
 	case <-ctx.Done():
-		fmt.Println("cancel1")
 		return nil
-	default:
-		result := makeCTransliterationResult(ctx, getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word)))
-		return result
+	case result := <-channel:
+		cResult := makeCTransliterationResult(ctx, result)
+		return cResult
 	}
 }
 
 //export varnam_cancel
 func varnam_cancel(id C.int) C.int {
-	if fun, ok := cancelFuncs[id]; ok {
-		fun.(func())()
-		fmt.Println("cancel")
+	cancelFuncsMapMutex.Lock()
+	cancelFunc, ok := cancelFuncs[id]
+	defer cancelFuncsMapMutex.Unlock()
+
+	if ok {
+		(*cancelFunc.(*context.CancelFunc))()
+		delete(cancelFuncs, id)
 		return C.VARNAM_SUCCESS
 	} else {
 		return C.VARNAM_ERROR

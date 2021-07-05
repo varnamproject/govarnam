@@ -141,27 +141,34 @@ func (handle *VarnamHandle) SetConfig(config Config) {
 	} else {
 		C.varnam_set_indic_digits(handle.connectionID, C.int(0))
 	}
+}
 
+func (handle *VarnamHandle) cgoGetTransliterationResult(operationID C.int, resultChannel chan<- *C.struct_TransliterationResult_t, word string) {
+	cWord := C.CString(word)
+	defer C.free(unsafe.Pointer(cWord))
+	cResult := C.varnam_transliterate_with_id(handle.connectionID, operationID, cWord)
+
+	resultChannel <- cResult
+	close(resultChannel)
 }
 
 var transliterationOperationCount = C.int(0)
 
 // Transliterate transilterate
 func (handle *VarnamHandle) Transliterate(ctx context.Context, word string) TransliterationResult {
-	p := transliterationOperationCount
+	operationID := transliterationOperationCount
 	transliterationOperationCount++
+
+	channel := make(chan *C.struct_TransliterationResult_t)
+
+	go handle.cgoGetTransliterationResult(operationID, channel, word)
 
 	select {
 	case <-ctx.Done():
-		fmt.Println("cancel0")
-		C.varnam_cancel(p)
+		C.varnam_cancel(operationID)
 		var result TransliterationResult
 		return result
-	default:
-		cWord := C.CString(word)
-		cResult := C.varnam_transliterate_with_id(handle.connectionID, p, cWord)
-		C.free(unsafe.Pointer(cWord))
-
+	case cResult := <-channel:
 		return makeGoTransliterationResult(ctx, cResult)
 	}
 }
