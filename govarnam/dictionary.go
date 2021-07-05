@@ -2,7 +2,6 @@ package govarnam
 
 import (
 	"context"
-	sql "database/sql"
 	"log"
 	"time"
 )
@@ -20,20 +19,18 @@ type PatternDictionarySuggestion struct {
 	Length int
 }
 
-func openDB(path string) *sql.DB {
-	conn, err := sql.Open("sqlite3", path)
+func (varnam *Varnam) openDict(dictPath string) error {
+	var err error
+	varnam.dictConn, err = openDB(dictPath)
+	return err
+}
+
+func makeDictionary(dictPath string) error {
+	conn, err := openDB(dictPath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	return conn
-}
-
-func (varnam *Varnam) openDict(dictPath string) {
-	varnam.dictConn = openDB(dictPath)
-}
-
-func makeDictionary(dictPath string) {
-	conn := openDB(dictPath)
+	defer conn.Close()
 
 	conn.Exec("PRAGMA page_size=4096;")
 	conn.Exec("PRAGMA journal_mode=wal;")
@@ -43,16 +40,22 @@ func makeDictionary(dictPath string) {
 		"CREATE TABLE IF NOT EXISTS patterns_content ( `pattern` text, `word_id` integer, `learned` integer DEFAULT 0, FOREIGN KEY(`word_id`) REFERENCES `words`(`id`) ON DELETE CASCADE, PRIMARY KEY(`pattern`,`word_id`) ) WITHOUT ROWID;"}
 
 	for _, query := range queries {
-		ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancelfunc()
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelFunc()
+
 		stmt, err := conn.PrepareContext(ctx, query)
-		checkError(err)
+		if err != nil {
+			return err
+		}
 		defer stmt.Close()
+
 		_, err = stmt.ExecContext(ctx)
-		checkError(err)
+		if err != nil {
+			return err
+		}
 	}
 
-	defer conn.Close()
+	return nil
 }
 
 // all - Search for words starting with the word

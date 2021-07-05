@@ -31,25 +31,63 @@ type Token struct {
 	character *string // Non language character
 }
 
-func (varnam *Varnam) openVST(vstPath string) {
-	var err error
-	varnam.vstConn, err = sql.Open("sqlite3", vstPath)
+func openDB(path string) (*sql.DB, error) {
+	conn, err := sql.Open("sqlite3", path)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (varnam *Varnam) openVST(vstPath string) error {
+	var err error
+	varnam.vstConn, err = openDB(vstPath)
+	return err
+}
+
+func (varnam *Varnam) setSchemeInfo() {
+	rows, err := varnam.vstConn.Query("SELECT * FROM metadata")
+
+	if err != nil {
+		log.Print(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			key   string
+			value string
+		)
+		rows.Scan(&key, &value)
+		if key == "scheme-id" {
+			varnam.SchemeInfo.SchemeID = value
+		} else if key == "lang-code" {
+			varnam.SchemeInfo.LangCode = value
+		} else if key == "scheme-display-name" {
+			varnam.SchemeInfo.DisplayName = value
+		} else if key == "scheme-author" {
+			varnam.SchemeInfo.Author = value
+		} else if key == "scheme-compiled-date" {
+			varnam.SchemeInfo.CompiledDate = value
+		}
 	}
 }
 
 // Checks if a symbol exist in VST
-func (varnam *Varnam) symbolExist(ch string) bool {
+func (varnam *Varnam) symbolExist(ch string) (bool, error) {
 	rows, err := varnam.vstConn.Query("SELECT COUNT(*) FROM symbols WHERE value1 = ? OR value2 = ? OR value3 = ?", ch, ch, ch)
-	checkError(err)
+	if err != nil {
+		return false, err
+	}
 
 	count := 0
 	for rows.Next() {
 		err := rows.Scan(&count)
-		checkError(err)
+		if err != nil {
+			return false, err
+		}
 	}
-	return count != 0
+	return count != 0, nil
 }
 
 func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int) []Symbol {
@@ -210,7 +248,12 @@ func (varnam *Varnam) splitWordByConjunct(input string) ([]string, error) {
 		sequence += ch
 		sequenceLength++
 
-		if !varnam.symbolExist(sequence) {
+		doesntExist, err := varnam.symbolExist(sequence)
+		if err != nil {
+			return results, err
+		}
+
+		if !doesntExist {
 			// No more matches
 
 			if sequenceLength == 1 {

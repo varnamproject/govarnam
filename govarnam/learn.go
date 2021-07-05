@@ -4,8 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
-	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -18,15 +17,9 @@ type WordInfo struct {
 	learnedOn  int
 }
 
-func checkError(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 // Insert a word into word DB. Increment confidence if word exists
 // Partial - Whether the word is not a real word, but only part of a pathway to a word
-func (varnam *Varnam) insertWord(word string, confidence int, partial bool) {
+func (varnam *Varnam) insertWord(word string, confidence int, partial bool) error {
 	var query string
 
 	if partial {
@@ -37,13 +30,21 @@ func (varnam *Varnam) insertWord(word string, confidence int, partial bool) {
 		query = "INSERT OR IGNORE INTO words(word, confidence, learned_on) VALUES (trim(?), ?, strftime('%s', 'now'))"
 	}
 
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
+	bgContext := context.Background()
+
+	ctx, cancelFunc := context.WithTimeout(bgContext, 5*time.Second)
+	defer cancelFunc()
+
 	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
-	checkError(err)
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
+
 	_, err = stmt.ExecContext(ctx, word, confidence)
-	checkError(err)
+	if err != nil {
+		return err
+	}
 
 	if partial {
 		query = "UPDATE words SET confidence = confidence + 1 WHERE word = ?"
@@ -51,19 +52,47 @@ func (varnam *Varnam) insertWord(word string, confidence int, partial bool) {
 		query = "UPDATE words SET confidence = confidence + 1, learned_on = strftime('%s', 'now') WHERE word = ?"
 	}
 
-	ctx, cancelfunc = context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
+	ctx, cancelFunc = context.WithTimeout(bgContext, 5*time.Second)
+	defer cancelFunc()
+
 	stmt, err = varnam.dictConn.PrepareContext(ctx, query)
-	checkError(err)
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
+
 	_, err = stmt.ExecContext(ctx, word)
-	checkError(err)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (varnam *Varnam) languageSpecificSanitization(word string) string {
+	if varnam.SchemeInfo.LangCode == "ml" {
+		/* Malayalam has got two ways to write chil letters. Converting the old style to new atomic chil one */
+		word = strings.Replace(word, "ന്‍", "ൻ", -1)
+		word = strings.Replace(word, "ണ്‍", "ൺ", -1)
+		word = strings.Replace(word, "ല്‍", "ൽ", -1)
+		word = strings.Replace(word, "ള്‍", "ൾ", -1)
+		word = strings.Replace(word, "ര്‍", "ർ", -1)
+	}
+
+	if varnam.SchemeInfo.LangCode == "hi" {
+		/* Hindi's DANDA (Purna viram) */
+		word = strings.Replace(word, "।", "", -1)
+	}
+
+	return word
 }
 
 // Sanitize a word, remove unwanted characters before learning
-func sanitizeWord(word string) string {
+func (varnam *Varnam) sanitizeWord(word string) string {
 	// Remove leading & trailing whitespaces
 	word = strings.TrimSpace(word)
+
+	word = varnam.languageSpecificSanitization(word)
 
 	// Remove leading ZWJ & ZWNJ
 	firstChar, size := getFirstCharacter(word)
@@ -71,9 +100,9 @@ func sanitizeWord(word string) string {
 		word = word[size:len(word)]
 	}
 
-	// Remove trailing ZWJ & ZWNJ
+	// Remove trailing ZWNJ
 	lastChar, size := getLastCharacter(word)
-	if lastChar == ZWJ || lastChar == ZWNJ {
+	if lastChar == ZWNJ {
 		word = word[0 : len(word)-size]
 	}
 
@@ -84,24 +113,34 @@ func sanitizeWord(word string) string {
 // When learning a word, each path to that word is inserted into DB.
 // Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
 func (varnam *Varnam) Learn(word string, confidence int) error {
-	word = sanitizeWord(word)
-	conjuncts, _ := varnam.splitWordByConjunct(word)
+	word = varnam.sanitizeWord(word)
+	conjuncts, err := varnam.splitWordByConjunct(word)
+
+	if err != nil {
+		return err
+	}
 
 	if len(conjuncts) == 0 {
 		return fmt.Errorf("Nothing to learn")
 	} else if len(conjuncts) == 1 {
 		// Forced learning of a single conjunct
-		varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
+		err := varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
+
+		if err != nil {
+			return err
+		}
 	} else {
 		sequence := conjuncts[0]
 		for i, ch := range conjuncts {
 			if i == 0 {
 				continue
 			}
+
 			sequence += ch
 			if varnam.Debug {
 				fmt.Println("Learning", sequence)
 			}
+
 			if i+1 == len(conjuncts) {
 				// The word. The final word should have the highest confidence
 
@@ -113,7 +152,11 @@ func (varnam *Varnam) Learn(word string, confidence int) error {
 				} else {
 					weight = confidence - 1
 				}
-				varnam.insertWord(sequence, weight, false)
+
+				err := varnam.insertWord(sequence, weight, false)
+				if err != nil {
+					return err
+				}
 			} else {
 				// Partial word. Part of pathway to the word to be learnt
 				varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-i), true)
@@ -142,24 +185,34 @@ func (varnam *Varnam) Unlearn(word string) error {
 
 		// Check if there are words starting with this sequence
 		rows, err := varnam.dictConn.Query("SELECT COUNT(*) FROM words WHERE word LIKE ?", sequence+"%")
-		checkError(err)
+		if err != nil {
+			return err
+		}
 
 		count := 0
 		for rows.Next() {
 			err := rows.Scan(&count)
-			checkError(err)
+			if err != nil {
+				return err
+			}
 		}
 
 		if count == 1 {
 			// If there's only one, remove it
+			ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancelFunc()
+
 			query := "DELETE FROM words WHERE word = ?"
-			ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancelfunc()
 			stmt, err := varnam.dictConn.PrepareContext(ctx, query)
-			checkError(err)
+			if err != nil {
+				return err
+			}
 			defer stmt.Close()
+
 			_, err = stmt.ExecContext(ctx, sequence)
-			checkError(err)
+			if err != nil {
+				return err
+			}
 
 			// No need to remove from `patterns_content` since FOREIGN KEY ON DELETE CASCADE will work
 
@@ -175,29 +228,42 @@ func (varnam *Varnam) Unlearn(word string) error {
 
 // Train a word with a particular pattern. Pattern => word
 func (varnam *Varnam) Train(pattern string, word string) error {
-	varnam.Learn(word, 0)
+	word = varnam.sanitizeWord(word)
 
-	wordInfo := varnam.getWordInfo(word)
-
-	if wordInfo == nil {
-		return fmt.Errorf("Word %s couldn't be inserted", word)
+	err := varnam.Learn(word, 0)
+	if err != nil {
+		return err
 	}
 
+	wordInfo, err := varnam.getWordInfo(word)
+
+	if wordInfo == nil {
+		return fmt.Errorf("Word %s couldn't be inserted (%s)", word, err.Error())
+	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
+
 	query := "INSERT OR IGNORE INTO patterns_content(pattern, word_id, learned) VALUES (?, ?, 1)"
-	ctx, cancelfunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelfunc()
 	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
-	checkError(err)
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
+
 	_, err = stmt.ExecContext(ctx, pattern, wordInfo.id)
-	checkError(err)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (varnam *Varnam) getWordInfo(word string) *WordInfo {
+func (varnam *Varnam) getWordInfo(word string) (*WordInfo, error) {
 	rows, err := varnam.dictConn.Query("SELECT id, confidence, learned_on FROM words WHERE word = ?", word)
-	checkError(err)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 
 	var wordInfo WordInfo
@@ -211,13 +277,19 @@ func (varnam *Varnam) getWordInfo(word string) *WordInfo {
 	}
 
 	if wordExists {
-		return &wordInfo
+		return &wordInfo, nil
 	}
-	return nil
+	return nil, fmt.Errorf("Word doesn't exist")
 }
 
 // LearnFromFile Learn all words in a file
-func (varnam *Varnam) LearnFromFile(file io.Reader) {
+func (varnam *Varnam) LearnFromFile(filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
 	// io.Reader is a stream, so only one time iteration possible
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanWords)
@@ -234,7 +306,7 @@ func (varnam *Varnam) LearnFromFile(file io.Reader) {
 		curWord := scanner.Text()
 
 		if count <= 1 {
-			// Check the first 2 words. If it's of format <word frequency
+			// Check the first 2 words. If it's of format <word frequency>
 			// Then treat rest of words as frequency report
 			if count == 0 {
 				word = curWord
@@ -279,6 +351,48 @@ func (varnam *Varnam) LearnFromFile(file io.Reader) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
+}
+
+// TrainFromFile Train words with a particular pattern in bulk
+func (varnam *Varnam) TrainFromFile(filePath string) error {
+	// The file should have the format :
+	//    pattern word
+	// The separation between pattern and word should just be a single whitespace
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	count := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		wordsInLine := strings.Fields(line)
+
+		if len(wordsInLine) == 2 {
+			err := varnam.Train(wordsInLine[0], wordsInLine[1])
+			if err != nil {
+				fmt.Printf("Couldn't train %s => %s (%s) \n", wordsInLine[0], wordsInLine[1], err.Error())
+			}
+		} else if count > 2 {
+			return fmt.Errorf("File format not correct")
+		}
+
+		count++
+		if count%500 == 0 {
+			fmt.Printf("Trained %d words\n", count)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return nil
 }

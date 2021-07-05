@@ -25,12 +25,22 @@ type LangRules struct {
 	IndicDigits bool
 }
 
+// SchemeInfo of VST
+type SchemeInfo struct {
+	SchemeID     string
+	LangCode     string
+	DisplayName  string
+	Author       string
+	CompiledDate string
+}
+
 // Varnam config
 type Varnam struct {
-	vstConn   *sql.DB
-	dictConn  *sql.DB
-	LangRules LangRules
-	Debug     bool
+	vstConn    *sql.DB
+	dictConn   *sql.DB
+	LangRules  LangRules
+	SchemeInfo SchemeInfo
+	Debug      bool
 
 	// Maximum suggestions to obtain from dictionary
 	DictionarySuggestionsLimit int
@@ -365,23 +375,27 @@ func Init(vstPath string, dictPath string) Varnam {
 	varnam.openVST(vstPath)
 	varnam.openDict(dictPath)
 	varnam.setDefaultConfig()
+	varnam.setSchemeInfo()
 	return varnam
 }
 
 // InitFromID Init from ID. Scheme ID doesn't necessarily be a language code
-func InitFromID(langCode string) (*Varnam, error) {
+func InitFromID(schemeID string) (*Varnam, error) {
 	var (
 		vstPath  *string = nil
 		dictPath string
 	)
 
-	vstPath = findVSTPath(langCode)
+	vstPath = findVSTPath(schemeID)
 
-	dictPath = findLearningsFilePath(langCode)
+	dictPath = findLearningsFilePath(schemeID)
 	if !fileExists(dictPath) {
 		fmt.Printf("Making Varnam Learnings File at %s\n", dictPath)
 		os.MkdirAll(path.Dir(dictPath), 0750)
-		makeDictionary(dictPath)
+		err := makeDictionary(dictPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if vstPath == nil {

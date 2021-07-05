@@ -27,19 +27,22 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Errorf("Received %v (type %v), expected %v (type %v)", a, reflect.TypeOf(a), b, reflect.TypeOf(b))
 }
 
-func setUp(langCode string) {
+func setUp(schemeID string) {
 	_, filename, _, _ := runtime.Caller(0)
 	projectRoot := path.Join(path.Dir(filename), "..")
 
-	vstLoc := path.Join(projectRoot, "schemes", langCode+".vst")
+	vstLoc := path.Join(projectRoot, "schemes", schemeID+".vst")
 
 	dictDir, err := ioutil.TempDir("", "govarnam_test")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	dictLoc := path.Join(dictDir, langCode+".vst.learnings")
-	makeDictionary(dictLoc)
+	dictLoc := path.Join(dictDir, schemeID+".vst.learnings")
+	err = makeDictionary(dictLoc)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	varnam = Init(vstLoc, dictLoc)
 }
