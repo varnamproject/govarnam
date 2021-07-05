@@ -73,7 +73,8 @@ func TestTokenizer(t *testing.T) {
 
 func TestLearn(t *testing.T) {
 	// Non language word
-	assertEqual(t, varnam.Learn("Шаблон", 0), false)
+	err := varnam.Learn("Шаблон", 0) != nil
+	assertEqual(t, err, true)
 
 	// Before learning
 	assertEqual(t, varnam.Transliterate("malayalam").Suggestions[0].Word, "മലയലം")
@@ -140,6 +141,12 @@ func TestZW(t *testing.T) {
 	// __ is ZWJ
 	assertEqual(t, varnam.Transliterate("n_").Suggestions[0].Word, "ൻ‌") // Old chil
 	assertEqual(t, varnam.Transliterate("nan_ma").Suggestions[0].Word, "നൻ‌മ")
+}
+
+// Test if zwj-chils are replaced with atomic chil
+func TestAtomicChil(t *testing.T) {
+	varnam.Train("professor", "പ്രൊഫസര്‍")
+	assertEqual(t, varnam.Transliterate("professor").Suggestions[0].Word, "പ്രൊഫസർ")
 }
 
 func TestMain(m *testing.M) {
