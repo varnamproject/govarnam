@@ -41,7 +41,7 @@ func (varnam *Varnam) openVST(vstPath string) {
 
 // Checks if a symbol exist in VST
 func (varnam *Varnam) symbolExist(ch string) bool {
-	rows, err := varnam.vstConn.Query("SELECT COUNT(*) FROM symbols WHERE value1 = ?", ch)
+	rows, err := varnam.vstConn.Query("SELECT COUNT(*) FROM symbols WHERE value1 = ? OR value2 = ? OR value3 = ?", ch, ch, ch)
 	checkError(err)
 
 	count := 0
@@ -215,7 +215,7 @@ func (varnam *Varnam) splitWordByConjunct(input string) ([]string, error) {
 
 			if sequenceLength == 1 {
 				// Has non language characters, give error
-				return []string{}, fmt.Errorf("Has non language characters")
+				return []string{}, fmt.Errorf("Has non language characters: %s", sequence)
 			} else if len(prevSequenceMatch) > 0 {
 				// Backtrack and add the previous sequence matches
 				i--
