@@ -7,13 +7,20 @@ package main
  */
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 
-	"gitlab.com/subins2000/govarnam/govarnam"
+	"gitlab.com/subins2000/govarnam/govarnamgo"
 )
+
+var varnam *govarnamgo.VarnamHandle
+
+func logVarnamError() {
+	log.Fatal(varnam.GetLastError())
+}
 
 func main() {
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
@@ -30,15 +37,16 @@ func main() {
 
 	flag.Parse()
 
-	varnam, err := govarnam.InitFromLang(*langFlag)
-
+	var err error
+	varnam, err = govarnamgo.InitFromID(*langFlag)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 
-	varnam.Debug = *debugFlag
-	varnam.LangRules.IndicDigits = *indicDigitsFlag
+	varnam.Debug(*debugFlag)
+
+	config := govarnamgo.Config{IndicDigits: *indicDigitsFlag, DictionarySuggestionsLimit: 10, TokenizerSuggestionsLimit: 10, TokenizerSuggestionsAlways: true}
+	varnam.SetConfig(config)
 
 	args := flag.Args()
 
@@ -46,11 +54,10 @@ func main() {
 		pattern := args[0]
 		word := args[1]
 
-		err := varnam.Train(pattern, word)
-		if err == nil {
+		if varnam.Train(pattern, word) {
 			fmt.Printf("Trained %s => %s\n", pattern, word)
 		} else {
-			fmt.Printf(err.Error() + "\n")
+			logVarnamError()
 		}
 	} else if *learnFlag {
 		word := args[0]
@@ -59,6 +66,7 @@ func main() {
 			fmt.Printf("Learnt %s\n", word)
 		} else {
 			fmt.Printf("Couldn't learn %s", word)
+			logVarnamError()
 		}
 	} else if *unlearnFlag {
 		word := args[0]
@@ -67,6 +75,7 @@ func main() {
 			fmt.Printf("Unlearnt %s\n", word)
 		} else {
 			fmt.Printf("Couldn't learn %s", word)
+			logVarnamError()
 		}
 	} else if *learnFromFileFlag {
 		file, err := os.Open(args[0])
@@ -75,33 +84,31 @@ func main() {
 		}
 		defer file.Close()
 
-		varnam.LearnFromFile(file)
+		// C.LearnFromFile(file)
 	} else {
-		var results govarnam.TransliterationResult
+		var result govarnamgo.TransliterationResult
 
 		if *greedy {
-			results = varnam.TransliterateGreedy(args[0])
+			// results = C.TransliterateGreedy(args[0])
 		} else {
-			results = varnam.Transliterate(args[0])
+			result = varnam.Transliterate(context.Background(), args[0])
 		}
 
-		if len(results.ExactMatch) > 0 {
+		if len(result.ExactMatch) > 0 {
 			fmt.Println("Exact Matches")
-			for _, sug := range results.ExactMatch {
+			for _, sug := range result.ExactMatch {
 				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 			}
 		}
-		if len(results.Suggestions) > 0 {
+		if len(result.Suggestions) > 0 {
 			fmt.Println("Suggestions")
-			for _, sug := range results.Suggestions {
+			for _, sug := range result.Suggestions {
 				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 			}
 		}
 		fmt.Println("Greedy Tokenized")
-		for _, sug := range results.GreedyTokenized {
+		for _, sug := range result.GreedyTokenized {
 			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 		}
 	}
-
-	defer varnam.Close()
 }

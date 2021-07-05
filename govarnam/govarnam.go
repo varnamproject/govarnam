@@ -314,12 +314,12 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 }
 
 // TransliterateWithContext Use Go context
-func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string) TransliterationResult {
+func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string, resultChannel chan<- TransliterationResult) {
 	var result TransliterationResult
 
 	select {
 	case <-ctx.Done():
-		return result
+		return
 
 	default:
 		tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
@@ -340,7 +340,7 @@ func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string)
 		result.Suggestions = sortSuggestions(sugs)
 		result.GreedyTokenized = sortSuggestions(greedyTokenized)
 
-		return result
+		resultChannel <- result
 	}
 }
 
@@ -368,8 +368,8 @@ func Init(vstPath string, dictPath string) Varnam {
 	return varnam
 }
 
-// InitFromLang code
-func InitFromLang(langCode string) (*Varnam, error) {
+// InitFromID Init from ID. Scheme ID doesn't necessarily be a language code
+func InitFromID(langCode string) (*Varnam, error) {
 	var (
 		vstPath  *string = nil
 		dictPath string
