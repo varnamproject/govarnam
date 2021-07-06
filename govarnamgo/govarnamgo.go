@@ -89,6 +89,8 @@ func makeGoTransliterationResult(ctx context.Context, cResult *C.struct_Translit
 		}
 		result.GreedyTokenized = greedyTokenized
 
+		result.DictionaryResultCount = int(cResult.DictionaryResultCount)
+
 		go C.destroyTransliterationResult(cResult)
 
 		return result

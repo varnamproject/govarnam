@@ -101,6 +101,7 @@ func main() {
 		} else {
 			result = varnam.Transliterate(context.Background(), args[0])
 		}
+		fmt.Println("Dictionary Result Count:", result.DictionaryResultCount)
 
 		if len(result.ExactMatch) > 0 {
 			fmt.Println("Exact Matches")

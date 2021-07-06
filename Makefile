@@ -51,9 +51,10 @@ build:
 
 release:
 	mkdir -p ${RELEASE_NAME} ${RELEASE_NAME}/schemes
-	cp varnamc ${RELEASE_NAME}/
+	cp ${CLI_BIN} ${RELEASE_NAME}/
 	cp libgovarnam.so ${RELEASE_NAME}/
 	cp *.h ${RELEASE_NAME}/
+	cp *.pc ${RELEASE_NAME}/
 	cp install.sh ${RELEASE_NAME}/
 
 	cp schemes/*.vst ${RELEASE_NAME}/schemes/
