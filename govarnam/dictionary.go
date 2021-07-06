@@ -271,8 +271,7 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 	case <-ctx.Done():
 		return results
 	default:
-		// TODO better optimized query. Use JOIN maybe
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), (SELECT wd.word FROM words wd WHERE wd.id = pts.word_id), (SELECT wd.confidence FROM words wd WHERE wd.id = pts.word_id) FROM `patterns_content` pts WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.DictionarySuggestionsLimit)
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), words.word, words.confidence, words.learned_on FROM `patterns_content` pts LEFT JOIN words ON words.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.DictionarySuggestionsLimit)
 
 		if err != nil {
 			log.Print(err)
@@ -283,7 +282,7 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 
 		for rows.Next() {
 			var item PatternDictionarySuggestion
-			rows.Scan(&item.Length, &item.Sug.Word, &item.Sug.Weight)
+			rows.Scan(&item.Length, &item.Sug.Word, &item.Sug.Weight, &item.Sug.LearnedOn)
 			item.Sug.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
 			results = append(results, item)
 		}
