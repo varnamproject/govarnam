@@ -104,15 +104,15 @@ func main() {
 				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 			}
 		}
+		fmt.Println("Greedy Tokenized")
+		for _, sug := range result.GreedyTokenized {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+		}
 		if len(result.Suggestions) > 0 {
 			fmt.Println("Suggestions")
 			for _, sug := range result.Suggestions {
 				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 			}
-		}
-		fmt.Println("Greedy Tokenized")
-		for _, sug := range result.GreedyTokenized {
-			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 		}
 	}
 }
