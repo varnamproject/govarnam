@@ -118,7 +118,10 @@ func InitFromID(id string) (*VarnamHandle, error) {
 
 // GetLastError get last error
 func (handle *VarnamHandle) GetLastError() string {
-	return C.GoString(C.varnam_get_last_error(handle.connectionID))
+	cStr := C.varnam_get_last_error(handle.connectionID)
+	goStr := C.GoString(cStr)
+	C.free(unsafe.Pointer(cStr))
+	return goStr
 }
 
 // Debug turn debug on/off
@@ -205,5 +208,19 @@ func (handle *VarnamHandle) Unlearn(word string) bool {
 
 	C.free(unsafe.Pointer(cWord))
 
+	return checkError(err)
+}
+
+// LearnFromFile learn words from a file
+func (handle *VarnamHandle) LearnFromFile(filePath string) bool {
+	cFilePath := C.CString(filePath)
+	err := C.varnam_learn_from_file(handle.connectionID, cFilePath)
+	return checkError(err)
+}
+
+// TrainFromFile train pattern => word from a file
+func (handle *VarnamHandle) TrainFromFile(filePath string) bool {
+	cFilePath := C.CString(filePath)
+	err := C.varnam_train_from_file(handle.connectionID, cFilePath)
 	return checkError(err)
 }

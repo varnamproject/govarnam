@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 
 	"gitlab.com/subins2000/govarnam/govarnamgo"
 )
@@ -31,6 +30,7 @@ func main() {
 	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
 
 	learnFromFileFlag := flag.Bool("learn-from-file", false, "Learn words in a file")
+	trainFromFileFlag := flag.Bool("train-from-file", false, "Train pattern => word from a file.")
 
 	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
 	greedy := flag.Bool("greedy", false, "Show only exactly matched suggestions")
@@ -78,13 +78,17 @@ func main() {
 			logVarnamError()
 		}
 	} else if *learnFromFileFlag {
-		file, err := os.Open(args[0])
-		if err != nil {
-			log.Fatal(err)
+		if varnam.LearnFromFile(args[0]) {
+			fmt.Println("Finished learning from file")
+		} else {
+			logVarnamError()
 		}
-		defer file.Close()
-
-		// C.LearnFromFile(file)
+	} else if *trainFromFileFlag {
+		if varnam.TrainFromFile(args[0]) {
+			fmt.Println("Finished training from file")
+		} else {
+			logVarnamError()
+		}
 	} else {
 		var result govarnamgo.TransliterationResult
 

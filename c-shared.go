@@ -65,7 +65,8 @@ type varnamHandle struct {
 }
 
 // For storing varnam instances
-var varnamHandles = map[C.int]interface{}{}
+var varnamHandles = map[C.int]*varnamHandle{}
+var varnamHandlesMapMutex = sync.RWMutex{}
 
 //export varnam_init_from_id
 func varnam_init_from_id(langCode *C.char, id unsafe.Pointer) C.int {
@@ -73,18 +74,22 @@ func varnam_init_from_id(langCode *C.char, id unsafe.Pointer) C.int {
 	*(*C.int)(id) = handleID
 
 	varnamGo, err := govarnam.InitFromID(C.GoString(langCode))
-	varnamHandles[handleID] = varnamHandle{varnamGo, err}
+
+	varnamHandlesMapMutex.Lock()
+	varnamHandles[handleID] = &varnamHandle{varnamGo, err}
+	varnamHandlesMapMutex.Unlock()
 
 	return checkError(err)
 }
 
-func getVarnamHandle(id C.int) varnamHandle {
+func getVarnamHandle(id C.int) *varnamHandle {
+	varnamHandlesMapMutex.Lock()
+	defer varnamHandlesMapMutex.Unlock()
 	if handle, ok := varnamHandles[id]; ok {
-		return handle.(varnamHandle)
-	} else {
-		log.Fatal("Varnam handle not found")
-		return varnamHandle{}
+		return handle
 	}
+	log.Fatal("Varnam handle not found")
+	return &varnamHandle{}
 }
 
 //export varnam_transliterate
@@ -141,14 +146,34 @@ func varnam_unlearn(varnamHandleID C.int, word *C.char) C.int {
 	return checkError(handle.err)
 }
 
+//export varnam_learn_from_file
+func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+	handle.err = handle.varnam.LearnFromFile(C.GoString(filePath))
+	return checkError(handle.err)
+}
+
+//export varnam_train_from_file
+func varnam_train_from_file(varnamHandleID C.int, filePath *C.char) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+	handle.err = handle.varnam.TrainFromFile(C.GoString(filePath))
+	return checkError(handle.err)
+}
+
 //export varnam_get_last_error
 func varnam_get_last_error(varnamHandleID C.int) *C.char {
-	return C.CString(getVarnamHandle(varnamHandleID).err.Error())
+	err := getVarnamHandle(varnamHandleID).err
+	if err != nil {
+		return C.CString(err.Error())
+	} else {
+		return C.CString("")
+	}
 }
 
 //export varnam_transliterate_with_id
 func varnam_transliterate_with_id(varnamHandleID C.int, id C.int, word *C.char) *C.struct_TransliterationResult_t {
 	ctx, cancel := context.WithCancel(backgroundContext)
+	defer cancel()
 
 	cancelFuncsMapMutex.Lock()
 	cancelFuncs[id] = &cancel
