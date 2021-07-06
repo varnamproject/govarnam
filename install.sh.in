@@ -1,0 +1,38 @@
+#!/bin/bash
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+if [[ "$EUID" != 0 ]]; then
+  echo "Run this script as root or with sudo"
+  exit
+fi
+
+if [ -z "$1" ]; then
+  echo "Specify install or uninstall"
+else
+  if [ "$1" = "install" ]; then
+    sudo cp "$SCRIPT_DIR/varnamc" "@INSTALL_PREFIX@/bin/varnamc"
+    
+    sudo mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
+    sudo cp "$SCRIPT_DIR/libgovarnam.so" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@"
+    sudo ln -s "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so"
+    sudo cp "$SCRIPT_DIR/govarnam.pc" "@INSTALL_PREFIX@/lib/pkgconfig/"
+
+    sudo mkdir -p "@INSTALL_PREFIX@/include/libgovarnam"
+    sudo cp "$SCRIPT_DIR/"*.h "@INSTALL_PREFIX@/include/libgovarnam/"
+    sudo ldconfig
+
+    sudo mkdir -p "@INSTALL_PREFIX@/share/varnam/vstDEV"
+    sudo cp "$SCRIPT_DIR/schemes/"*.vst "@INSTALL_PREFIX@/share/varnam/vstDEV/"
+    echo "Installation finished"
+
+  elif [ "$1" = "uninstall" ]; then
+    sudo rm "@INSTALL_PREFIX@/bin/varnamc" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
+    sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*
+    sudo rmdir "@INSTALL_PREFIX@/include/libgovarnam"
+    sudo rm "@INSTALL_PREFIX@/share/varnam/vstDEV/"*
+    sudo rmdir "@INSTALL_PREFIX@/share/varnam/vstDEV/"
+
+    echo "Uninstallation finished"
+  fi
+fi

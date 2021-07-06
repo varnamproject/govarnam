@@ -1,0 +1,11 @@
+prefix=@INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include/libgovarnam
+
+Name: GoVarnam
+Description: A transliteration library for Indian languages
+URL: http://varnamproject.com
+Version: @VERSION@
+Libs: -L${libdir} -lgovarnam
+Cflags: -I${includedir}

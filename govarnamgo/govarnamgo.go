@@ -2,8 +2,7 @@ package govarnamgo
 
 /* Golang bindings for govarnam library */
 
-// #cgo LDFLAGS: -L${SRCDIR}/../ -lgovarnam
-// #cgo CFLAGS: -I${SRCDIR}/../
+// #cgo pkg-config: govarnam
 // #include "libgovarnam.h"
 // #include "stdlib.h"
 import "C"

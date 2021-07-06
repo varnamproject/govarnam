@@ -2,3 +2,6 @@ libgovarnam.so
 libgovarnam.h
 varnam
 varnamc
+
+install.sh
+govarnam.pc
