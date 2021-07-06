@@ -83,7 +83,7 @@ func makeGoTransliterationResult(ctx context.Context, cResult *C.struct_Translit
 		var greedyTokenized []Suggestion
 		i = 0
 		for i < int(C.varray_length(cResult.GreedyTokenized)) {
-			cSug := (*C.Suggestion)(C.varray_get(cResult.Suggestions, C.int(i)))
+			cSug := (*C.Suggestion)(C.varray_get(cResult.GreedyTokenized, C.int(i)))
 			sug := makeSuggestion(cSug)
 			greedyTokenized = append(greedyTokenized, sug)
 			i++
