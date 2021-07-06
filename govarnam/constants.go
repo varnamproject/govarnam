@@ -1,6 +1,7 @@
 package govarnam
 
 import (
+	"fmt"
 	"os"
 	"path"
 )
@@ -58,14 +59,14 @@ var VARNAM_VST_DIR = [2]string{
 	// "/usr/local/share/varnam/vst",
 	"/usr/local/share/varnam/vstDEV"}
 
-func findVSTPath(langCode string) *string {
+func findVSTPath(schemeID string) (string, error) {
 	for _, loc := range VARNAM_VST_DIR {
-		temp := path.Join(loc, langCode+".vst")
+		temp := path.Join(loc, schemeID+".vst")
 		if fileExists(temp) {
-			return &temp
+			return temp, nil
 		}
 	}
-	return nil
+	return "", fmt.Errorf("Couldn't find VST for %s", schemeID)
 }
 
 func findLearningsFilePath(langCode string) string {

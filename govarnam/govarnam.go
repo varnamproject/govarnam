@@ -382,11 +382,14 @@ func Init(vstPath string, dictPath string) Varnam {
 // InitFromID Init from ID. Scheme ID doesn't necessarily be a language code
 func InitFromID(schemeID string) (*Varnam, error) {
 	var (
-		vstPath  *string = nil
+		vstPath  string
 		dictPath string
 	)
 
-	vstPath = findVSTPath(schemeID)
+	vstPath, err := findVSTPath(schemeID)
+	if err != nil {
+		return nil, err
+	}
 
 	dictPath = findLearningsFilePath(schemeID)
 	if !fileExists(dictPath) {
@@ -398,11 +401,7 @@ func InitFromID(schemeID string) (*Varnam, error) {
 		}
 	}
 
-	if vstPath == nil {
-		return nil, fmt.Errorf("Couldn't find VST")
-	}
-
-	varnam := Init(*vstPath, dictPath)
+	varnam := Init(vstPath, dictPath)
 
 	return &varnam, nil
 }

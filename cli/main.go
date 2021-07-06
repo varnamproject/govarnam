@@ -37,6 +37,10 @@ func main() {
 
 	flag.Parse()
 
+	if *langFlag == "" {
+		log.Fatal("Specifiy a language with -lang")
+	}
+
 	var err error
 	varnam, err = govarnamgo.InitFromID(*langFlag)
 	if err != nil {
