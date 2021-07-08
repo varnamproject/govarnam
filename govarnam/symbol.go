@@ -281,10 +281,10 @@ func (varnam *Varnam) splitWordByConjunct(input string) ([]string, error) {
 }
 
 func getSymbolValue(symbol Symbol, position int) string {
-	if symbol.tag == RENDER_VALUE2_TAG {
-		// Specific rule to use value 2
-		return symbol.value2
-	} else if symbol.generalType == VARNAM_SYMBOL_VOWEL && position > 0 {
+	// Ignore render_value2 tag. It's only applicable for libvarnam
+	// https://gitlab.com/subins2000/govarnam/-/issues/3
+
+	if symbol.generalType == VARNAM_SYMBOL_VOWEL && position > 0 {
 		// If in between word, we use the vowel and not the consonant
 		return symbol.value2 // ാ
 	} else {
