@@ -28,7 +28,7 @@ type Token struct {
 	tokenType int
 	symbols   []Symbol // Will be empty for non language character
 	position  int
-	character *string // Non language character
+	character string // Non language character
 }
 
 func openDB(path string) (*sql.DB, error) {
@@ -158,12 +158,12 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 
 				if len(sequence) == 1 {
 					// No matches for a single char, add it
-					token := Token{VARNAM_TOKEN_CHAR, matches, i, &ch}
+					token := Token{VARNAM_TOKEN_CHAR, matches, i, ch}
 					results = append(results, token)
 				} else if len(prevSequenceMatches) > 0 {
 					// Backtrack and add the previous sequence matches
 					i--
-					token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, nil}
+					token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, sequence}
 					results = append(results, token)
 				}
 
@@ -171,13 +171,13 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 			} else {
 				if matches[0].generalType == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
 					// Skip numbers
-					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, &ch}
+					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, ch}
 					results = append(results, token)
 
 					sequence = ""
 				} else if i == len(word)-1 {
 					// Last character
-					token := Token{VARNAM_TOKEN_SYMBOL, matches, i, nil}
+					token := Token{VARNAM_TOKEN_SYMBOL, matches, i, sequence}
 					results = append(results, token)
 				} else {
 					prevSequenceMatches = matches
@@ -300,17 +300,22 @@ func getSymbolWeight(symbol Symbol) int {
 func removeNonExactTokens(tokens []Token) []Token {
 	// Remove non-exact symbols
 	for i, token := range tokens {
-		var reducedSymbols []Symbol
-		for _, symbol := range token.symbols {
-			if symbol.matchType == VARNAM_MATCH_EXACT {
-				reducedSymbols = append(reducedSymbols, symbol)
-			} else {
-				// If a possibility result, then rest of them will also be same
-				// so save time by skipping rest
-				break
+		if token.tokenType == VARNAM_TOKEN_SYMBOL {
+			var reducedSymbols []Symbol
+			for _, symbol := range token.symbols {
+				if symbol.matchType == VARNAM_MATCH_EXACT {
+					reducedSymbols = append(reducedSymbols, symbol)
+				} else {
+					if len(reducedSymbols) == 0 {
+						tokens[i].tokenType = VARNAM_TOKEN_CHAR
+					}
+					// If a possibility result, then rest of them will also be same
+					// so save time by skipping rest
+					break
+				}
 			}
+			tokens[i].symbols = reducedSymbols
 		}
-		tokens[i].symbols = reducedSymbols
 	}
 	return tokens
 }

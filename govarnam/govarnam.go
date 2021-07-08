@@ -64,10 +64,23 @@ type Suggestion struct {
 
 // TransliterationResult result
 type TransliterationResult struct {
-	ExactMatch            []Suggestion
-	Suggestions           []Suggestion
-	GreedyTokenized       []Suggestion
-	DictionaryResultCount int
+	// Exact matches found in dictionary if any
+	// From both patterns and normal dict
+	ExactMatches []Suggestion
+
+	// Possible words matching from dictionary
+	DictionarySuggestions []Suggestion
+
+	// Possible words matching from patterns dictionary
+	PatternDictionarySuggestions []Suggestion
+
+	// All possible matches from tokenizer (VARNAM_MATCH_ALL)
+	// Has a limit. The first few results will be VARNAM_MATCH_EXACT
+	TokenizerSuggestions []Suggestion
+
+	// VARNAM_MATCH_EXACT results from tokenizer.
+	// No limit, mostly gives 1 or less than 3 outputs
+	GreedyTokenized []Suggestion
 }
 
 /**
@@ -188,7 +201,7 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokens []Token, p
 					word[i] = symbolValue
 					weight += symbolWeight
 				} else if t.tokenType == VARNAM_TOKEN_CHAR {
-					word[i] = *t.character
+					word[i] = t.character
 				}
 				i--
 			}
@@ -235,7 +248,9 @@ func (varnam *Varnam) setDefaultConfig() {
 	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT)[0].value1
 }
 
-func sortSuggestions(sugs []Suggestion) []Suggestion {
+// SortSuggestions by confidence and learned on time
+func SortSuggestions(sugs []Suggestion) []Suggestion {
+	// TODO write tests
 	sort.SliceStable(sugs, func(i, j int) bool {
 		if (sugs[i].LearnedOn == 0 || sugs[j].LearnedOn == 0) && !(sugs[i].LearnedOn == 0 && sugs[j].LearnedOn == 0) {
 			return sugs[i].LearnedOn > sugs[j].LearnedOn
@@ -248,10 +263,12 @@ func sortSuggestions(sugs []Suggestion) []Suggestion {
 // Returns tokens, exactMatches, dictionary results, greedy tokenized
 func (varnam *Varnam) transliterate(ctx context.Context, word string) ([]Token, []Suggestion, []Suggestion, []Suggestion) {
 	var (
-		dictResults     []Suggestion
-		exactMatches    []Suggestion
-		greedyTokenized []Suggestion
-		tokens          []Token
+		exactMatches     []Suggestion
+		dictSugs         []Suggestion
+		patternsDictSugs []Suggestion
+		tokenizerSugs    []Suggestion
+		greedyTokenized  []Suggestion
+		tokens           []Token
 	)
 
 	tokensChan := make(chan []Token)
@@ -290,7 +307,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) ([]Token, 
 
 			// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
 			greedyTokenizedResult := <-greedyTokenizedChan
-			greedyTokenized = sortSuggestions(greedyTokenizedResult)
+			greedyTokenized = SortSuggestions(greedyTokenizedResult)
 
 			return tokens, exactMatches, dictResults, greedyTokenized
 		}
@@ -305,7 +322,6 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 	tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
 
 	sugs := dictResults
-	result.DictionaryResultCount = len(dictResults)
 
 	if len(tokens) != 0 {
 		sugs = append(sugs, exactMatches...)
@@ -316,9 +332,9 @@ func (varnam *Varnam) Transliterate(word string) TransliterationResult {
 		}
 	}
 
-	result.ExactMatch = sortSuggestions(exactMatches)
-	result.Suggestions = sortSuggestions(sugs)
-	result.GreedyTokenized = sortSuggestions(greedyTokenized)
+	result.ExactMatch = SortSuggestions(exactMatches)
+	result.Suggestions = SortSuggestions(sugs)
+	result.GreedyTokenized = SortSuggestions(greedyTokenized)
 
 	return result
 }
@@ -346,9 +362,9 @@ func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string,
 			}
 		}
 
-		result.ExactMatch = sortSuggestions(exactMatches)
-		result.Suggestions = sortSuggestions(sugs)
-		result.GreedyTokenized = sortSuggestions(greedyTokenized)
+		result.ExactMatch = SortSuggestions(exactMatches)
+		result.Suggestions = SortSuggestions(sugs)
+		result.GreedyTokenized = SortSuggestions(greedyTokenized)
 
 		resultChannel <- result
 	}
@@ -361,9 +377,9 @@ func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
 	ctx := context.Background()
 	_, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
 
-	result.ExactMatch = sortSuggestions(exactMatches)
-	result.Suggestions = sortSuggestions(dictResults)
-	result.GreedyTokenized = sortSuggestions(greedyTokenized)
+	result.ExactMatch = SortSuggestions(exactMatches)
+	result.Suggestions = SortSuggestions(dictResults)
+	result.GreedyTokenized = SortSuggestions(greedyTokenized)
 	result.DictionaryResultCount = len(dictResults)
 
 	return result
