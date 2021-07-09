@@ -130,12 +130,12 @@ func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int
 }
 
 // Convert a string into Tokens for later processing
-func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType int) []Token {
+func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType int) *[]Token {
 	var results []Token
 
 	select {
 	case <-ctx.Done():
-		return results
+		return &results
 	default:
 
 		var prevSequenceMatches []Symbol
@@ -185,7 +185,7 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 			}
 			i++
 		}
-		return results
+		return &results
 	}
 }
 

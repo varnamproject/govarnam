@@ -10,7 +10,7 @@ type channelDictionaryResult struct {
 	suggestions  []Suggestion
 }
 
-func (varnam *Varnam) channelTokenizeWord(ctx context.Context, word string, matchType int, channel chan []Token) {
+func (varnam *Varnam) channelTokenizeWord(ctx context.Context, word string, matchType int, channel chan *[]Token) {
 	select {
 	case <-ctx.Done():
 		close(channel)
@@ -21,15 +21,26 @@ func (varnam *Varnam) channelTokenizeWord(ctx context.Context, word string, matc
 	}
 }
 
-func (varnam *Varnam) channelTokensToGreedySuggestions(ctx context.Context, tokens []Token, channel chan []Suggestion) {
+func (varnam *Varnam) channelTokensToSuggestions(ctx context.Context, tokens *[]Token, channel chan []Suggestion) {
+	select {
+	case <-ctx.Done():
+		close(channel)
+		return
+	default:
+		channel <- varnam.tokensToSuggestions(ctx, tokens, false)
+		close(channel)
+	}
+}
+
+func (varnam *Varnam) channelTokensToGreedySuggestions(ctx context.Context, tokens *[]Token, channel chan []Suggestion) {
 	select {
 	case <-ctx.Done():
 		close(channel)
 		return
 	default:
 		// Altering tokens directly will affect others
-		tokensCopy := make([]Token, len(tokens))
-		copy(tokensCopy, tokens)
+		tokensCopy := make([]Token, len(*tokens))
+		copy(tokensCopy, *tokens)
 
 		tokensCopy = removeNonExactTokens(tokensCopy)
 
@@ -40,12 +51,13 @@ func (varnam *Varnam) channelTokensToGreedySuggestions(ctx context.Context, toke
 			return
 		}
 
-		channel <- varnam.tokensToSuggestions(ctx, tokensCopy, false)
+		channel <- varnam.tokensToSuggestions(ctx, &tokensCopy, false)
+		tokensCopy = nil
 		close(channel)
 	}
 }
 
-func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string, tokens []Token, channel chan channelDictionaryResult) {
+func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string, tokens *[]Token, channel chan channelDictionaryResult) {
 	var (
 		dictResults  []Suggestion
 		exactMatches []Suggestion

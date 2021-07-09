@@ -124,8 +124,9 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 	}
 }
 
-func (varnam *Varnam) getFromDictionary(ctx context.Context, tokens []Token) DictionaryResult {
+func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]Token) DictionaryResult {
 	var endResult DictionaryResult
+	tokens := *tokensPointer
 
 	select {
 	case <-ctx.Done():

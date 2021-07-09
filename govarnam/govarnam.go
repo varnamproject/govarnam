@@ -49,7 +49,7 @@ type Varnam struct {
 	TokenizerSuggestionsLimit int
 
 	// Always include tokenizer made suggestions.
-	// This may give bad results and suggestion list will be long
+	// Tokenizer results are not exactly the best, but it's alright
 	TokenizerSuggestionsAlways bool
 
 	// See setDefaultConfig() for the default values
@@ -75,7 +75,9 @@ type TransliterationResult struct {
 	PatternDictionarySuggestions []Suggestion
 
 	// All possible matches from tokenizer (VARNAM_MATCH_ALL)
-	// Has a limit. The first few results will be VARNAM_MATCH_EXACT
+	// Has a limit. The first few results will be VARNAM_MATCH_EXACT.
+	// This will only be filled if there are no exact matches.
+	// Related: See Config.TokenizerSuggestionsAlways
 	TokenizerSuggestions []Suggestion
 
 	// VARNAM_MATCH_EXACT results from tokenizer.
@@ -87,8 +89,9 @@ type TransliterationResult struct {
  * Convert tokens into suggestions.
  * partial - set true if only a part of a word is being tokenized and not an entire word
  */
-func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokens []Token, partial bool) []Suggestion {
+func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]Token, partial bool) []Suggestion {
 	var results []Suggestion
+	tokens := *tokensPointer
 
 	select {
 	case <-ctx.Done():
@@ -260,27 +263,24 @@ func SortSuggestions(sugs []Suggestion) []Suggestion {
 	return sugs
 }
 
-// Returns tokens, exactMatches, dictionary results, greedy tokenized
-func (varnam *Varnam) transliterate(ctx context.Context, word string) ([]Token, []Suggestion, []Suggestion, []Suggestion) {
+// Returns tokens and all found suggestions
+func (varnam *Varnam) transliterate(ctx context.Context, word string) (
+	*[]Token,
+	TransliterationResult) {
 	var (
-		exactMatches     []Suggestion
-		dictSugs         []Suggestion
-		patternsDictSugs []Suggestion
-		tokenizerSugs    []Suggestion
-		greedyTokenized  []Suggestion
-		tokens           []Token
+		result TransliterationResult
 	)
 
-	tokensChan := make(chan []Token)
-	go varnam.channelTokenizeWord(ctx, word, VARNAM_MATCH_ALL, tokensChan)
+	tokensPointerChan := make(chan *[]Token)
+	go varnam.channelTokenizeWord(ctx, word, VARNAM_MATCH_ALL, tokensPointerChan)
 
 	select {
 	case <-ctx.Done():
-		return tokens, exactMatches, dictResults, greedyTokenized
+		return nil, result
 
-	case tokens = <-tokensChan:
-		if len(tokens) == 0 {
-			return tokens, exactMatches, dictResults, greedyTokenized
+	case tokensPointer := <-tokensPointerChan:
+		if len(*tokensPointer) == 0 {
+			return nil, result
 		}
 
 		/* Channels make things faster, getting from DB is time-consuming */
@@ -289,98 +289,92 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) ([]Token, 
 		patternDictSugsChan := make(chan channelDictionaryResult)
 		greedyTokenizedChan := make(chan []Suggestion)
 
-		go varnam.channelGetFromDictionary(ctx, word, tokens, dictSugsChan)
+		go varnam.channelGetFromDictionary(ctx, word, tokensPointer, dictSugsChan)
 		go varnam.channelGetFromPatternDictionary(ctx, word, patternDictSugsChan)
-		go varnam.channelTokensToGreedySuggestions(ctx, tokens, greedyTokenizedChan)
+		go varnam.channelTokensToGreedySuggestions(ctx, tokensPointer, greedyTokenizedChan)
+
+		tokenizerSugsChan := make(chan []Suggestion)
+		tokenizerSugsCalled := false
 
 		select {
 		case <-ctx.Done():
-			return tokens, exactMatches, dictResults, greedyTokenized
+			return nil, result
 
 		case channelDictResult := <-dictSugsChan:
-			exactMatches = append(exactMatches, channelDictResult.exactMatches...)
-			dictResults = append(dictResults, channelDictResult.suggestions...)
+			// From dictionary
+			result.ExactMatches = channelDictResult.exactMatches
+			result.DictionarySuggestions = channelDictResult.suggestions
 
-			channelPatternDictResult := <-patternDictSugsChan
-			exactMatches = append(exactMatches, channelPatternDictResult.exactMatches...)
-			dictResults = append(dictResults, channelPatternDictResult.suggestions...)
+			select {
+			case <-ctx.Done():
+				return nil, result
+			case channelPatternDictResult := <-patternDictSugsChan:
+				// From patterns dictionary
+				result.ExactMatches = append(result.ExactMatches, channelPatternDictResult.exactMatches...)
+				result.PatternDictionarySuggestions = channelPatternDictResult.suggestions
 
-			// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
-			greedyTokenizedResult := <-greedyTokenizedChan
-			greedyTokenized = SortSuggestions(greedyTokenizedResult)
+				if len(result.ExactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
+					go varnam.channelTokensToSuggestions(ctx, tokensPointer, tokenizerSugsChan)
+					tokenizerSugsCalled = true
+				}
 
-			return tokens, exactMatches, dictResults, greedyTokenized
+				select {
+				case <-ctx.Done():
+					return nil, result
+
+				// Add greedy tokenized suggestions. This will only give exact match (VARNAM_MATCH_EXACT) results
+				case greedyTokenizedResult := <-greedyTokenizedChan:
+					result.GreedyTokenized = SortSuggestions(greedyTokenizedResult)
+
+					// Sort everything now
+
+					result.ExactMatches = SortSuggestions(result.ExactMatches)
+					result.DictionarySuggestions = SortSuggestions(result.DictionarySuggestions)
+					result.PatternDictionarySuggestions = SortSuggestions(result.PatternDictionarySuggestions)
+
+					if tokenizerSugsCalled {
+						select {
+						case <-ctx.Done():
+							return nil, result
+
+						case tokenizerSugs := <-tokenizerSugsChan:
+							result.TokenizerSuggestions = tokenizerSugs
+
+							return tokensPointer, result
+						}
+					} else {
+						return tokensPointer, result
+					}
+				}
+			}
 		}
 	}
 }
 
 // Transliterate a word with all possibilities as results
 func (varnam *Varnam) Transliterate(word string) TransliterationResult {
-	var result TransliterationResult
-
 	ctx := context.Background()
-	tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
-
-	sugs := dictResults
-
-	if len(tokens) != 0 {
-		sugs = append(sugs, exactMatches...)
-
-		if len(exactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
-			tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
-			sugs = append(sugs, tokenSugs...)
-		}
-	}
-
-	result.ExactMatch = SortSuggestions(exactMatches)
-	result.Suggestions = SortSuggestions(sugs)
-	result.GreedyTokenized = SortSuggestions(greedyTokenized)
-
+	_, result := varnam.transliterate(ctx, word)
 	return result
 }
 
 // TransliterateWithContext Use Go context
 func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string, resultChannel chan<- TransliterationResult) {
-	var result TransliterationResult
-
 	select {
 	case <-ctx.Done():
 		return
 
 	default:
-		tokens, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
-
-		sugs := dictResults
-		result.DictionaryResultCount = len(dictResults)
-
-		if len(tokens) != 0 {
-			sugs = append(sugs, exactMatches...)
-
-			if len(exactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
-				tokenSugs := varnam.tokensToSuggestions(ctx, tokens, false)
-				sugs = append(sugs, tokenSugs...)
-			}
-		}
-
-		result.ExactMatch = SortSuggestions(exactMatches)
-		result.Suggestions = SortSuggestions(sugs)
-		result.GreedyTokenized = SortSuggestions(greedyTokenized)
-
+		_, result := varnam.transliterate(ctx, word)
 		resultChannel <- result
+		close(resultChannel)
 	}
 }
 
 // TransliterateGreedy transliterate word without all possible suggestions in result
 func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
-	var result TransliterationResult
-
 	ctx := context.Background()
-	_, exactMatches, dictResults, greedyTokenized := varnam.transliterate(ctx, word)
-
-	result.ExactMatch = SortSuggestions(exactMatches)
-	result.Suggestions = SortSuggestions(dictResults)
-	result.GreedyTokenized = SortSuggestions(greedyTokenized)
-	result.DictionaryResultCount = len(dictResults)
+	_, result := varnam.transliterate(ctx, word)
 
 	return result
 }

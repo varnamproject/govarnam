@@ -101,23 +101,29 @@ func main() {
 		} else {
 			result = varnam.Transliterate(context.Background(), args[0])
 		}
-		fmt.Println("Dictionary Result Count:", result.DictionaryResultCount)
-
-		if len(result.ExactMatch) > 0 {
-			fmt.Println("Exact Matches")
-			for _, sug := range result.ExactMatch {
-				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
-			}
-		}
 		fmt.Println("Greedy Tokenized")
 		for _, sug := range result.GreedyTokenized {
 			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 		}
-		if len(result.Suggestions) > 0 {
-			fmt.Println("Suggestions")
-			for _, sug := range result.Suggestions {
-				fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
-			}
+
+		fmt.Println("Exact Matches")
+		for _, sug := range result.ExactMatches {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+		}
+
+		fmt.Println("Dictionary Suggestions")
+		for _, sug := range result.DictionarySuggestions {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+		}
+
+		fmt.Println("Pattern Dictionary Suggestions")
+		for _, sug := range result.PatternDictionarySuggestions {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+		}
+
+		fmt.Println("Tokenizer Suggestions")
+		for _, sug := range result.TokenizerSuggestions {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 		}
 	}
 }
