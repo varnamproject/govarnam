@@ -45,6 +45,9 @@ type Varnam struct {
 	// Maximum suggestions to obtain from dictionary
 	DictionarySuggestionsLimit int
 
+	// Maximum suggestions to obtain from patterns dictionary
+	PatternDictionarySuggestionsLimit int
+
 	// Maximum suggestions to be made from tokenizer
 	TokenizerSuggestionsLimit int
 
@@ -244,6 +247,8 @@ func (varnam *Varnam) setDefaultConfig() {
 	ctx := context.Background()
 
 	varnam.DictionarySuggestionsLimit = 5
+	varnam.PatternDictionarySuggestionsLimit = 10
+
 	varnam.TokenizerSuggestionsLimit = 10
 	varnam.TokenizerSuggestionsAlways = true
 

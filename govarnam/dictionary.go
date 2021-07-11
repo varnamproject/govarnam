@@ -272,7 +272,7 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 	case <-ctx.Done():
 		return results
 	default:
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), words.word, words.confidence, words.learned_on FROM `patterns_content` pts LEFT JOIN words ON words.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.DictionarySuggestionsLimit)
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), words.word, words.confidence, words.learned_on FROM `patterns_content` pts LEFT JOIN words ON words.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.PatternDictionarySuggestionsLimit)
 
 		if err != nil {
 			log.Print(err)
