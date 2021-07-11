@@ -124,8 +124,9 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 	}
 }
 
-func (varnam *Varnam) getFromDictionary(ctx context.Context, tokens []Token) DictionaryResult {
+func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]Token) DictionaryResult {
 	var endResult DictionaryResult
+	tokens := *tokensPointer
 
 	select {
 	case <-ctx.Done():
@@ -271,7 +272,7 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 	case <-ctx.Done():
 		return results
 	default:
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), words.word, words.confidence, words.learned_on FROM `patterns_content` pts LEFT JOIN words ON words.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.DictionarySuggestionsLimit)
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), words.word, words.confidence, words.learned_on FROM `patterns_content` pts LEFT JOIN words ON words.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.PatternDictionarySuggestionsLimit)
 
 		if err != nil {
 			log.Print(err)

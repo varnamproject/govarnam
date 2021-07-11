@@ -38,15 +38,27 @@ func makeCTransliterationResult(ctx context.Context, goResult govarnam.Translite
 		// The freeing should be done by programs using govarnam
 
 		cExactMatch := C.varray_init()
-		for _, sug := range goResult.ExactMatch {
+		for _, sug := range goResult.ExactMatches {
 			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
 			C.varray_push(cExactMatch, cSug)
 		}
 
-		cSuggestions := C.varray_init()
-		for _, sug := range goResult.Suggestions {
+		cDictionarySuggestions := C.varray_init()
+		for _, sug := range goResult.DictionarySuggestions {
 			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
-			C.varray_push(cSuggestions, cSug)
+			C.varray_push(cDictionarySuggestions, cSug)
+		}
+
+		cPatternDictionarySuggestions := C.varray_init()
+		for _, sug := range goResult.PatternDictionarySuggestions {
+			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+			C.varray_push(cPatternDictionarySuggestions, cSug)
+		}
+
+		cTokenizerSuggestions := C.varray_init()
+		for _, sug := range goResult.TokenizerSuggestions {
+			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+			C.varray_push(cTokenizerSuggestions, cSug)
 		}
 
 		cGreedyTokenized := C.varray_init()
@@ -55,7 +67,7 @@ func makeCTransliterationResult(ctx context.Context, goResult govarnam.Translite
 			C.varray_push(cGreedyTokenized, cSug)
 		}
 
-		return C.makeResult(cExactMatch, cSuggestions, cGreedyTokenized, C.int(goResult.DictionaryResultCount))
+		return C.makeResult(cExactMatch, cDictionarySuggestions, cPatternDictionarySuggestions, cTokenizerSuggestions, cGreedyTokenized)
 	}
 }
 

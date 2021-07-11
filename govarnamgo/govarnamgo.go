@@ -34,10 +34,11 @@ type Suggestion struct {
 
 // TransliterationResult result
 type TransliterationResult struct {
-	ExactMatch            []Suggestion
-	Suggestions           []Suggestion
-	GreedyTokenized       []Suggestion
-	DictionaryResultCount int
+	ExactMatches                 []Suggestion
+	DictionarySuggestions        []Suggestion
+	PatternDictionarySuggestions []Suggestion
+	TokenizerSuggestions         []Suggestion
+	GreedyTokenized              []Suggestion
 }
 
 // Convert a C Suggestion to Go
@@ -59,25 +60,45 @@ func makeGoTransliterationResult(ctx context.Context, cResult *C.struct_Translit
 	default:
 		var i int
 
-		var exactMatch []Suggestion
+		var exactMatches []Suggestion
 		i = 0
-		for i < int(C.varray_length(cResult.ExactMatch)) {
-			cSug := (*C.Suggestion)(C.varray_get(cResult.ExactMatch, C.int(i)))
+		for i < int(C.varray_length(cResult.ExactMatches)) {
+			cSug := (*C.Suggestion)(C.varray_get(cResult.ExactMatches, C.int(i)))
 			sug := makeSuggestion(cSug)
-			exactMatch = append(exactMatch, sug)
+			exactMatches = append(exactMatches, sug)
 			i++
 		}
-		result.ExactMatch = exactMatch
+		result.ExactMatches = exactMatches
 
-		var suggestions []Suggestion
+		var dictionarySuggestions []Suggestion
 		i = 0
-		for i < int(C.varray_length(cResult.Suggestions)) {
-			cSug := (*C.Suggestion)(C.varray_get(cResult.Suggestions, C.int(i)))
+		for i < int(C.varray_length(cResult.DictionarySuggestions)) {
+			cSug := (*C.Suggestion)(C.varray_get(cResult.DictionarySuggestions, C.int(i)))
 			sug := makeSuggestion(cSug)
-			suggestions = append(suggestions, sug)
+			dictionarySuggestions = append(dictionarySuggestions, sug)
 			i++
 		}
-		result.Suggestions = suggestions
+		result.DictionarySuggestions = dictionarySuggestions
+
+		var patternDictionarySuggestions []Suggestion
+		i = 0
+		for i < int(C.varray_length(cResult.PatternDictionarySuggestions)) {
+			cSug := (*C.Suggestion)(C.varray_get(cResult.PatternDictionarySuggestions, C.int(i)))
+			sug := makeSuggestion(cSug)
+			patternDictionarySuggestions = append(patternDictionarySuggestions, sug)
+			i++
+		}
+		result.PatternDictionarySuggestions = patternDictionarySuggestions
+
+		var tokenizerSuggestions []Suggestion
+		i = 0
+		for i < int(C.varray_length(cResult.TokenizerSuggestions)) {
+			cSug := (*C.Suggestion)(C.varray_get(cResult.TokenizerSuggestions, C.int(i)))
+			sug := makeSuggestion(cSug)
+			tokenizerSuggestions = append(tokenizerSuggestions, sug)
+			i++
+		}
+		result.TokenizerSuggestions = tokenizerSuggestions
 
 		var greedyTokenized []Suggestion
 		i = 0
@@ -88,8 +109,6 @@ func makeGoTransliterationResult(ctx context.Context, cResult *C.struct_Translit
 			i++
 		}
 		result.GreedyTokenized = greedyTokenized
-
-		result.DictionaryResultCount = int(cResult.DictionaryResultCount)
 
 		go C.destroyTransliterationResult(cResult)
 

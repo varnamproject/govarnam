@@ -14,15 +14,17 @@ typedef struct Suggestion_t {
 } Suggestion;
 
 typedef struct TransliterationResult_t {
-  varray* ExactMatch;
-  varray* Suggestions;
+  varray* ExactMatches;
+  varray* DictionarySuggestions;
+  varray* PatternDictionarySuggestions;
+  varray* TokenizerSuggestions;
   varray* GreedyTokenized;
   int DictionaryResultCount;
 } TransliterationResult;
 
 Suggestion* makeSuggestion(char* word, int weight, int learned_on);
 
-TransliterationResult* makeResult(varray* exact_match, varray* suggestions, varray* greedy_tokenized, int dictionary_result_count);
+TransliterationResult* makeResult(varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized);
 
 void destroyTransliterationResult(TransliterationResult*);
 
