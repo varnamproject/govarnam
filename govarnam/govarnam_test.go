@@ -63,14 +63,16 @@ func TestTokenizer(t *testing.T) {
 		assertEqual(t, sug.Word, expected[i])
 	}
 
+	// Test non lang word
 	nonLangWord := varnam.Transliterate("Шаблон")
 	assertEqual(t, len(nonLangWord.ExactMatches), 0)
 	assertEqual(t, len(nonLangWord.DictionarySuggestions), 0)
 	assertEqual(t, len(nonLangWord.PatternDictionarySuggestions), 0)
-	assertEqual(t, len(nonLangWord.TokenizerSuggestions), 0)
-	assertEqual(t, len(nonLangWord.GreedyTokenized), 0)
+	assertEqual(t, len(nonLangWord.TokenizerSuggestions), 1)
+	assertEqual(t, len(nonLangWord.GreedyTokenized), 1)
 
 	// Test mixed words
+	assertEqual(t, varnam.Transliterate("naമസ്കാരmenthuNt").GreedyTokenized[0].Word, "നമസ്കാരമെന്തുണ്ട്")
 	assertEqual(t, varnam.Transliterate("*namaskaaram").GreedyTokenized[0].Word, "*നമസ്കാരം")
 	assertEqual(t, varnam.Transliterate("*nama@skaaram").GreedyTokenized[0].Word, "*നമ@സ്കാരം")
 	assertEqual(t, varnam.Transliterate("*nama@skaaram%^&").GreedyTokenized[0].Word, "*നമ@സ്കാരം%^&")

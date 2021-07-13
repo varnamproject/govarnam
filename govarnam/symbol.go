@@ -136,25 +136,28 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 	case <-ctx.Done():
 		return &results
 	default:
-
 		var (
 			prevSequence        string
 			prevSequenceMatches []Symbol
 			sequence            string
+			sequenceLength      int
 		)
 
+		runes := []rune(word)
+
 		i := 0
-		for i < len(word) {
-			ch := string(word[i])
+		for i < len(runes) {
+			ch := string(runes[i])
 
 			sequence += ch
+			sequenceLength++
 
 			acceptCondition := VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
 
 			if len(results) == 0 && !partial {
 				// Trying to make the first token
 				acceptCondition = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
-			} else if i == len(word)-1 {
+			} else if i == len(runes)-1 {
 				acceptCondition = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
 			}
 
@@ -167,7 +170,7 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 			if len(matches) == 0 {
 				// No more matches
 
-				if len(sequence) == 1 {
+				if sequenceLength == 1 {
 					// No matches for a single char, add it
 					token := Token{VARNAM_TOKEN_CHAR, matches, i, ch}
 					results = append(results, token)
@@ -179,6 +182,7 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 				}
 
 				sequence = ""
+				sequenceLength = 0
 			} else {
 				if matches[0].generalType == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
 					// Skip numbers
@@ -186,7 +190,8 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 					results = append(results, token)
 
 					sequence = ""
-				} else if i == len(word)-1 {
+					sequenceLength = 0
+				} else if i == len(runes)-1 {
 					// Last character
 					token := Token{VARNAM_TOKEN_SYMBOL, matches, i, sequence}
 					results = append(results, token)
