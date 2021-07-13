@@ -3,7 +3,10 @@ package govarnam
 import (
 	"bufio"
 	"context"
+	sql "database/sql"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +18,12 @@ type WordInfo struct {
 	word       string
 	confidence int
 	learnedOn  int
+}
+
+// Learnings file export format
+type exportFormat struct {
+	WordsDict    []map[string]interface{} `json:"words"`
+	PatternsDict []map[string]interface{} `json:"patterns_content"`
 }
 
 // Insert a word into word DB. Increment confidence if word exists
@@ -244,7 +253,7 @@ func (varnam *Varnam) Train(pattern string, word string) error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
 
-	query := "INSERT OR IGNORE INTO patterns_content(pattern, word_id, learned) VALUES (?, ?, 1)"
+	query := "INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES (?, ?, 1)"
 	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
 	if err != nil {
 		return err
@@ -394,5 +403,128 @@ func (varnam *Varnam) TrainFromFile(filePath string) error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
+	return nil
+}
+
+// Get full data from DB
+func rowsToJSON(rows *sql.Rows) ([]map[string]interface{}, error) {
+	// Dumping rows from SQL to JSON
+	// Thanks lucidquiet https://stackoverflow.com/a/17885636/1372424
+	// Thanks turkenh https://stackoverflow.com/a/29164115/1372424
+	// Licensed CC-BY-SA 4.0
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	count := len(columns)
+	tableData := make([]map[string]interface{}, 0)
+	values := make([]interface{}, count)
+	valuePtrs := make([]interface{}, count)
+
+	for rows.Next() {
+		for i := 0; i < count; i++ {
+			valuePtrs[i] = &values[i]
+		}
+		rows.Scan(valuePtrs...)
+		entry := make(map[string]interface{})
+		for i, col := range columns {
+			var v interface{}
+			val := values[i]
+			b, ok := val.([]byte)
+			if ok {
+				v = string(b)
+			} else {
+				v = val
+			}
+			entry[col] = v
+		}
+		tableData = append(tableData, entry)
+	}
+
+	return tableData, nil
+}
+
+// Export learnings as JSON to a file
+func (varnam *Varnam) Export(filePath string) error {
+	if fileExists(filePath) {
+		return fmt.Errorf("output file already exists")
+	}
+
+	wordsRows, err := varnam.dictConn.Query("SELECT * FROM words")
+	if err != nil {
+		return err
+	}
+	defer wordsRows.Close()
+
+	wordsData, err := rowsToJSON(wordsRows)
+
+	patternsRows, err := varnam.dictConn.Query("SELECT * FROM patterns_content")
+	if err != nil {
+		return err
+	}
+	defer wordsRows.Close()
+
+	patternsData, err := rowsToJSON(patternsRows)
+
+	output := exportFormat{wordsData, patternsData}
+
+	jsonData, err := json.Marshal(output)
+
+	err = ioutil.WriteFile(filePath, jsonData, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Import learnings from file
+func (varnam *Varnam) Import(filePath string) error {
+	fileContent, _ := ioutil.ReadFile(filePath)
+
+	var dbData exportFormat
+
+	if err := json.Unmarshal(fileContent, &dbData); err != nil {
+		return fmt.Errorf("Parsing packs JSON failed, err: %s", err.Error())
+	}
+
+	count := 0
+	for _, item := range dbData.WordsDict {
+		stmt, err := varnam.dictConn.Prepare("INSERT OR IGNORE INTO words(id, word, confidence, learned_on) VALUES (?, trim(?), ?, ?)")
+		if err != nil {
+			return err
+		}
+
+		_, err = stmt.Exec(item["id"], item["word"], item["confidence"], item["learned_on"])
+		if err != nil {
+			return err
+		}
+
+		count++
+		if count%500 == 0 {
+			fmt.Printf("Inserted %d words\n", count)
+		}
+	}
+
+	count = 0
+	for _, item := range dbData.PatternsDict {
+		stmt, err := varnam.dictConn.Prepare("INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES (?, ?)")
+		if err != nil {
+			return err
+		}
+
+		_, err = stmt.Exec(item["pattern"], item["word_id"])
+		if err != nil {
+			return err
+		}
+
+		count++
+		if count%500 == 0 {
+			fmt.Printf("Inserted %d patterns\n", count)
+		}
+	}
+
 	return nil
 }

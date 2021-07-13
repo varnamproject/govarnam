@@ -244,3 +244,17 @@ func (handle *VarnamHandle) TrainFromFile(filePath string) bool {
 	err := C.varnam_train_from_file(handle.connectionID, cFilePath)
 	return checkError(err)
 }
+
+// Export learnigns to a file
+func (handle *VarnamHandle) Export(filePath string) bool {
+	cFilePath := C.CString(filePath)
+	err := C.varnam_export(handle.connectionID, cFilePath)
+	return checkError(err)
+}
+
+// Import learnigns to a file
+func (handle *VarnamHandle) Import(filePath string) bool {
+	cFilePath := C.CString(filePath)
+	err := C.varnam_import(handle.connectionID, cFilePath)
+	return checkError(err)
+}

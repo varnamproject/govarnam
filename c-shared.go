@@ -219,4 +219,20 @@ func varnam_cancel(id C.int) C.int {
 	}
 }
 
+//export varnam_export
+func varnam_export(varnamHandleID C.int, filePath *C.char) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+	handle.err = handle.varnam.Export(C.GoString(filePath))
+
+	return checkError(handle.err)
+}
+
+//export varnam_import
+func varnam_import(varnamHandleID C.int, filePath *C.char) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+	handle.err = handle.varnam.Import(C.GoString(filePath))
+
+	return checkError(handle.err)
+}
+
 func main() {}
