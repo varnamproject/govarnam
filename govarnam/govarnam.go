@@ -101,20 +101,7 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]
 		return results
 
 	default:
-		// First, remove less weighted symbols
-		for i, token := range tokens {
-			var reducedSymbols []Symbol
-			for _, symbol := range token.symbols {
-				// TODO should 0 be fixed for all languages ?
-				// Because this may differ according to data source
-				// from where symbol frequency was found out
-				if getSymbolWeight(symbol) == 0 {
-					break
-				}
-				reducedSymbols = append(reducedSymbols, symbol)
-			}
-			tokens[i].symbols = reducedSymbols
-		}
+		tokens = removeLessWeightedSymbols(tokens)
 
 		addWord := func(word []string, weight int) {
 			// TODO avoid division, performance improvement ?
@@ -157,21 +144,6 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]
 				t := tokens[i]
 				if t.tokenType == VARNAM_TOKEN_SYMBOL {
 					symbol := t.symbols[tokenPositions[i]]
-
-					if symbol.acceptCondition != VARNAM_TOKEN_ACCEPT_ALL {
-						var state int
-						if i == 0 {
-							state = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
-						} else if i == len(tokens)-1 {
-							state = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
-						} else {
-							state = VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
-						}
-						if symbol.acceptCondition != state {
-							i--
-							continue
-						}
-					}
 
 					var (
 						symbolValue  string
@@ -253,7 +225,7 @@ func (varnam *Varnam) setDefaultConfig() {
 	varnam.TokenizerSuggestionsAlways = true
 
 	varnam.LangRules.IndicDigits = false
-	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT)[0].value1
+	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT, VARNAM_TOKEN_ACCEPT_ALL)[0].value1
 }
 
 // SortSuggestions by confidence and learned on time

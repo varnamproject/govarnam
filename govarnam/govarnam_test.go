@@ -74,6 +74,13 @@ func TestTokenizer(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("*namaskaaram").GreedyTokenized[0].Word, "*നമസ്കാരം")
 	assertEqual(t, varnam.Transliterate("*nama@skaaram").GreedyTokenized[0].Word, "*നമ@സ്കാരം")
 	assertEqual(t, varnam.Transliterate("*nama@skaaram%^&").GreedyTokenized[0].Word, "*നമ@സ്കാരം%^&")
+
+	// Test some complex words
+	assertEqual(t, varnam.Transliterate("kambyoottar").GreedyTokenized[0].Word, "കമ്പ്യൂട്ടർ")
+	assertEqual(t, varnam.Transliterate("kambyoottar").GreedyTokenized[0].Word, "കമ്പ്യൂട്ടർ")
+
+	// Test fancy words
+	assertEqual(t, varnam.Transliterate("thaaaaaaaankyoo").GreedyTokenized[0].Word, "താാാാങ്ക്യൂ")
 }
 
 func TestLearn(t *testing.T) {
@@ -152,9 +159,10 @@ func TestZW(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("thaazhvara").TokenizerSuggestions[0].Word, "താഴ്വര")
 	// _ is ZWNJ
 	assertEqual(t, varnam.Transliterate("thaazh_vara").TokenizerSuggestions[0].Word, "താഴ്‌വര")
-	// __ is ZWJ
-	assertEqual(t, varnam.Transliterate("n_").TokenizerSuggestions[0].Word, "ൻ‌") // Old chil
-	assertEqual(t, varnam.Transliterate("nan_ma").TokenizerSuggestions[0].Word, "നൻ‌മ")
+
+	// When _ is followed by a chil, varnam explicitly generates chil without ZWNJ at end
+	assertEqual(t, varnam.Transliterate("n_").TokenizerSuggestions[0].Word, "ൻ")
+	assertEqual(t, varnam.Transliterate("nan_ma").TokenizerSuggestions[0].Word, "നൻമ")
 }
 
 // Test if zwj-chils are replaced with atomic chil

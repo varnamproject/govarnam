@@ -90,7 +90,7 @@ func (varnam *Varnam) symbolExist(ch string) (bool, error) {
 	return count != 0, nil
 }
 
-func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int) []Symbol {
+func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int, acceptCondition int) []Symbol {
 	var (
 		rows    *sql.Rows
 		err     error
@@ -101,11 +101,10 @@ func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int
 	case <-ctx.Done():
 		return results
 	default:
-
 		if matchType == VARNAM_MATCH_ALL {
-			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? ORDER BY match_type ASC, weight DESC", ch)
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND (accept_condition = 0 OR accept_condition = ?) ORDER BY match_type ASC, weight DESC, priority DESC", ch, acceptCondition)
 		} else {
-			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ?", ch, matchType)
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ? AND (accept_condition = 0 OR accept_condition = ?)", ch, matchType, acceptCondition)
 		}
 
 		if err != nil {
@@ -130,7 +129,7 @@ func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int
 }
 
 // Convert a string into Tokens for later processing
-func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType int) *[]Token {
+func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType int, partial bool) *[]Token {
 	var results []Token
 
 	select {
@@ -138,8 +137,11 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 		return &results
 	default:
 
-		var prevSequenceMatches []Symbol
-		var sequence string
+		var (
+			prevSequence        string
+			prevSequenceMatches []Symbol
+			sequence            string
+		)
 
 		i := 0
 		for i < len(word) {
@@ -147,7 +149,16 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 
 			sequence += ch
 
-			matches := varnam.searchSymbol(ctx, sequence, matchType)
+			acceptCondition := VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
+
+			if len(results) == 0 && !partial {
+				// Trying to make the first token
+				acceptCondition = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
+			} else if i == len(word)-1 {
+				acceptCondition = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
+			}
+
+			matches := varnam.searchSymbol(ctx, sequence, matchType, acceptCondition)
 
 			if varnam.Debug {
 				fmt.Println(sequence, matches)
@@ -163,7 +174,7 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 				} else if len(prevSequenceMatches) > 0 {
 					// Backtrack and add the previous sequence matches
 					i--
-					token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, sequence}
+					token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, prevSequence}
 					results = append(results, token)
 				}
 
@@ -180,6 +191,7 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 					token := Token{VARNAM_TOKEN_SYMBOL, matches, i, sequence}
 					results = append(results, token)
 				} else {
+					prevSequence = sequence
 					prevSequenceMatches = matches
 				}
 			}
@@ -199,7 +211,7 @@ func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, resul
 			fmt.Printf("Tokenizing %s\n", word)
 		}
 
-		restOfWordTokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL)
+		restOfWordTokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL, true)
 		restOfWordSugs := varnam.tokensToSuggestions(ctx, restOfWordTokens, true)
 
 		if varnam.Debug {
@@ -296,6 +308,25 @@ func getSymbolWeight(symbol Symbol) int {
 	return symbol.weight + (VARNAM_MATCH_POSSIBILITY-symbol.matchType)*100
 }
 
+// Removes less weighted symbols
+func removeLessWeightedSymbols(tokens []Token) []Token {
+	for i, token := range tokens {
+		var reducedSymbols []Symbol
+		for _, symbol := range token.symbols {
+			// TODO should 0 be fixed for all languages ?
+			// Because this may differ according to data source
+			// from where symbol frequency was found out
+			if getSymbolWeight(symbol) == 0 && len(reducedSymbols) > 0 {
+				break
+			}
+			reducedSymbols = append(reducedSymbols, symbol)
+		}
+		tokens[i].symbols = nil
+		tokens[i].symbols = reducedSymbols
+	}
+	return tokens
+}
+
 // Remove non-exact matching tokens
 func removeNonExactTokens(tokens []Token) []Token {
 	// Remove non-exact symbols
@@ -307,7 +338,8 @@ func removeNonExactTokens(tokens []Token) []Token {
 					reducedSymbols = append(reducedSymbols, symbol)
 				} else {
 					if len(reducedSymbols) == 0 {
-						tokens[i].tokenType = VARNAM_TOKEN_CHAR
+						// No exact matches, so add the first possibility match
+						reducedSymbols = append(reducedSymbols, symbol)
 					}
 					// If a possibility result, then rest of them will also be same
 					// so save time by skipping rest
