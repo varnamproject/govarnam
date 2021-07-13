@@ -16,7 +16,7 @@ func (varnam *Varnam) channelTokenizeWord(ctx context.Context, word string, matc
 		close(channel)
 		return
 	default:
-		channel <- varnam.tokenizeWord(ctx, word, matchType)
+		channel <- varnam.tokenizeWord(ctx, word, matchType, false)
 		close(channel)
 	}
 }
