@@ -32,6 +32,9 @@ func main() {
 	learnFromFileFlag := flag.Bool("learn-from-file", false, "Learn words in a file")
 	trainFromFileFlag := flag.Bool("train-from-file", false, "Train pattern => word from a file.")
 
+	exportFlag := flag.Bool("export", false, "Export learnings to file")
+	importFlag := flag.Bool("import", false, "Import learnings from file")
+
 	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
 	greedy := flag.Bool("greedy", false, "Show only exactly matched suggestions")
 
@@ -90,6 +93,18 @@ func main() {
 	} else if *trainFromFileFlag {
 		if varnam.TrainFromFile(args[0]) {
 			fmt.Println("Finished training from file")
+		} else {
+			logVarnamError()
+		}
+	} else if *exportFlag {
+		if varnam.Export(args[0]) {
+			fmt.Println("Finished exporting to file")
+		} else {
+			logVarnamError()
+		}
+	} else if *importFlag {
+		if varnam.Import(args[0]) {
+			fmt.Println("Finished importing from file")
 		} else {
 			logVarnamError()
 		}
