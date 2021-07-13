@@ -27,6 +27,12 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Errorf("Received %v (type %v), expected %v (type %v)", a, reflect.TypeOf(a), b, reflect.TypeOf(b))
 }
 
+func checkError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func setUp(schemeID string) {
 	_, filename, _, _ := runtime.Caller(0)
 	projectRoot := path.Join(path.Dir(filename), "..")
@@ -86,14 +92,14 @@ func TestTokenizer(t *testing.T) {
 }
 
 func TestLearn(t *testing.T) {
-	// Non language word
-	err := varnam.Learn("Шаблон", 0) != nil
-	assertEqual(t, err, true)
+	// Non language word. Should give error
+	assertEqual(t, varnam.Learn("Шаблон", 0) != nil, true)
 
 	// Before learning
 	assertEqual(t, varnam.Transliterate("malayalam").TokenizerSuggestions[0].Word, "മലയലം")
 
-	varnam.Learn("മലയാളം", 0)
+	err := varnam.Learn("മലയാളം", 0)
+	checkError(err)
 
 	// After learning
 	assertEqual(t, varnam.Transliterate("malayalam").ExactMatches[0].Word, "മലയാളം")
@@ -102,7 +108,8 @@ func TestLearn(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("malaykk").DictionarySuggestions[0].Word, "മലയ്ക്ക്")
 
 	start := time.Now().UTC()
-	varnam.Learn("മലയാളത്തിൽ", 0)
+	err = varnam.Learn("മലയാളത്തിൽ", 0)
+	checkError(err)
 	end := time.Now().UTC()
 
 	start1SecondBefore := time.Date(start.Year(), start.Month(), start.Day(), start.Hour(), start.Minute(), start.Second()-1, 0, start.Location())
@@ -125,7 +132,8 @@ func TestLearn(t *testing.T) {
 	// Learn the word again
 	// This word will now be at the top
 	// Test if confidence has increased by one now
-	varnam.Learn("മലയാളത്തിൽ", 0)
+	err = varnam.Learn("മലയാളത്തിൽ", 0)
+	checkError(err)
 
 	sug := varnam.Transliterate("malayala").DictionarySuggestions[0]
 	assertEqual(t, sug, Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_CONFIDENCE + 1, sug.LearnedOn})
@@ -138,7 +146,8 @@ func TestTrain(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("india").TokenizerSuggestions[0].Word, "ഇന്ദി")
 	assertEqual(t, len(varnam.Transliterate("india").PatternDictionarySuggestions), 0)
 
-	varnam.Train("india", "ഇന്ത്യ")
+	err := varnam.Train("india", "ഇന്ത്യ")
+	checkError(err)
 
 	assertEqual(t, varnam.Transliterate("india").ExactMatches[0].Word, "ഇന്ത്യ")
 	assertEqual(t, varnam.Transliterate("indiayil").PatternDictionarySuggestions[0].Word, "ഇന്ത്യയിൽ")
@@ -147,7 +156,8 @@ func TestTrain(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("college").TokenizerSuggestions[0].Word, "കൊല്ലെഗെ")
 	assertEqual(t, len(varnam.Transliterate("college").PatternDictionarySuggestions), 0)
 
-	varnam.Train("college", "കോളേജ്")
+	err = varnam.Train("college", "കോളേജ്")
+	checkError(err)
 
 	assertEqual(t, varnam.Transliterate("college").ExactMatches[0].Word, "കോളേജ്")
 	assertEqual(t, varnam.Transliterate("collegeil").PatternDictionarySuggestions[0].Word, "കോളേജിൽ")
@@ -162,9 +172,10 @@ func TestZW(t *testing.T) {
 	// _ is ZWNJ
 	assertEqual(t, varnam.Transliterate("thaazh_vara").TokenizerSuggestions[0].Word, "താഴ്‌വര")
 
-	// When _ is followed by a chil, varnam explicitly generates chil without ZWNJ at end
+	// When _ comes after a chil, varnam explicitly generates chil without ZWNJ at end
 	assertEqual(t, varnam.Transliterate("n_").TokenizerSuggestions[0].Word, "ൻ")
 	assertEqual(t, varnam.Transliterate("nan_ma").TokenizerSuggestions[0].Word, "നൻമ")
+	assertEqual(t, varnam.Transliterate("sam_bhavam").TokenizerSuggestions[0].Word, "സംഭവം")
 }
 
 // Test if zwj-chils are replaced with atomic chil

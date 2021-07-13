@@ -253,7 +253,7 @@ func (varnam *Varnam) Train(pattern string, word string) error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
 
-	query := "INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES (?, ?, 1)"
+	query := "INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES (?, ?)"
 	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
 	if err != nil {
 		return err
