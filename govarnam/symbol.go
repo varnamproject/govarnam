@@ -45,6 +45,23 @@ func (varnam *Varnam) openVST(vstPath string) error {
 	return err
 }
 
+// Find the longest pattern length
+func (varnam *Varnam) setPatternLongestLength() {
+	rows, err := varnam.vstConn.Query("SELECT MAX(LENGTH(pattern)) FROM symbols")
+	if err != nil {
+		log.Print(err)
+	}
+
+	length := 0
+	for rows.Next() {
+		err := rows.Scan(&length)
+		if err != nil {
+			log.Print(err)
+		}
+	}
+	varnam.LangRules.PatternLongestLength = length
+}
+
 func (varnam *Varnam) setSchemeInfo() {
 	rows, err := varnam.vstConn.Query("SELECT * FROM metadata")
 
@@ -201,16 +218,16 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 	case <-ctx.Done():
 		return &results
 	default:
-		var (
-			sequenceLength int
-		)
-
 		runes := []rune(word)
 
 		i := 0
 		for i < len(runes) {
-			sequence := runes[i:] // Get characters after 'i'th position
-			sequenceLength++
+			end := i + varnam.LangRules.PatternLongestLength
+			if len(runes) < end {
+				end = len(runes)
+			}
+			// Get characters after 'i'th position
+			sequence := runes[i:end]
 
 			acceptCondition := VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
 
@@ -223,10 +240,6 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 
 			matches := varnam.findLongestPatternMatchSymbols(ctx, sequence, matchType, acceptCondition)
 
-			if varnam.Debug {
-				fmt.Println(string(sequence), matches)
-			}
-
 			if len(matches) == 0 {
 				// No matches, add a character token
 				// Note that we just add 1 character, and move on
@@ -235,17 +248,17 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 
 				i++
 			} else {
-				longestPatternLength := 0
-
 				if matches[0].generalType == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
 					// Skip numbers
 					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, string(sequence)}
 					results = append(results, token)
 
-					longestPatternLength = 1
+					i++
 				} else {
 					// Add matches
 					var refinedMatches []Symbol
+					longestPatternLength := 0
+
 					for _, match := range matches {
 						if longestPatternLength == 0 {
 							// Sort is by length of pattern, so we will get length from first iterations.
@@ -258,10 +271,11 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 							refinedMatches = append(refinedMatches, match)
 						}
 					}
-					token := Token{VARNAM_TOKEN_SYMBOL, refinedMatches, i, string(sequence)}
+					i += longestPatternLength
+
+					token := Token{VARNAM_TOKEN_SYMBOL, refinedMatches, i - 1, string(refinedMatches[0].pattern)}
 					results = append(results, token)
 				}
-				i += longestPatternLength
 			}
 		}
 		return &results

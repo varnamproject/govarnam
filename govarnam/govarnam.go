@@ -21,8 +21,9 @@ import (
 
 // LangRules language reulated config
 type LangRules struct {
-	Virama      string
-	IndicDigits bool
+	Virama               string
+	IndicDigits          bool
+	PatternLongestLength int // Longest length of pattern in VST
 }
 
 // SchemeInfo of VST
@@ -226,6 +227,8 @@ func (varnam *Varnam) setDefaultConfig() {
 
 	varnam.LangRules.IndicDigits = false
 	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT, VARNAM_TOKEN_ACCEPT_ALL)[0].value1
+
+	varnam.setPatternLongestLength()
 }
 
 // SortSuggestions by confidence and learned on time
@@ -258,6 +261,10 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 	case tokensPointer := <-tokensPointerChan:
 		if len(*tokensPointer) == 0 {
 			return nil, result
+		}
+
+		if varnam.Debug {
+			fmt.Println(*tokensPointer)
 		}
 
 		/* Channels make things faster, getting from DB is time-consuming */
