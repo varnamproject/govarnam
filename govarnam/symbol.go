@@ -41,8 +41,25 @@ func openDB(path string) (*sql.DB, error) {
 
 func (varnam *Varnam) openVST(vstPath string) error {
 	var err error
-	varnam.vstConn, err = openDB(vstPath)
+	varnam.vstConn, err = openDB(vstPath + "?_case_sensitive_like=on")
 	return err
+}
+
+// Find the longest pattern length
+func (varnam *Varnam) setPatternLongestLength() {
+	rows, err := varnam.vstConn.Query("SELECT MAX(LENGTH(pattern)) FROM symbols")
+	if err != nil {
+		log.Print(err)
+	}
+
+	length := 0
+	for rows.Next() {
+		err := rows.Scan(&length)
+		if err != nil {
+			log.Print(err)
+		}
+	}
+	varnam.LangRules.PatternLongestLength = length
 }
 
 func (varnam *Varnam) setSchemeInfo() {
@@ -128,6 +145,71 @@ func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int
 	}
 }
 
+// Find longest pattern prefix matching symbols from VST
+func (varnam *Varnam) findLongestPatternMatchSymbols(ctx context.Context, pattern []rune, matchType int, acceptCondition int) []Symbol {
+	var (
+		query      string
+		results    []Symbol
+		patternINs string
+		vals       []interface{}
+	)
+
+	if matchType != VARNAM_MATCH_ALL {
+		vals = append(vals, matchType)
+	}
+
+	vals = append(vals, acceptCondition)
+	vals = append(vals, string(pattern[0]))
+
+	for i := range pattern {
+		if i == 0 {
+			continue
+		}
+		patternINs += ", ?"
+		vals = append(vals, string(pattern[0:i+1]))
+	}
+
+	if varnam.Debug {
+		// The query will be made like :
+		//   SELECT * FROM symbols WHERE pattern IN ('e', 'en', 'ent', 'enth', 'entho')
+		// Will fetch the longest prefix match
+		// Idea from https://stackoverflow.com/a/1860279/1372424
+		fmt.Println(patternINs, vals)
+	}
+
+	select {
+	case <-ctx.Done():
+		return results
+	default:
+		if matchType == VARNAM_MATCH_ALL {
+			query = "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags FROM `symbols` WHERE (accept_condition = 0 OR accept_condition = ?) AND pattern IN (? " + patternINs + ") ORDER BY LENGTH(pattern) DESC, match_type ASC, weight DESC, priority DESC"
+		} else {
+			query = "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags FROM `symbols` WHERE match_type = ? AND (accept_condition = 0 OR accept_condition = ?) AND pattern IN (? " + patternINs + ") ORDER BY LENGTH(pattern) DESC"
+		}
+
+		rows, err := varnam.vstConn.QueryContext(ctx, query, vals...)
+
+		if err != nil {
+			log.Print(err)
+			return results
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var item Symbol
+			rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
+			results = append(results, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err)
+		}
+
+		return results
+	}
+}
+
 // Convert a string into Tokens for later processing
 func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType int, partial bool) *[]Token {
 	var results []Token
@@ -136,21 +218,16 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 	case <-ctx.Done():
 		return &results
 	default:
-		var (
-			prevSequence        string
-			prevSequenceMatches []Symbol
-			sequence            string
-			sequenceLength      int
-		)
-
 		runes := []rune(word)
 
 		i := 0
 		for i < len(runes) {
-			ch := string(runes[i])
-
-			sequence += ch
-			sequenceLength++
+			end := i + varnam.LangRules.PatternLongestLength
+			if len(runes) < end {
+				end = len(runes)
+			}
+			// Get characters after 'i'th position
+			sequence := runes[i:end]
 
 			acceptCondition := VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
 
@@ -161,46 +238,45 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 				acceptCondition = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
 			}
 
-			matches := varnam.searchSymbol(ctx, sequence, matchType, acceptCondition)
-
-			if varnam.Debug {
-				fmt.Println(sequence, matches)
-			}
+			matches := varnam.findLongestPatternMatchSymbols(ctx, sequence, matchType, acceptCondition)
 
 			if len(matches) == 0 {
-				// No more matches
+				// No matches, add a character token
+				// Note that we just add 1 character, and move on
+				token := Token{VARNAM_TOKEN_CHAR, matches, i, string(sequence[:1])}
+				results = append(results, token)
 
-				if sequenceLength == 1 {
-					// No matches for a single char, add it
-					token := Token{VARNAM_TOKEN_CHAR, matches, i, ch}
-					results = append(results, token)
-				} else if len(prevSequenceMatches) > 0 {
-					// Backtrack and add the previous sequence matches
-					i--
-					token := Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, i, prevSequence}
-					results = append(results, token)
-				}
-
-				sequence = ""
-				sequenceLength = 0
+				i++
 			} else {
 				if matches[0].generalType == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
 					// Skip numbers
-					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, ch}
+					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, string(sequence)}
 					results = append(results, token)
 
-					sequence = ""
-					sequenceLength = 0
-				} else if i == len(runes)-1 {
-					// Last character
-					token := Token{VARNAM_TOKEN_SYMBOL, matches, i, sequence}
-					results = append(results, token)
+					i++
 				} else {
-					prevSequence = sequence
-					prevSequenceMatches = matches
+					// Add matches
+					var refinedMatches []Symbol
+					longestPatternLength := 0
+
+					for _, match := range matches {
+						if longestPatternLength == 0 {
+							// Sort is by length of pattern, so we will get length from first iterations.
+							longestPatternLength = len(match.pattern)
+							refinedMatches = append(refinedMatches, match)
+						} else {
+							if len(match.pattern) != longestPatternLength {
+								break
+							}
+							refinedMatches = append(refinedMatches, match)
+						}
+					}
+					i += longestPatternLength
+
+					token := Token{VARNAM_TOKEN_SYMBOL, refinedMatches, i - 1, string(refinedMatches[0].pattern)}
+					results = append(results, token)
 				}
 			}
-			i++
 		}
 		return &results
 	}

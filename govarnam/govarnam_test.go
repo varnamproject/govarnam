@@ -140,6 +140,13 @@ func TestLearn(t *testing.T) {
 
 	// Subsequent pattern can be smaller now (no need of "thth")
 	assertEqual(t, varnam.Transliterate("malayalathil").ExactMatches[0].Word, "മലയാളത്തിൽ")
+
+	// Try words with symbols that have many possibilities
+	// thu has 12 possibilties
+	err = varnam.Learn("തുടങ്ങി", 0)
+	checkError(err)
+
+	assertEqual(t, varnam.Transliterate("thudangiyittE").DictionarySuggestions[0].Word, "തുടങ്ങിയിട്ടേ")
 }
 
 func TestTrain(t *testing.T) {

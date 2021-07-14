@@ -131,47 +131,37 @@ func (varnam *Varnam) Learn(word string, confidence int) error {
 
 	if len(conjuncts) == 0 {
 		return fmt.Errorf("Nothing to learn")
-	} else if len(conjuncts) == 1 {
-		// Forced learning of a single conjunct
-		err := varnam.insertWord(conjuncts[0], VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
+	}
 
-		if err != nil {
-			return err
+	sequence := ""
+	for i, ch := range conjuncts {
+		sequence += ch
+		if varnam.Debug {
+			fmt.Println("Learning", sequence)
 		}
-	} else {
-		sequence := conjuncts[0]
-		for i, ch := range conjuncts {
-			if i == 0 {
-				continue
-			}
 
-			sequence += ch
-			if varnam.Debug {
-				fmt.Println("Learning", sequence)
-			}
+		if i == len(conjuncts)-1 {
+			// The word. The final word should have the highest confidence
 
-			if i+1 == len(conjuncts) {
-				// The word. The final word should have the highest confidence
+			var weight int
 
-				var weight int
-
-				// -1 because insertWord will increment one
-				if confidence == 0 {
-					weight = VARNAM_LEARNT_WORD_MIN_CONFIDENCE - 1
-				} else {
-					weight = confidence - 1
-				}
-
-				err := varnam.insertWord(sequence, weight, false)
-				if err != nil {
-					return err
-				}
+			// -1 because insertWord will increment one
+			if confidence == 0 {
+				weight = VARNAM_LEARNT_WORD_MIN_CONFIDENCE - 1
 			} else {
-				// Partial word. Part of pathway to the word to be learnt
-				varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-i), true)
+				weight = confidence - 1
 			}
+
+			err := varnam.insertWord(sequence, weight, false)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Partial word. Part of pathway to the word to be learnt
+			varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-i), true)
 		}
 	}
+
 	return nil
 }
 
