@@ -1,4 +1,4 @@
-CLI_BIN := varnamc
+CLI_BIN := govarnamc
 INSTALL_PREFIX := /usr/local
 VERSION := $(shell git describe --abbrev=0 --tags | sed s/v//)
 RELEASE_NAME := govarnam-${VERSION}
@@ -40,8 +40,7 @@ build-nix:
 	$(MAKE) build-library
 
 	$(MAKE) build-temp-pc
-	export PKG_CONFIG_PATH=$(realpath .):$\PKG_CONFIG_PATH
-	$(MAKE) build-cli
+	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH $(MAKE) build-cli
 
 	$(MAKE) build-pc
 	$(MAKE) build-install-script
