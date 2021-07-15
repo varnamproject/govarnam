@@ -56,6 +56,7 @@ const CHIL_TAG = "chill"
 var VARNAM_VST_DIR = [2]string{
 	// "/usr/share/varnam/vst",
 	// "/usr/local/share/varnam/vst",
+	"schemes",
 	"/usr/local/share/varnam/vstDEV"}
 
 func findVSTPath(schemeID string) (string, error) {
