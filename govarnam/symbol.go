@@ -262,7 +262,7 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, string(sequence)}
 					results = append(results, token)
 
-					i++
+					i += len(matches[0].pattern)
 				} else {
 					// Add matches
 					var refinedMatches []Symbol
