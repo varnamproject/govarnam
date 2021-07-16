@@ -19,7 +19,8 @@ type PatternDictionarySuggestion struct {
 	Length int
 }
 
-func (varnam *Varnam) openDict(dictPath string) error {
+// InitDict open connection to dictionary
+func (varnam *Varnam) InitDict(dictPath string) error {
 	var err error
 	varnam.dictConn, err = openDB(dictPath)
 	return err

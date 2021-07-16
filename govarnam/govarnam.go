@@ -227,8 +227,6 @@ func (varnam *Varnam) setDefaultConfig() {
 
 	varnam.LangRules.IndicDigits = false
 	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT, VARNAM_TOKEN_ACCEPT_ALL)[0].value1
-
-	varnam.setPatternLongestLength()
 }
 
 // SortSuggestions by confidence and learned on time
@@ -364,13 +362,21 @@ func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
 }
 
 // Init Initialize varnam
-func Init(vstPath string, dictPath string) Varnam {
+func Init(vstPath string, dictPath string) (*Varnam, error) {
 	varnam := Varnam{}
-	varnam.openVST(vstPath)
-	varnam.openDict(dictPath)
+
+	err := varnam.InitVST(vstPath)
+	if err != nil {
+		return nil, err
+	}
+	err = varnam.InitDict(dictPath)
+	if err != nil {
+		return nil, err
+	}
+
 	varnam.setDefaultConfig()
-	varnam.setSchemeInfo()
-	return varnam
+
+	return &varnam, nil
 }
 
 // InitFromID Init from ID. Scheme ID doesn't necessarily be a language code
@@ -385,7 +391,12 @@ func InitFromID(schemeID string) (*Varnam, error) {
 		return nil, err
 	}
 
-	dictPath = findLearningsFilePath(schemeID)
+	varnam := Varnam{}
+	varnam.InitVST(vstPath)
+
+	// One dictionary for one language, not for different scheme IDs
+
+	dictPath = findLearningsFilePath(varnam.SchemeInfo.LangCode)
 	if !fileExists(dictPath) {
 		fmt.Printf("Making Varnam Learnings File at %s\n", dictPath)
 		os.MkdirAll(path.Dir(dictPath), 0750)
@@ -395,7 +406,12 @@ func InitFromID(schemeID string) (*Varnam, error) {
 		}
 	}
 
-	varnam := Init(vstPath, dictPath)
+	err = varnam.InitDict(dictPath)
+	if err != nil {
+		return nil, err
+	}
+
+	varnam.setDefaultConfig()
 
 	return &varnam, nil
 }
