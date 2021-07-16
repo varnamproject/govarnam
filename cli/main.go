@@ -23,7 +23,7 @@ func logVarnamError() {
 
 func main() {
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
-	langFlag := flag.String("lang", "", "Language")
+	schemeFlag := flag.String("s", "", "Scheme ID")
 
 	learnFlag := flag.Bool("learn", false, "Learn a word")
 	unlearnFlag := flag.Bool("unlearn", false, "Unlearn a word")
@@ -40,12 +40,12 @@ func main() {
 
 	flag.Parse()
 
-	if *langFlag == "" {
-		log.Fatal("Specifiy a language with -lang")
+	if *schemeFlag == "" {
+		log.Fatal("Specifiy a scheme ID with -s")
 	}
 
 	var err error
-	varnam, err = govarnamgo.InitFromID(*langFlag)
+	varnam, err = govarnamgo.InitFromID(*schemeFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
