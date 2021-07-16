@@ -39,10 +39,19 @@ func openDB(path string) (*sql.DB, error) {
 	return conn, nil
 }
 
-func (varnam *Varnam) openVST(vstPath string) error {
+// InitVST initialize
+func (varnam *Varnam) InitVST(vstPath string) error {
 	var err error
 	varnam.vstConn, err = openDB(vstPath + "?_case_sensitive_like=on")
-	return err
+
+	if err != nil {
+		return err
+	}
+
+	varnam.setSchemeInfo()
+	varnam.setPatternLongestLength()
+
+	return nil
 }
 
 // Find the longest pattern length
