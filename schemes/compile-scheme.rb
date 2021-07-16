@@ -582,6 +582,10 @@ def set_default_symbols
 end
 
 def initialize_varnam_handle()
+  # Include libvarnam bindings in ruby
+  require './varnamruby.rb'
+  $varnam_handle = FFI::MemoryPointer.new :pointer
+
   init_error_msg = FFI::MemoryPointer.new(:pointer, 1)
   initialized = VarnamLibrary.varnam_init($vst_path, $varnam_handle, init_error_msg)
 
@@ -613,6 +617,10 @@ end
 def compile_scheme(scheme_path)
   $vst_name = File.basename(scheme_path) + ".vst"
   $vst_path = File.join(Dir.pwd, $vst_name)
+
+  if File.exists?($vst_path)
+    File.delete($vst_path)
+  end
 
   initialize_varnam_handle()
 
@@ -684,10 +692,6 @@ optparse = OptionParser.new do |opts|
   opts.on('-z', '--debug', 'Enable debugging') do
     $options[:debug] = true
   end
-
-  # Include libvarnam bindings in ruby
-  require './varnamruby.rb'
-  $varnam_handle = FFI::MemoryPointer.new :pointer
 
   opts.on('-s', '-s path_to_scheme_file_path', 'Path to scheme file') do |path|
     if File.exists? (path)
