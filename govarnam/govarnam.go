@@ -175,6 +175,7 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]
 						}
 					} else {
 						symbolValue = getSymbolValue(symbol, i)
+						symbolWeight = getSymbolWeight(symbol)
 					}
 
 					word[i] = symbolValue

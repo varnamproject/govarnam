@@ -41,6 +41,12 @@ func TestMLTokenizer(t *testing.T) {
 
 	// TestML fancy words
 	assertEqual(t, varnam.Transliterate("thaaaaaaaankyoo").GreedyTokenized[0].Word, "താാാാങ്ക്യൂ")
+
+	// Test confidence value
+	sugs := varnam.Transliterate("thuthuru").TokenizerSuggestions
+	assertEqual(t, sugs[0].Weight, 3) // തുതുരു. Greedy
+	assertEqual(t, sugs[1].Weight, 2) // തുതുറു. Last conjunct is VARNAM_MATCH_POSSIBILITY symbol
+	assertEqual(t, sugs[7].Weight, 1) // തുത്തുരു. Last 2 conjuncts are VARNAM_MATCH_POSSIBILITY symbols
 }
 
 func TestMLLearn(t *testing.T) {
