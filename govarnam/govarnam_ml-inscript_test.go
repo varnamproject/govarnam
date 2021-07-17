@@ -24,10 +24,11 @@ func TestMLInscriptTokenizer(t *testing.T) {
 	assertEqual(t, len(nonLangWord.TokenizerSuggestions), 1)
 	assertEqual(t, len(nonLangWord.GreedyTokenized), 1)
 
-	// TestMLInscript mixed words
+	// TestMLInscript mixed words & symbol escapes with |
 	assertEqual(t, varnam.Transliterate(";aയ്ച്ചാclf").GreedyTokenized[0].Word, "ചോയ്ച്ചാമതി")
-	assertEqual(t, varnam.Transliterate("*vgcdc").GreedyTokenized[0].Word, "*നുമ്മ")
-	assertEqual(t, varnam.Transliterate("*vg@cdc").GreedyTokenized[0].Word, "*നു@മ്മ")
+	assertEqual(t, varnam.Transliterate("|*vgcdc").GreedyTokenized[0].Word, "*നുമ്മ")
+	assertEqual(t, varnam.Transliterate("|*vg@cdc").GreedyTokenized[0].Word, "*നു@മ്മ")
+	assertEqual(t, varnam.Transliterate("|;|\"||*|'|-|>|\\^4^k").GreedyTokenized[0].Word, ";\"|*'->\\₹^ക")
 
 	// TestMLInscript some complex words
 	assertEqual(t, varnam.Transliterate("Gh/aif;d;g").GreedyTokenized[0].Word, "ഉപയോഗിച്ചു")
