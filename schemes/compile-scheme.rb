@@ -513,6 +513,11 @@ def get_numbers(criteria = {})
   return get_tokens(Varnam::VARNAM_TOKEN_OTHER, criteria)
 end
 
+def get_chill()
+  tokens = get_tokens(Varnam::VARNAM_TOKEN_CONSONANT, {:exact => true})
+  return tokens.find_all {|t| t.tag == "chill"}
+end
+
 def get_virama
     tokens = get_tokens(Varnam::VARNAM_TOKEN_VIRAMA, {})
     if tokens.empty?
@@ -579,6 +584,41 @@ def set_default_symbols
   non_joiner "_" => "_"  if not $overridden_default_symbols.include?(Varnam::VARNAM_TOKEN_NON_JOINER)
   joiner "__" => "__"  if not $overridden_default_symbols.include?(Varnam::VARNAM_TOKEN_JOINER)
   symbols "-" => "-"
+end
+
+def _persist_stemrules(old_ending, new_ending)
+  return if _context.errors > 0
+  rc = VarnamLibrary.varnam_create_stemrule($varnam_handle.get_pointer(0), old_ending, new_ending)
+  if rc != 0
+    error_message = VarnamLibrary.varnam_get_last_error($varnam_handle.get_pointer(0))
+    error error_message
+  end
+  return rc
+end
+
+def _create_stemrule(hash, options)
+  return if _context.errors > 0
+  hash.each_pair do |key,value|
+    rc = _persist_stemrules(key, value)
+    if rc != 0
+      puts "could not create stemrule for " + key + ":" + value
+    end
+  end
+end 
+
+def stemrules(hash,options={})
+ # _ensure_sanity(hash)
+  _create_stemrule(hash, options) 
+  puts VarnamLibrary.varnam_get_last_error($varnam_handle.get_pointer(0))
+end
+
+def exceptions_stem(hash, options={})
+  hash.each_pair do |key,value|
+    rc = VarnamLibrary.varnam_create_stem_exception($varnam_handle.get_pointer(0), key, value)
+    if rc != 0
+      puts "Could not create stemrule exception"
+    end
+  end
 end
 
 def initialize_varnam_handle()
