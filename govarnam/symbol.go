@@ -116,6 +116,44 @@ func (varnam *Varnam) symbolExist(ch string) (bool, error) {
 	return count != 0, nil
 }
 
+func (varnam *Varnam) searchPattern(ctx context.Context, ch string, matchType int, acceptCondition int) []Symbol {
+	var (
+		rows    *sql.Rows
+		err     error
+		results []Symbol
+	)
+
+	select {
+	case <-ctx.Done():
+		return results
+	default:
+		if matchType == VARNAM_MATCH_ALL {
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE value1 = ? AND (accept_condition = 0 OR accept_condition = ?) ORDER BY match_type ASC, weight DESC, priority DESC", ch, acceptCondition)
+		} else {
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE value1 = ? AND match_type = ? AND (accept_condition = 0 OR accept_condition = ?)", ch, matchType, acceptCondition)
+		}
+
+		if err != nil {
+			log.Print(err)
+			return results
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var item Symbol
+			rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
+			results = append(results, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err)
+		}
+
+		return results
+	}
+}
+
 func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int, acceptCondition int) []Symbol {
 	var (
 		rows    *sql.Rows

@@ -143,8 +143,7 @@ func TestMLZW(t *testing.T) {
 	// _ is ZWNJ
 	assertEqual(t, varnam.Transliterate("thaazh_vara").TokenizerSuggestions[0].Word, "താഴ്‌വര")
 
-	// When _ comes after a chil, varnam explicitly generates chil without ZWNJ at end
-	assertEqual(t, varnam.Transliterate("n_").TokenizerSuggestions[0].Word, "ൻ")
+	// When _ comes after a chil in between a word, varnam explicitly generates chil. This chil won't have a ZWNJ at end
 	assertEqual(t, varnam.Transliterate("nan_ma").TokenizerSuggestions[0].Word, "നൻമ")
 	assertEqual(t, varnam.Transliterate("sam_bhavam").TokenizerSuggestions[0].Word, "സംഭവം")
 }
@@ -155,4 +154,17 @@ func TestMLAtomicChil(t *testing.T) {
 
 	varnam.Train("professor", "പ്രൊഫസര്‍")
 	assertEqual(t, varnam.Transliterate("professor").ExactMatches[0].Word, "പ്രൊഫസർ")
+}
+
+func TestMLReverseTransliteration(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	sugs, err := varnam.ReverseTransliterate("മലയാളം")
+	checkError(err)
+
+	// The order of this will fail if VST weights change
+	expected := []string{"malayaaLam", "malayALam", "malayaLam", "malayaalam", "malayAlam", "malayalam"}
+	for i, sug := range sugs {
+		assertEqual(t, sug.Word, expected[i])
+	}
 }
