@@ -389,9 +389,8 @@ func getSymbolValue(symbol Symbol, position int) string {
 	if symbol.generalType == VARNAM_SYMBOL_VOWEL && position > 0 {
 		// If in between word, we use the vowel and not the consonant
 		return symbol.value2 // ാ
-	} else {
-		return symbol.value1 // ആ
 	}
+	return symbol.value1 // ആ
 }
 
 func getSymbolWeight(symbol Symbol) int {
