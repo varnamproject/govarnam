@@ -17,6 +17,9 @@ stable true
 $virama = "്"
 virama "~" => "്"
 
+# zwj and zwnj are __ & _ by default in all schemes in varnam
+# unless explicitly override in scheme
+
 infer_dead_consonants true
 
 vowels "a" => "അ",
