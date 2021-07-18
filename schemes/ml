@@ -207,16 +207,14 @@ end
 # START July 7, 2021 change
 # https://gitlab.com/subins2000/govarnam/-/issues/2
 
-# TODO simplify
-# consonants({}, combine(get_chil, [["*u"]] => "*1"))
-
 tag "chill" do
-   consonants "m_" => ["ം","ം","മ"],
-              "n_" => ["ൻ", "ന്‍", "ന"],
-              ["N_", ["n_"]] => ["ൺ", "ണ്‍", "ണ"],
-              "l_" => ["ൽ", "ല്‍", "ല"],
-              ["L_", ["l_"]] => ["ൾ", "ള്‍", "ള"],
-              ["r_"] => ["ർ", "ര്‍", "ര"]
+   consonants(
+      {
+         :accept_if => :in_between,
+         :match_type => :match_exact
+      },
+      combine(get_chill, ["*_"] => ["*1", "*2", "*3"])
+   )
 end
 
 # END July 7, 2021 change

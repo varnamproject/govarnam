@@ -109,6 +109,25 @@ func varnam_transliterate(varnamHandleID C.int, word *C.char) *C.struct_Translit
 	return makeCTransliterationResult(backgroundContext, getVarnamHandle(varnamHandleID).varnam.Transliterate(C.GoString(word)))
 }
 
+//export varnam_reverse_transliterate
+func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char) *C.varray {
+	handle := getVarnamHandle(varnamHandleID)
+	sugs, err := handle.varnam.ReverseTransliterate(C.GoString(word))
+
+	if err != nil {
+		handle.err = err
+		return nil
+	}
+
+	cVArray := C.varray_init()
+	for _, sug := range sugs {
+		cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+		C.varray_push(cVArray, cSug)
+	}
+
+	return cVArray
+}
+
 //export varnam_debug
 func varnam_debug(varnamHandleID C.int, val C.int) {
 	if val == 0 {

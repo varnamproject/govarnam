@@ -38,6 +38,8 @@ func main() {
 	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
 	greedy := flag.Bool("greedy", false, "Show only exactly matched suggestions")
 
+	reverseTransliterate := flag.Bool("reverse", false, "Reverse transliterate. Find which pattern to use for a specific word")
+
 	flag.Parse()
 
 	if *schemeFlag == "" {
@@ -107,6 +109,25 @@ func main() {
 			fmt.Println("Finished importing from file")
 		} else {
 			logVarnamError()
+		}
+	} else if *reverseTransliterate {
+		sugs, err := varnam.ReverseTransliterate(args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		probMsg := false
+		lastWeight := sugs[0].Weight
+
+		fmt.Println("Exact Matches")
+		for _, sug := range sugs {
+			// The first exact matches will have same weight value
+			if !probMsg && lastWeight != sug.Weight {
+				fmt.Println("Probability Match")
+				probMsg = true
+			}
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+			lastWeight = sug.Weight
 		}
 	} else {
 		var result govarnamgo.TransliterationResult

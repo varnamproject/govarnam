@@ -137,9 +137,9 @@ func InitFromID(id string) (*VarnamHandle, error) {
 }
 
 // GetLastError get last error
-func (handle *VarnamHandle) GetLastError() string {
+func (handle *VarnamHandle) GetLastError() error {
 	cStr := C.varnam_get_last_error(handle.connectionID)
-	goStr := C.GoString(cStr)
+	goStr := fmt.Errorf(C.GoString(cStr))
 	C.free(unsafe.Pointer(cStr))
 	return goStr
 }
@@ -194,6 +194,26 @@ func (handle *VarnamHandle) Transliterate(ctx context.Context, word string) Tran
 	case cResult := <-channel:
 		return makeGoTransliterationResult(ctx, cResult)
 	}
+}
+
+// ReverseTransliterate reverse transilterate
+func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, error) {
+	var sugs []Suggestion
+	cWord := C.CString(word)
+
+	result := C.varnam_reverse_transliterate(handle.connectionID, cWord)
+	if result == nil {
+		return sugs, handle.GetLastError()
+	}
+
+	i := 0
+	for i < int(C.varray_length(result)) {
+		cSug := (*C.Suggestion)(C.varray_get(result, C.int(i)))
+		sug := makeSuggestion(cSug)
+		sugs = append(sugs, sug)
+		i++
+	}
+	return sugs, nil
 }
 
 // Train train a pattern => word

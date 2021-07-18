@@ -362,6 +362,43 @@ func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
 	return result
 }
 
+// ReverseTransliterate do a reverse transliteration
+func (varnam *Varnam) ReverseTransliterate(word string) ([]Suggestion, error) {
+	var results []Suggestion
+	ctx := context.Background()
+
+	conjuncts, err := varnam.splitWordByConjunct(word)
+
+	if err != nil {
+		return results, err
+	}
+
+	tokens := make([]Token, len(conjuncts))
+
+	for i, c := range conjuncts {
+		acceptCondition := VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
+
+		if i == 0 {
+			// Trying to make the first token
+			acceptCondition = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
+		} else if i == len(conjuncts)-1 {
+			acceptCondition = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
+		}
+
+		matches := varnam.searchPattern(ctx, c, VARNAM_MATCH_ALL, acceptCondition)
+
+		for i, m := range matches {
+			matches[i].value1 = m.pattern
+			matches[i].value2 = m.pattern
+		}
+		tokens = append(tokens, Token{VARNAM_TOKEN_SYMBOL, matches, i, c})
+	}
+
+	results = SortSuggestions(varnam.tokensToSuggestions(ctx, &tokens, false))
+
+	return results, nil
+}
+
 // Init Initialize varnam
 func Init(vstPath string, dictPath string) (*Varnam, error) {
 	varnam := Varnam{}
