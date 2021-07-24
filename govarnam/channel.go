@@ -121,8 +121,18 @@ func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word 
 
 			for _, match := range patternDictSugs {
 				if match.Length < len(word) {
+					sug := &match.Sug
+
+					// Increase weight on length matched.
+					// 50 because half of 100%
+					sug.Weight += match.Length * 50
+
+					for _, cb := range varnam.PatternWordPartializers {
+						cb(sug)
+					}
+
 					restOfWord := word[match.Length:]
-					filled := varnam.tokenizeRestOfWord(ctx, restOfWord, []Suggestion{match.Sug})
+					filled := varnam.tokenizeRestOfWord(ctx, restOfWord, []Suggestion{*sug})
 					dictResults = append(dictResults, filled...)
 				} else if match.Length == len(word) {
 					// Same length

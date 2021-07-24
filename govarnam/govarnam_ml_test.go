@@ -140,6 +140,18 @@ func TestMLTrain(t *testing.T) {
 
 	// TODO without e at the end
 	// assertEqual(t, varnam.Transliterate("collegil").TokenizerSuggestions[0].Word, "കോളേജിൽ")
+
+	// Word with chil at end
+	err = varnam.Train("computer", "കമ്പ്യൂട്ടർ")
+	checkError(err)
+	// This used to be an issue in libvarnam https://github.com/varnamproject/libvarnam/issues/166
+	// GoVarnam don't have this issue because we don't use pattern_content DB for malayalam words.
+	// So the problem exist for english words in pattern_content
+	err = varnam.Train("kilivaathil", "കിളിവാതിൽ")
+	checkError(err)
+
+	assertEqual(t, varnam.Transliterate("computeril").PatternDictionarySuggestions[0].Word, "കമ്പ്യൂട്ടറിൽ")
+	assertEqual(t, varnam.Transliterate("kilivaathilil").PatternDictionarySuggestions[0].Word, "കിളിവാതിലിൽ")
 }
 
 // TestML zero width joiner/non-joiner things

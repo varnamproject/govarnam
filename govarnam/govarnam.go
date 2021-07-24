@@ -43,6 +43,8 @@ type Varnam struct {
 	SchemeInfo SchemeInfo
 	Debug      bool
 
+	PatternWordPartializers []func(*Suggestion)
+
 	// Maximum suggestions to obtain from dictionary
 	DictionarySuggestionsLimit int
 
@@ -228,6 +230,10 @@ func (varnam *Varnam) setDefaultConfig() {
 
 	varnam.LangRules.IndicDigits = false
 	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT, VARNAM_TOKEN_ACCEPT_ALL)[0].value1
+
+	if varnam.SchemeInfo.LangCode == "ml" {
+		varnam.RegisterPatternWordPartializer(varnam.mlPatternWordPartializer)
+	}
 }
 
 // SortSuggestions by confidence and learned on time
@@ -294,7 +300,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 			case channelPatternDictResult := <-patternDictSugsChan:
 				// From patterns dictionary
 				result.ExactMatches = append(result.ExactMatches, channelPatternDictResult.exactMatches...)
-				result.PatternDictionarySuggestions = channelPatternDictResult.suggestions
+				result.PatternDictionarySuggestions = SortSuggestions(channelPatternDictResult.suggestions)
 
 				if len(result.ExactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
 					go varnam.channelTokensToSuggestions(ctx, tokensPointer, tokenizerSugsChan)
@@ -397,6 +403,13 @@ func (varnam *Varnam) ReverseTransliterate(word string) ([]Suggestion, error) {
 	results = SortSuggestions(varnam.tokensToSuggestions(ctx, &tokens, false))
 
 	return results, nil
+}
+
+// RegisterPatternWordPartializer A word partializer remove word ending
+// with proper alternative so that the word can be tokenized further.
+// Useful for malayalam to replace last chil letter with its root
+func (varnam *Varnam) RegisterPatternWordPartializer(cb func(*Suggestion)) {
+	varnam.PatternWordPartializers = append(varnam.PatternWordPartializers, cb)
 }
 
 // Init Initialize varnam
