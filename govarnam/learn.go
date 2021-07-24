@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// WordInfo represent a item in words table
 type WordInfo struct {
 	id         int
 	word       string
@@ -152,7 +153,16 @@ func (varnam *Varnam) Learn(word string, confidence int) error {
 				weight = confidence - 1
 			}
 
-			err := varnam.insertWord(sequence, weight, false)
+			partial := false
+			fmt.Println(i)
+			if i == 0 {
+				// Only one conjunct.
+				// Learning a single conjunct as a word
+				// messes up dictionary results
+				partial = true
+			}
+
+			err := varnam.insertWord(sequence, weight, partial)
 			if err != nil {
 				return err
 			}
@@ -324,6 +334,7 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 				varnam.Learn(word, 0)
 				varnam.Learn(curWord, 0)
 			}
+			count++
 
 			if varnam.Debug {
 				fmt.Println("Frequency report :", frequencyReport)
@@ -331,6 +342,7 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 		} else if frequencyReport {
 			if word == "" {
 				word = curWord
+				continue
 			} else {
 				confidence, err := strconv.Atoi(curWord)
 
