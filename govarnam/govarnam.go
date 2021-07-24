@@ -321,7 +321,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 							return nil, result
 
 						case tokenizerSugs := <-tokenizerSugsChan:
-							result.TokenizerSuggestions = tokenizerSugs
+							result.TokenizerSuggestions = SortSuggestions(tokenizerSugs)
 
 							return tokensPointer, result
 						}
