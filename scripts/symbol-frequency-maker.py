@@ -1,13 +1,18 @@
 import sqlite3
 import sys
 
-'''
+desc = '''
+Usage: script.py scheme.vst wordReportFile.txt outputSymbolReportFile.txt
+
 INPUT FILE MUST BE WORD FREQUENCY REPORT. FORMAT:
 word<space>frequency
 എന്ത് 14569
 ഇത് 2045
 '''
 
+if len(sys.argv) != 4:
+    print(desc)
+    sys.exit(0)
 
 db = sys.argv[1]
 file = sys.argv[2]

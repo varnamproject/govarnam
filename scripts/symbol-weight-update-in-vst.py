@@ -1,12 +1,18 @@
 import sqlite3
 import sys
 
-'''
+desc = '''
+Usage: script.py scheme.vst symbolFrequencyReport.txt
+
 INPUT FILE MUST BE SYMBOL FREQUENCY REPORT. FORMAT:
 symbol<space>frequency
 സ 2045414
 യെ 1456
 '''
+
+if len(sys.argv) != 3:
+    print(desc)
+    sys.exit(0)
 
 db = sys.argv[1]
 file = sys.argv[2]
