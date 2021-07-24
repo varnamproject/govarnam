@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"gitlab.com/subins2000/govarnam/govarnamgo"
 )
@@ -137,29 +138,30 @@ func main() {
 		} else {
 			result = varnam.Transliterate(context.Background(), args[0])
 		}
-		fmt.Println("Greedy Tokenized")
-		for _, sug := range result.GreedyTokenized {
-			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+
+		printSugs := func(sugs []govarnamgo.Suggestion) {
+			for _, sug := range sugs {
+				if sug.LearnedOn == 0 {
+					fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+				} else {
+					fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight) + " " + time.Unix(int64(sug.LearnedOn), 0).String())
+				}
+			}
 		}
+
+		fmt.Println("Greedy Tokenized")
+		printSugs(result.GreedyTokenized)
 
 		fmt.Println("Exact Matches")
-		for _, sug := range result.ExactMatches {
-			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
-		}
+		printSugs(result.ExactMatches)
 
 		fmt.Println("Dictionary Suggestions")
-		for _, sug := range result.DictionarySuggestions {
-			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
-		}
+		printSugs(result.DictionarySuggestions)
 
 		fmt.Println("Pattern Dictionary Suggestions")
-		for _, sug := range result.PatternDictionarySuggestions {
-			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
-		}
+		printSugs(result.PatternDictionarySuggestions)
 
 		fmt.Println("Tokenizer Suggestions")
-		for _, sug := range result.TokenizerSuggestions {
-			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
-		}
+		printSugs(result.TokenizerSuggestions)
 	}
 }
