@@ -432,7 +432,11 @@ func getSymbolValue(symbol Symbol, position int) string {
 }
 
 func getSymbolWeight(symbol Symbol) int {
-	return symbol.weight + (VARNAM_MATCH_POSSIBILITY-symbol.matchType)*100
+	if symbol.matchType == VARNAM_MATCH_EXACT {
+		// 200 because there might be possibility matches having weight 100
+		return 200
+	}
+	return symbol.weight
 }
 
 // Removes less weighted symbols

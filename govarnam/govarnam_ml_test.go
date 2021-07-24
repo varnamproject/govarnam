@@ -16,7 +16,7 @@ func TestMLTokenizer(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
 	// The order of this will fail if VST weights change
-	expected := []string{"മല", "മള", "മലാ", "മളാ", "മാല", "മാള", "മാലാ", "മാളാ"}
+	expected := []string{"മല", "മാല", "മള", "മലാ", "മളാ", "മാള", "മാലാ", "മാളാ"}
 	for i, sug := range varnam.Transliterate("mala").TokenizerSuggestions {
 		assertEqual(t, sug.Word, expected[i])
 	}
@@ -44,9 +44,9 @@ func TestMLTokenizer(t *testing.T) {
 
 	// Test confidence value
 	sugs := varnam.Transliterate("thuthuru").TokenizerSuggestions
-	assertEqual(t, sugs[0].Weight, 3) // തുതുരു. Greedy
-	assertEqual(t, sugs[1].Weight, 2) // തുതുറു. Last conjunct is VARNAM_MATCH_POSSIBILITY symbol
-	assertEqual(t, sugs[7].Weight, 1) // തുത്തുരു. Last 2 conjuncts are VARNAM_MATCH_POSSIBILITY symbols
+	assertEqual(t, sugs[0].Weight, 6) // തുതുരു. Greedy. Should have highest confidence
+	assertEqual(t, sugs[1].Weight, 4) // തുതുറു. Last conjunct is VARNAM_MATCH_POSSIBILITY symbol
+	assertEqual(t, sugs[7].Weight, 2) // തുത്തുറു. Last 2 conjuncts are VARNAM_MATCH_POSSIBILITY symbols
 }
 
 func TestMLLearn(t *testing.T) {
@@ -107,6 +107,13 @@ func TestMLLearn(t *testing.T) {
 	checkError(err)
 
 	assertEqual(t, varnam.Transliterate("thudangiyittE").DictionarySuggestions[0].Word, "തുടങ്ങിയിട്ടേ")
+
+	// Shouldn't learn single conjucnts as a word
+	err = varnam.Learn("കാ", 0)
+	checkError(err)
+
+	// A learned word would have LearnedOn timestamp
+	assertEqual(t, varnam.Transliterate("kaa").ExactMatches[0].LearnedOn, 0)
 }
 
 func TestMLTrain(t *testing.T) {
