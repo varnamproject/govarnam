@@ -350,6 +350,7 @@ func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, resul
 			for j, result := range results {
 				till := varnam.removeLastVirama(result.Word)
 				tillWeight := result.Weight
+				tillLearnedOn := result.LearnedOn
 
 				firstSug := restOfWordSugs[0]
 				results[j].Word = varnam.removeLastVirama(results[j].Word) + firstSug.Word
@@ -359,7 +360,7 @@ func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, resul
 					if k == 0 {
 						continue
 					}
-					sug := Suggestion{till + sug.Word, tillWeight + sug.Weight, sug.LearnedOn}
+					sug := Suggestion{till + sug.Word, tillWeight + sug.Weight, tillLearnedOn}
 					results = append(results, sug)
 				}
 			}
