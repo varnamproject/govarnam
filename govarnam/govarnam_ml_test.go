@@ -187,3 +187,46 @@ func TestMLReverseTransliteration(t *testing.T) {
 		assertEqual(t, sug.Word, expected[i])
 	}
 }
+
+func TestDictionaryLimit(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	words := []string{"മല", "മലയോരം", "മലയാളചലച്ചിത്രം", "മലപ്പുറം", "മലയാളത്തിൽ", "മലയ്ക്ക്", "മലയിൽ", "മലയാളം"}
+	for _, word := range words {
+		varnam.Learn(word, 0)
+	}
+
+	varnam.DictionarySuggestionsLimit = 2
+	assertEqual(t, len(varnam.Transliterate("mala").DictionarySuggestions), 2)
+
+	patternsAndWords := map[string]string{
+		"collateral": "കോലാറ്ററൽ",
+		"collective": "കളക്ടീവ്",
+		"collector":  "കളക്ടർ",
+		"college":    "കോളേജ്",
+		"colombia":   "കൊളംബിയ",
+		"commons":    "കോമൺസ്",
+	}
+	for pattern, word := range patternsAndWords {
+		varnam.Train(pattern, word)
+	}
+
+	varnam.PatternDictionarySuggestionsLimit = 4
+	assertEqual(t, len(varnam.Transliterate("co").PatternDictionarySuggestions), 4)
+
+	// Test multiple matching words while partializing
+	patternsAndWords = map[string]string{
+		"edit":    "എഡിറ്റ്",
+		"editing": "എഡിറ്റിംഗ്",
+		"edition": "എഡിഷൻ",
+	}
+	for pattern, word := range patternsAndWords {
+		varnam.Train(pattern, word)
+	}
+
+	varnam.PatternDictionarySuggestionsLimit = 2
+
+	// Tokenizer will work on 2 words: എഡിറ്റ് & എഡിറ്റിംഗ്
+	// Total results = 4+
+	assertEqual(t, len(varnam.Transliterate("editingil").PatternDictionarySuggestions), 2)
+}

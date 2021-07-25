@@ -95,7 +95,7 @@ type TransliterationResult struct {
  * Convert tokens into suggestions.
  * partial - set true if only a part of a word is being tokenized and not an entire word
  */
-func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]Token, partial bool) []Suggestion {
+func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]Token, partial bool, limit int) []Suggestion {
 	var results []Suggestion
 	tokens := *tokensPointer
 
@@ -136,7 +136,7 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]
 			i--
 		}
 
-		for len(results) < varnam.TokenizerSuggestionsLimit {
+		for len(results) < limit {
 			// One loop will make one word
 			word := make([]string, len(tokens))
 			weight := 0
@@ -257,7 +257,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 	)
 
 	tokensPointerChan := make(chan *[]Token)
-	go varnam.channelTokenizeWord(ctx, word, VARNAM_MATCH_ALL, tokensPointerChan)
+	go varnam.channelTokenizeWord(ctx, word, VARNAM_MATCH_ALL, false, tokensPointerChan)
 
 	select {
 	case <-ctx.Done():
@@ -303,7 +303,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 				result.PatternDictionarySuggestions = SortSuggestions(channelPatternDictResult.suggestions)
 
 				if len(result.ExactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
-					go varnam.channelTokensToSuggestions(ctx, tokensPointer, tokenizerSugsChan)
+					go varnam.channelTokensToSuggestions(ctx, tokensPointer, varnam.TokenizerSuggestionsLimit, tokenizerSugsChan)
 					tokenizerSugsCalled = true
 				}
 
@@ -400,7 +400,7 @@ func (varnam *Varnam) ReverseTransliterate(word string) ([]Suggestion, error) {
 		tokens = append(tokens, Token{VARNAM_TOKEN_SYMBOL, matches, i, c})
 	}
 
-	results = SortSuggestions(varnam.tokensToSuggestions(ctx, &tokens, false))
+	results = SortSuggestions(varnam.tokensToSuggestions(ctx, &tokens, false, varnam.TokenizerSuggestionsLimit))
 
 	return results, nil
 }

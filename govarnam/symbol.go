@@ -330,39 +330,36 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 }
 
 // Tokenize end part of a word and append it to results
-func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, results []Suggestion) []Suggestion {
+func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, sugs []Suggestion, limit int) []Suggestion {
+	var results []Suggestion
+
+	tokensPointerChan := make(chan *[]Token)
+	go varnam.channelTokenizeWord(ctx, word, VARNAM_MATCH_ALL, true, tokensPointerChan)
+
 	select {
 	case <-ctx.Done():
 		return results
-	default:
+	case restOfWordTokens := <-tokensPointerChan:
 		if varnam.Debug {
 			fmt.Printf("Tokenizing %s\n", word)
 		}
 
-		restOfWordTokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_ALL, true)
-		restOfWordSugs := varnam.tokensToSuggestions(ctx, restOfWordTokens, true)
+		for _, sug := range sugs {
+			sugWord := varnam.removeLastVirama(sug.Word)
+			tokensWithWord := []Token{Token{VARNAM_TOKEN_CHAR, []Symbol{}, 0, sugWord}}
+			tokensWithWord = append(tokensWithWord, *restOfWordTokens...)
 
-		if varnam.Debug {
-			fmt.Println("Tokenized:", restOfWordSugs)
-		}
+			restOfWordSugs := varnam.tokensToSuggestions(ctx, &tokensWithWord, true, limit)
 
-		if len(restOfWordSugs) > 0 {
-			for j, result := range results {
-				till := varnam.removeLastVirama(result.Word)
-				tillWeight := result.Weight
-				tillLearnedOn := result.LearnedOn
+			if varnam.Debug {
+				fmt.Println("Tokenized:", restOfWordSugs)
+			}
 
-				firstSug := restOfWordSugs[0]
-				results[j].Word = varnam.removeLastVirama(results[j].Word) + firstSug.Word
-				results[j].Weight += firstSug.Weight
-
-				for k, sug := range restOfWordSugs {
-					if k == 0 {
-						continue
-					}
-					sug := Suggestion{till + sug.Word, tillWeight + sug.Weight, tillLearnedOn}
-					results = append(results, sug)
-				}
+			for _, restOfWordSug := range restOfWordSugs {
+				// Preserve original word's weight and timestamp
+				restOfWordSug.Weight += sug.Weight
+				restOfWordSug.LearnedOn = sug.LearnedOn
+				results = append(results, restOfWordSug)
 			}
 		}
 

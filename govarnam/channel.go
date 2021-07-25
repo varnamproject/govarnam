@@ -10,24 +10,24 @@ type channelDictionaryResult struct {
 	suggestions  []Suggestion
 }
 
-func (varnam *Varnam) channelTokenizeWord(ctx context.Context, word string, matchType int, channel chan *[]Token) {
+func (varnam *Varnam) channelTokenizeWord(ctx context.Context, word string, matchType int, partial bool, channel chan *[]Token) {
 	select {
 	case <-ctx.Done():
 		close(channel)
 		return
 	default:
-		channel <- varnam.tokenizeWord(ctx, word, matchType, false)
+		channel <- varnam.tokenizeWord(ctx, word, matchType, partial)
 		close(channel)
 	}
 }
 
-func (varnam *Varnam) channelTokensToSuggestions(ctx context.Context, tokens *[]Token, channel chan []Suggestion) {
+func (varnam *Varnam) channelTokensToSuggestions(ctx context.Context, tokens *[]Token, limit int, channel chan []Suggestion) {
 	select {
 	case <-ctx.Done():
 		close(channel)
 		return
 	default:
-		channel <- varnam.tokensToSuggestions(ctx, tokens, false)
+		channel <- varnam.tokensToSuggestions(ctx, tokens, false, limit)
 		close(channel)
 	}
 }
@@ -51,7 +51,7 @@ func (varnam *Varnam) channelTokensToGreedySuggestions(ctx context.Context, toke
 			return
 		}
 
-		channel <- varnam.tokensToSuggestions(ctx, &tokensCopy, false)
+		channel <- varnam.tokensToSuggestions(ctx, &tokensCopy, false, varnam.TokenizerSuggestionsLimit)
 		tokensCopy = nil
 		close(channel)
 	}
@@ -78,7 +78,7 @@ func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string,
 			if dictSugs.exactMatch == false {
 				// These will be partial words
 				restOfWord := word[dictSugs.longestMatchPosition+1:]
-				dictResults = varnam.tokenizeRestOfWord(ctx, restOfWord, dictSugs.sugs)
+				dictResults = varnam.tokenizeRestOfWord(ctx, restOfWord, dictSugs.sugs, varnam.DictionarySuggestionsLimit)
 			} else {
 				exactMatches = dictSugs.sugs
 
@@ -119,6 +119,8 @@ func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word 
 				fmt.Println("Pattern dictionary results:", patternDictSugs)
 			}
 
+			var partialMatches []PatternDictionarySuggestion
+
 			for _, match := range patternDictSugs {
 				if match.Length < len(word) {
 					sug := &match.Sug
@@ -131,14 +133,30 @@ func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word 
 						cb(sug)
 					}
 
-					restOfWord := word[match.Length:]
-					filled := varnam.tokenizeRestOfWord(ctx, restOfWord, []Suggestion{*sug})
-					dictResults = append(dictResults, filled...)
+					partialMatches = append(partialMatches, match)
 				} else if match.Length == len(word) {
 					// Same length
 					exactMatches = append(exactMatches, match.Sug)
 				} else {
 					dictResults = append(dictResults, match.Sug)
+				}
+			}
+
+			perMatchLimit := varnam.PatternDictionarySuggestionsLimit
+
+			if len(partialMatches) > 0 && perMatchLimit > len(partialMatches) {
+				perMatchLimit = perMatchLimit / len(partialMatches)
+			}
+
+			for _, match := range partialMatches {
+				restOfWord := word[match.Length:]
+
+				filled := varnam.tokenizeRestOfWord(ctx, restOfWord, []Suggestion{match.Sug}, perMatchLimit)
+
+				dictResults = append(dictResults, filled...)
+
+				if len(dictResults) >= varnam.PatternDictionarySuggestionsLimit {
+					break
 				}
 			}
 		}
