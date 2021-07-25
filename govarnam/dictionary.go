@@ -31,7 +31,6 @@ func makeDictionary(dictPath string) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	conn.Exec("PRAGMA page_size=4096;")
 	conn.Exec("PRAGMA journal_mode=wal;")

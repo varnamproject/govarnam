@@ -7,10 +7,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mattn/go-sqlite3"
 )
 
 // WordInfo represent a item in words table
@@ -492,39 +496,90 @@ func (varnam *Varnam) Import(filePath string) error {
 		return fmt.Errorf("Parsing packs JSON failed, err: %s", err.Error())
 	}
 
-	count := 0
-	for _, item := range dbData.WordsDict {
-		stmt, err := varnam.dictConn.Prepare("INSERT OR IGNORE INTO words(id, word, confidence, learned_on) VALUES (?, trim(?), ?, ?)")
-		if err != nil {
-			return err
-		}
+	limitVariableNumber := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
+	log.Printf("default SQLITE_LIMIT_VARIABLE_NUMBER: %d", limitVariableNumber)
 
-		_, err = stmt.Exec(item["id"], item["word"], item["confidence"], item["learned_on"])
-		if err != nil {
-			return err
-		}
+	insertsPerTransaction := int(math.Min(
+		float64(limitVariableNumber)/4, // We have 4 fields per item
+		float64(len(dbData.WordsDict)),
+	))
+
+	var (
+		args   []interface{}
+		values []string
+	)
+
+	insertions := 0
+	count := 0
+	for i, item := range dbData.WordsDict {
+		values = append(values, "(?, trim(?), ?, ?)")
+		args = append(args, item["id"], item["word"], item["confidence"], item["learned_on"])
 
 		count++
-		if count%500 == 0 {
-			fmt.Printf("Inserted %d words\n", count)
+		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {
+			query := fmt.Sprintf(
+				"INSERT OR IGNORE INTO words(id, word, confidence, learned_on) VALUES %s",
+				strings.Join(values, ", "),
+			)
+
+			stmt, err := varnam.dictConn.Prepare(query)
+			if err != nil {
+				return err
+			}
+
+			_, err = stmt.Exec(args...)
+			if err != nil {
+				return err
+			}
+
+			args = nil
+			values = nil
+
+			insertions += count
+			count = 0
+
+			fmt.Printf("Inserted %d words\n", insertions)
 		}
 	}
 
-	count = 0
-	for _, item := range dbData.PatternsDict {
-		stmt, err := varnam.dictConn.Prepare("INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES (?, ?)")
-		if err != nil {
-			return err
-		}
+	args = nil
+	values = nil
 
-		_, err = stmt.Exec(item["pattern"], item["word_id"])
-		if err != nil {
-			return err
-		}
+	insertsPerTransaction = int(math.Min(
+		float64(limitVariableNumber)/2, // We have 2 fields per item
+		float64(len(dbData.PatternsDict)),
+	))
+
+	insertions = 0
+	count = 0
+	for i, item := range dbData.PatternsDict {
+		values = append(values, "(?, ?)")
+		args = append(args, item["pattern"], item["word_id"])
 
 		count++
-		if count%500 == 0 {
-			fmt.Printf("Inserted %d patterns\n", count)
+		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {
+			query := fmt.Sprintf(
+				"INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES %s",
+				strings.Join(values, ", "),
+			)
+
+			stmt, err := varnam.dictConn.Prepare(query)
+			if err != nil {
+				return err
+			}
+
+			_, err = stmt.Exec(args...)
+			if err != nil {
+				return err
+			}
+
+			args = nil
+			values = nil
+
+			insertions += count
+			count = 0
+
+			fmt.Printf("Inserted %d patterns\n", insertions)
 		}
 	}
 
