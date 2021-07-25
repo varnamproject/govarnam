@@ -34,8 +34,11 @@ vowels "a" => "അ",
        ["ai", "ei"] => ["ഐ", "ൈ"],
        "o" => ["ഒ", "ൊ"],
        ["O", ["o"]] => ["ഓ", "ോ"],
-       ["ou", "au", "ow"]  => ["ഔ", "ൌ"],
-       ["OU", "AU", "OW"] => ["ഔ", "ൗ"]
+       ["ou", "au", "ow"]  => ["ഔ", "ൗ"],
+       ["OU", "AU", "OW"] => ["ഔ", "ൌ"]
+
+# Scheme Change July 25, 2021: ou & OU swapped
+# By Subin Siby
 
 vowels({:priority => :low, :accept_if => :ends_with}, [["y"]] => ["ഇ", "ി"])
 
