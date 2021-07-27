@@ -80,12 +80,26 @@ type varnamHandle struct {
 var varnamHandles = map[C.int]*varnamHandle{}
 var varnamHandlesMapMutex = sync.RWMutex{}
 
-//export varnam_init_from_id
-func varnam_init_from_id(langCode *C.char, id unsafe.Pointer) C.int {
+//export varnam_init
+func varnam_init(vstFile *C.char, learningsFile *C.char, id unsafe.Pointer) C.int {
 	handleID := C.int(len(varnamHandles))
 	*(*C.int)(id) = handleID
 
-	varnamGo, err := govarnam.InitFromID(C.GoString(langCode))
+	varnamGo, err := govarnam.Init(C.GoString(vstFile), C.GoString(learningsFile))
+
+	varnamHandlesMapMutex.Lock()
+	varnamHandles[handleID] = &varnamHandle{varnamGo, err}
+	varnamHandlesMapMutex.Unlock()
+
+	return checkError(err)
+}
+
+//export varnam_init_from_id
+func varnam_init_from_id(schemeID *C.char, id unsafe.Pointer) C.int {
+	handleID := C.int(len(varnamHandles))
+	*(*C.int)(id) = handleID
+
+	varnamGo, err := govarnam.InitFromID(C.GoString(schemeID))
 
 	varnamHandlesMapMutex.Lock()
 	varnamHandles[handleID] = &varnamHandle{varnamGo, err}
