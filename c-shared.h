@@ -19,7 +19,6 @@ typedef struct TransliterationResult_t {
   varray* PatternDictionarySuggestions;
   varray* TokenizerSuggestions;
   varray* GreedyTokenized;
-  int DictionaryResultCount;
 } TransliterationResult;
 
 Suggestion* makeSuggestion(char* word, int weight, int learned_on);
