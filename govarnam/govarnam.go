@@ -11,7 +11,6 @@ import (
 	sql "database/sql"
 	"fmt"
 	"os"
-	"path"
 	"sort"
 	"strings"
 
@@ -412,7 +411,7 @@ func (varnam *Varnam) RegisterPatternWordPartializer(cb func(*Suggestion)) {
 	varnam.PatternWordPartializers = append(varnam.PatternWordPartializers, cb)
 }
 
-// Init Initialize varnam
+// Init Initialize varnam. Dictionary will be created if it doesn't exist
 func Init(vstPath string, dictPath string) (*Varnam, error) {
 	varnam := Varnam{}
 
@@ -445,17 +444,8 @@ func InitFromID(schemeID string) (*Varnam, error) {
 	varnam := Varnam{}
 	varnam.InitVST(vstPath)
 
-	// One dictionary for one language, not for different scheme IDs
-
+	// One dictionary for one language, not for different scheme
 	dictPath = findLearningsFilePath(varnam.SchemeInfo.LangCode)
-	if !fileExists(dictPath) {
-		fmt.Printf("Making Varnam Learnings File at %s\n", dictPath)
-		os.MkdirAll(path.Dir(dictPath), 0750)
-		err := makeDictionary(dictPath)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	err = varnam.InitDict(dictPath)
 	if err != nil {

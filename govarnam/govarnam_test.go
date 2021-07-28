@@ -43,8 +43,6 @@ func setUp(schemeID string, langCode string) {
 	checkError(err)
 
 	dictLoc := path.Join(dictDir, langCode+".vst.learnings")
-	err = makeDictionary(dictLoc)
-	checkError(err)
 
 	varnam, err := Init(vstLoc, dictLoc)
 	checkError(err)

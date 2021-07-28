@@ -2,7 +2,10 @@ package govarnam
 
 import (
 	"context"
+	sql "database/sql"
 	"log"
+	"os"
+	"path"
 	"time"
 )
 
@@ -22,14 +25,23 @@ type PatternDictionarySuggestion struct {
 // InitDict open connection to dictionary
 func (varnam *Varnam) InitDict(dictPath string) error {
 	var err error
-	varnam.dictConn, err = openDB(dictPath)
+
+	if !fileExists(dictPath) {
+		log.Printf("Making Varnam Learnings File at %s\n", dictPath)
+		os.MkdirAll(path.Dir(dictPath), 0750)
+
+		varnam.dictConn, err = makeDictionary(dictPath)
+	} else {
+		varnam.dictConn, err = openDB(dictPath)
+	}
+
 	return err
 }
 
-func makeDictionary(dictPath string) error {
+func makeDictionary(dictPath string) (*sql.DB, error) {
 	conn, err := openDB(dictPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	conn.Exec("PRAGMA page_size=4096;")
@@ -45,17 +57,17 @@ func makeDictionary(dictPath string) error {
 
 		stmt, err := conn.PrepareContext(ctx, query)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		defer stmt.Close()
 
 		_, err = stmt.ExecContext(ctx)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return conn, nil
 }
 
 // all - Search for words starting with the word
