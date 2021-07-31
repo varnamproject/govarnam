@@ -155,17 +155,19 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 			var tempFoundDictWords []Suggestion
 			if t.tokenType == VARNAM_TOKEN_SYMBOL {
 				if i == 0 {
+					var toSearch []string
 					for _, possibility := range t.symbols {
+						toSearch = append(toSearch, getSymbolValue(possibility, 0))
+					}
+
+					searchResults := varnam.searchDictionary(ctx, toSearch, false)
+
+					tempFoundDictWords = append(tempFoundDictWords, searchResults...)
+
+					for _, result := range searchResults {
 						// Weight has no use in dictionary lookup
-						sug := Suggestion{getSymbolValue(possibility, 0), 0, 0}
-
-						search := []string{sug.Word}
-						searchResults := varnam.searchDictionary(ctx, search, false)
-
-						if len(searchResults) > 0 {
-							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
-							results = append(results, sug)
-						}
+						sug := Suggestion{result.Word, 0, 0}
+						results = append(results, sug)
 					}
 				} else {
 					for j, result := range results {
@@ -175,36 +177,31 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 
 						till := result.Word
 
-						firstSymbol := t.symbols[0]
-						results[j].Word += getSymbolValue(firstSymbol, i)
+						var toSearch []string
 
-						search := []string{results[j].Word}
-						searchResults := varnam.searchDictionary(ctx, search, false)
+						for _, symbol := range t.symbols {
+							newTill := till + getSymbolValue(symbol, i)
+							toSearch = append(toSearch, newTill)
+						}
+
+						searchResults := varnam.searchDictionary(ctx, toSearch, false)
 
 						if len(searchResults) > 0 {
-							tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
+							tempFoundDictWords = append(tempFoundDictWords, searchResults...)
+
+							for k, searchResult := range searchResults {
+								if k == 0 {
+									results[j].Word = searchResult.Word
+									continue
+								}
+
+								sug := Suggestion{searchResult.Word, 0, 0}
+								results = append(results, sug)
+							}
 						} else {
 							// No need of processing this anymore.
 							// Weight is used as a flag here to skip some results
 							results[j].Weight = -1
-						}
-
-						for k, symbol := range t.symbols {
-							if k == 0 {
-								continue
-							}
-
-							newTill := till + getSymbolValue(symbol, i)
-
-							search = []string{newTill}
-							searchResults = varnam.searchDictionary(ctx, search, false)
-
-							if len(searchResults) > 0 {
-								tempFoundDictWords = append(tempFoundDictWords, searchResults[0])
-
-								sug := Suggestion{newTill, 0, 0}
-								results = append(results, sug)
-							}
 						}
 					}
 				}
