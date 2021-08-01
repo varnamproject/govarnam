@@ -474,7 +474,8 @@ func dirExists(loc string) bool {
 }
 
 // Close close db connections
-func (varnam *Varnam) Close() {
-	defer varnam.vstConn.Close()
-	defer varnam.dictConn.Close()
+func (varnam *Varnam) Close() error {
+	varnam.vstConn.Close()
+	varnam.dictConn.Close()
+	return nil
 }

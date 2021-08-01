@@ -118,6 +118,22 @@ func getVarnamHandle(id C.int) *varnamHandle {
 	return &varnamHandle{}
 }
 
+//export varnam_close
+func varnam_close(varnamHandleID C.int) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+	handle.err = handle.varnam.Close()
+
+	if handle.err != nil {
+		return checkError(handle.err)
+	}
+
+	varnamHandlesMapMutex.Lock()
+	delete(varnamHandles, varnamHandleID)
+	varnamHandlesMapMutex.Unlock()
+
+	return C.VARNAM_SUCCESS
+}
+
 //export varnam_transliterate
 func varnam_transliterate(varnamHandleID C.int, word *C.char) *C.struct_TransliterationResult_t {
 	return makeCTransliterationResult(backgroundContext, getVarnamHandle(varnamHandleID).varnam.Transliterate(C.GoString(word)))
