@@ -111,7 +111,7 @@ func (varnam *Varnam) sanitizeWord(word string) string {
 	// Remove leading ZWJ & ZWNJ
 	firstChar, size := getFirstCharacter(word)
 	if firstChar == ZWJ || firstChar == ZWNJ {
-		word = word[size:len(word)]
+		word = word[size:]
 	}
 
 	// Remove trailing ZWNJ
@@ -138,42 +138,9 @@ func (varnam *Varnam) Learn(word string, confidence int) error {
 		return fmt.Errorf("Nothing to learn")
 	}
 
-	sequence := ""
-	for i, ch := range conjuncts {
-		sequence += ch
-		if varnam.Debug {
-			fmt.Println("Learning", sequence)
-		}
-
-		if i == len(conjuncts)-1 {
-			// The word. The final word should have the highest confidence
-
-			var weight int
-
-			// -1 because insertWord will increment one
-			if confidence == 0 {
-				weight = VARNAM_LEARNT_WORD_MIN_CONFIDENCE - 1
-			} else {
-				weight = confidence - 1
-			}
-
-			partial := false
-			fmt.Println(i)
-			if i == 0 {
-				// Only one conjunct.
-				// Learning a single conjunct as a word
-				// messes up dictionary results
-				partial = true
-			}
-
-			err := varnam.insertWord(sequence, weight, partial)
-			if err != nil {
-				return err
-			}
-		} else {
-			// Partial word. Part of pathway to the word to be learnt
-			varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-i), true)
-		}
+	err = varnam.insertWord(word, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
+	if err != nil {
+		return err
 	}
 
 	return nil

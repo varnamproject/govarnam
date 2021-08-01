@@ -94,18 +94,19 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 			// % means 0 or more and would include the word itself
 			vals = append(vals, words[0]+"_%")
 		} else {
-			vals = append(vals, words[0])
+			vals = append(vals, words[0]+"%")
 		}
 
 		for i, word := range words {
 			if i == 0 {
 				continue
 			}
-			likes += "OR word LIKE ? "
 			if all == true {
+				likes += "OR word LIKE ? "
 				vals = append(vals, word+"_%")
 			} else {
-				vals = append(vals, word)
+				likes += ", (?)"
+				vals = append(vals, word+"%")
 			}
 		}
 
@@ -113,7 +114,7 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " AND learned_on > 0 ORDER BY confidence DESC LIMIT ?"
 			vals = append(vals, varnam.DictionarySuggestionsLimit)
 		} else {
-			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " ORDER BY confidence DESC LIMIT 5"
+			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT SUBSTR(c.match, 0, LENGTH(c.match)) AS word FROM words w INNER JOIN cte c ON w.word LIKE c.match || '%' GROUP BY c.match"
 		}
 
 		rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
@@ -127,7 +128,11 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 
 		for rows.Next() {
 			var item Suggestion
-			rows.Scan(&item.Word, &item.Weight, &item.LearnedOn)
+			if all {
+				rows.Scan(&item.Word, &item.Weight, &item.LearnedOn)
+			} else {
+				rows.Scan(&item.Word)
+			}
 			results = append(results, item)
 		}
 
