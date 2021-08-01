@@ -5,22 +5,22 @@ RELEASE_NAME := govarnam-${VERSION}
 
 build-pc:
 	cp govarnam.pc.in govarnam.pc
-	sed -i "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" govarnam.pc
-	sed -i "s#@VERSION@#${VERSION}#g" govarnam.pc
+	sed -i  "" "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" govarnam.pc
+	sed -i  "" "s#@VERSION@#${VERSION}#g" govarnam.pc
 
 # Used only for building the CLI
 build-temp-pc:
 	cp govarnam.pc.in govarnam.pc
-	sed -i "s#@INSTALL_PREFIX@#$(realpath .)#g" govarnam.pc
-	sed -i "s#@VERSION@#${VERSION}#g" govarnam.pc
+	sed -i  "" "s#@INSTALL_PREFIX@#$(realpath .)#g" govarnam.pc
+	sed -i  ""  "s#@VERSION@#${VERSION}#g" govarnam.pc
 
-	sed -i "s#/include/libgovarnam##g" govarnam.pc
-	sed -i "s#/lib##g" govarnam.pc
+	sed -i  "" "s#/include/libgovarnam##g" govarnam.pc
+	sed -i  "" "s#/lib##g" govarnam.pc
 
-build-install-script:
+build-i  ""nstall-script:
 	cp install.sh.in install.sh
-	sed -i "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
-	sed -i "s#@VERSION@#${VERSION}#g" install.sh
+	sed -i  "" "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
+	sed -i  "" "s#@VERSION@#${VERSION}#g" install.sh
 	chmod +x install.sh
 
 install:
