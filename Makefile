@@ -2,25 +2,32 @@ CLI_BIN := govarnamc
 INSTALL_PREFIX := /usr/local
 VERSION := $(shell git describe --abbrev=0 --tags | sed s/v//)
 RELEASE_NAME := govarnam-${VERSION}
+UNAME := $(shell uname)
+
+SED := sed -i
+
+ifeq ($(UNAME), Darwin)
+  SED := sed -i ""
+endif
 
 build-pc:
 	cp govarnam.pc.in govarnam.pc
-	sed -i  "" "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" govarnam.pc
-	sed -i  "" "s#@VERSION@#${VERSION}#g" govarnam.pc
+	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" govarnam.pc
+	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
 
 # Used only for building the CLI
 build-temp-pc:
 	cp govarnam.pc.in govarnam.pc
-	sed -i  "" "s#@INSTALL_PREFIX@#$(realpath .)#g" govarnam.pc
-	sed -i  ""  "s#@VERSION@#${VERSION}#g" govarnam.pc
+	${SED} "s#@INSTALL_PREFIX@#$(realpath .)#g" govarnam.pc
+	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
 
-	sed -i  "" "s#/include/libgovarnam##g" govarnam.pc
-	sed -i  "" "s#/lib##g" govarnam.pc
+	${SED} "s#/include/libgovarnam##g" govarnam.pc
+	${SED} "s#/lib##g" govarnam.pc
 
 build-install-script:
 	cp install.sh.in install.sh
-	sed -i  "" "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
-	sed -i  "" "s#@VERSION@#${VERSION}#g" install.sh
+	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
+	${SED} "s#@VERSION@#${VERSION}#g" install.sh
 	chmod +x install.sh
 
 install:
