@@ -17,7 +17,7 @@ build-temp-pc:
 	sed -i  "" "s#/include/libgovarnam##g" govarnam.pc
 	sed -i  "" "s#/lib##g" govarnam.pc
 
-build-i  ""nstall-script:
+build-install-script:
 	cp install.sh.in install.sh
 	sed -i  "" "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
 	sed -i  "" "s#@VERSION@#${VERSION}#g" install.sh
