@@ -86,3 +86,5 @@ func findLearningsFilePath(langCode string) string {
 
 	return loc
 }
+
+var LOG_TIME_TAKEN = true
