@@ -10,9 +10,11 @@ import (
 	"context"
 	sql "database/sql"
 	"fmt"
+	"log"
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	// sqlite3
 	_ "github.com/mattn/go-sqlite3"
@@ -255,6 +257,8 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 		result TransliterationResult
 	)
 
+	start := time.Now()
+
 	tokensPointerChan := make(chan *[]Token)
 	go varnam.channelTokenizeWord(ctx, word, VARNAM_MATCH_ALL, false, tokensPointerChan)
 
@@ -328,9 +332,18 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 						case tokenizerSugs := <-tokenizerSugsChan:
 							result.TokenizerSuggestions = SortSuggestions(tokenizerSugs)
 
+							if LOG_TIME_TAKEN {
+								log.Printf("%s took %v\n", "transliteration", time.Since(start))
+							}
+
 							return tokensPointer, result
 						}
+
 					} else {
+						if LOG_TIME_TAKEN {
+							log.Printf("%s took %v\n", "transliteration", time.Since(start))
+						}
+
 						return tokensPointer, result
 					}
 				}

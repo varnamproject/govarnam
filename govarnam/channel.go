@@ -19,12 +19,15 @@ func (varnam *Varnam) channelTokenizeWord(ctx context.Context, word string, matc
 		return
 	default:
 		start := time.Now()
-		channel <- varnam.tokenizeWord(ctx, word, matchType, partial)
-		close(channel)
+
+		tokens := varnam.tokenizeWord(ctx, word, matchType, partial)
 
 		if LOG_TIME_TAKEN {
 			log.Printf("%s took %v\n", "channelTokenizeWord", time.Since(start))
 		}
+
+		channel <- tokens
+		close(channel)
 	}
 }
 
@@ -35,12 +38,15 @@ func (varnam *Varnam) channelTokensToSuggestions(ctx context.Context, tokens *[]
 		return
 	default:
 		start := time.Now()
-		channel <- varnam.tokensToSuggestions(ctx, tokens, false, limit)
+
+		sugs := varnam.tokensToSuggestions(ctx, tokens, false, limit)
 
 		if LOG_TIME_TAKEN {
 			log.Printf("%s took %v\n", "channelTokensToSuggestions", time.Since(start))
-			close(channel)
 		}
+
+		channel <- sugs
+		close(channel)
 	}
 }
 
@@ -65,13 +71,15 @@ func (varnam *Varnam) channelTokensToGreedySuggestions(ctx context.Context, toke
 			return
 		}
 
-		channel <- varnam.tokensToSuggestions(ctx, &tokensCopy, false, varnam.TokenizerSuggestionsLimit)
+		sugs := varnam.tokensToSuggestions(ctx, &tokensCopy, false, varnam.TokenizerSuggestionsLimit)
 		tokensCopy = nil
 
 		if LOG_TIME_TAKEN {
-			log.Printf("%s took %v\n", "channelTokensToSuggestions", time.Since(start))
-			close(channel)
+			log.Printf("%s took %v\n", "channelTokensToGreedySuggestions", time.Since(start))
 		}
+
+		channel <- sugs
+		close(channel)
 	}
 }
 
@@ -129,12 +137,12 @@ func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string,
 			}
 		}
 
-		channel <- channelDictionaryResult{exactMatches, dictResults}
-		close(channel)
-
 		if LOG_TIME_TAKEN {
 			log.Printf("%s took %v\n", "channelGetFromDictionary", time.Since(start))
 		}
+
+		channel <- channelDictionaryResult{exactMatches, dictResults}
+		close(channel)
 	}
 }
 
@@ -200,12 +208,12 @@ func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word 
 			}
 		}
 
+		if LOG_TIME_TAKEN {
+			log.Printf("%s took %v\n", "channelGetFromPatternDictionary", time.Since(start))
+		}
+
 		channel <- channelDictionaryResult{exactMatches, dictResults}
 		close(channel)
-
-		if LOG_TIME_TAKEN {
-			log.Printf("%s took %v\n", "channelGetFromDictionary", time.Since(start))
-		}
 	}
 }
 
@@ -216,11 +224,14 @@ func (varnam *Varnam) channelGetMoreFromDictionary(ctx context.Context, sugs []S
 		return
 	default:
 		start := time.Now()
-		channel <- varnam.getMoreFromDictionary(ctx, sugs)
-		close(channel)
+
+		result := varnam.getMoreFromDictionary(ctx, sugs)
 
 		if LOG_TIME_TAKEN {
 			log.Printf("%s took %v\n", "channelGetMoreFromDictionary", time.Since(start))
 		}
+
+		channel <- result
+		close(channel)
 	}
 }
