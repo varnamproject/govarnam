@@ -35,6 +35,11 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 		varnam.dictConn, err = openDB(dictPath)
 	}
 
+	if err == nil {
+		varnam.dictConn.Exec("PRAGMA TEMP_STORE=2;")
+		varnam.dictConn.Exec("PRAGMA LOCKING_MODE=EXCLUSIVE;")
+	}
+
 	return err
 }
 
