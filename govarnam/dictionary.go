@@ -94,7 +94,7 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 			// % means 0 or more and would include the word itself
 			vals = append(vals, words[0]+"_%")
 		} else {
-			vals = append(vals, words[0]+"%")
+			vals = append(vals, words[0])
 		}
 
 		for i, word := range words {
@@ -106,7 +106,7 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 				vals = append(vals, word+"_%")
 			} else {
 				likes += ", (?)"
-				vals = append(vals, word+"%")
+				vals = append(vals, word)
 			}
 		}
 
@@ -114,7 +114,7 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 			query = "SELECT word, confidence, learned_on FROM words WHERE word LIKE ? " + likes + " AND learned_on > 0 ORDER BY confidence DESC LIMIT ?"
 			vals = append(vals, varnam.DictionarySuggestionsLimit)
 		} else {
-			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT SUBSTR(c.match, 0, LENGTH(c.match)) AS word FROM words w INNER JOIN cte c ON w.word LIKE c.match || '%' GROUP BY c.match"
+			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT DISTINCT c.match AS word FROM words w INNER JOIN cte c ON w.word LIKE c.match || '%'"
 		}
 
 		rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
@@ -172,13 +172,8 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 
 					searchResults := varnam.searchDictionary(ctx, toSearch, false)
 
-					tempFoundDictWords = append(tempFoundDictWords, searchResults...)
-
-					for _, result := range searchResults {
-						// Weight has no use in dictionary lookup
-						sug := Suggestion{result.Word, 0, 0}
-						results = append(results, sug)
-					}
+					tempFoundDictWords = searchResults
+					results = searchResults
 				} else {
 					for j, result := range results {
 						if result.Weight == -1 {
