@@ -1,3 +1,8 @@
+.DEFAULT_GOAL := build
+
+.PHONY:default
+default: build ;
+
 CLI_BIN := govarnamc
 INSTALL_PREFIX := /usr/local
 VERSION := $(shell git describe --abbrev=0 --tags | sed s/v//)
@@ -40,7 +45,7 @@ build-library-nosqlite:
 	go build -tags libsqlite3 -buildmode=c-shared -o libgovarnam.so
 
 build-library:
-	go build -buildmode=c-shared -o libgovarnam.so
+	go build -tags "fts5" -buildmode=c-shared -o libgovarnam.so
 
 .PHONY: build-nix
 build-nix:
@@ -66,3 +71,6 @@ release:
 	cp schemes/*.vst ${RELEASE_NAME}/schemes/
 
 	zip -r ${RELEASE_NAME}.zip ${RELEASE_NAME}/*
+
+test:
+	go test -tags fts5 -count=1 govarnam/*.go

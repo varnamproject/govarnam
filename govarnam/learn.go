@@ -19,29 +19,29 @@ import (
 
 // WordInfo represent a item in words table
 type WordInfo struct {
-	id         int
-	word       string
-	confidence int
-	learnedOn  int
+	id        int
+	word      string
+	weight    int
+	learnedOn int
 }
 
 // Learnings file export format
 type exportFormat struct {
 	WordsDict    []map[string]interface{} `json:"words"`
-	PatternsDict []map[string]interface{} `json:"patterns_content"`
+	PatternsDict []map[string]interface{} `json:"patterns"`
 }
 
-// Insert a word into word DB. Increment confidence if word exists
+// Insert a word into word DB. Increment weight if word exists
 // Partial - Whether the word is not a real word, but only part of a pathway to a word
-func (varnam *Varnam) insertWord(word string, confidence int, partial bool) error {
+func (varnam *Varnam) insertWord(word string, weight int, partial bool) error {
 	var query string
 
 	if partial {
-		query = "INSERT OR IGNORE INTO words(word, confidence, learned_on) VALUES (trim(?), ?, NULL)"
+		query = "INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES (trim(?), ?, NULL)"
 	} else {
 		// The learned_on value determines whether it's a complete
 		// word or just partial, i.e part of a path to a word
-		query = "INSERT OR IGNORE INTO words(word, confidence, learned_on) VALUES (trim(?), ?, strftime('%s', 'now'))"
+		query = "INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES (trim(?), ?, strftime('%s', 'now'))"
 	}
 
 	bgContext := context.Background()
@@ -55,15 +55,15 @@ func (varnam *Varnam) insertWord(word string, confidence int, partial bool) erro
 	}
 	defer stmt.Close()
 
-	_, err = stmt.ExecContext(ctx, word, confidence)
+	_, err = stmt.ExecContext(ctx, word, weight)
 	if err != nil {
 		return err
 	}
 
 	if partial {
-		query = "UPDATE words SET confidence = confidence + 1 WHERE word = ?"
+		query = "UPDATE words SET weight = weight + 1 WHERE word = ?"
 	} else {
-		query = "UPDATE words SET confidence = confidence + 1, learned_on = strftime('%s', 'now') WHERE word = ?"
+		query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE word = ?"
 	}
 
 	ctx, cancelFunc = context.WithTimeout(bgContext, 5*time.Second)
@@ -111,7 +111,7 @@ func (varnam *Varnam) sanitizeWord(word string) string {
 	// Remove leading ZWJ & ZWNJ
 	firstChar, size := getFirstCharacter(word)
 	if firstChar == ZWJ || firstChar == ZWNJ {
-		word = word[size:len(word)]
+		word = word[size:]
 	}
 
 	// Remove trailing ZWNJ
@@ -123,10 +123,8 @@ func (varnam *Varnam) sanitizeWord(word string) string {
 	return word
 }
 
-// Learn a word. If already exist, increases confidence of the pathway to that word.
-// When learning a word, each path to that word is inserted into DB.
-// Eg: ചങ്ങാതി: ചങ്ങ -> ചങ്ങാ -> ചങ്ങാതി
-func (varnam *Varnam) Learn(word string, confidence int) error {
+// Learn a word. If already exist, increases weight
+func (varnam *Varnam) Learn(word string, weight int) error {
 	word = varnam.sanitizeWord(word)
 	conjuncts, err := varnam.splitWordByConjunct(word)
 
@@ -138,42 +136,17 @@ func (varnam *Varnam) Learn(word string, confidence int) error {
 		return fmt.Errorf("Nothing to learn")
 	}
 
-	sequence := ""
-	for i, ch := range conjuncts {
-		sequence += ch
-		if varnam.Debug {
-			fmt.Println("Learning", sequence)
-		}
+	if len(conjuncts) == 1 {
+		return fmt.Errorf("Can't learn a single conjunct")
+	}
 
-		if i == len(conjuncts)-1 {
-			// The word. The final word should have the highest confidence
+	if weight == 0 {
+		weight = VARNAM_LEARNT_WORD_MIN_WEIGHT - 1
+	}
 
-			var weight int
-
-			// -1 because insertWord will increment one
-			if confidence == 0 {
-				weight = VARNAM_LEARNT_WORD_MIN_CONFIDENCE - 1
-			} else {
-				weight = confidence - 1
-			}
-
-			partial := false
-			fmt.Println(i)
-			if i == 0 {
-				// Only one conjunct.
-				// Learning a single conjunct as a word
-				// messes up dictionary results
-				partial = true
-			}
-
-			err := varnam.insertWord(sequence, weight, partial)
-			if err != nil {
-				return err
-			}
-		} else {
-			// Partial word. Part of pathway to the word to be learnt
-			varnam.insertWord(sequence, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-(len(conjuncts)-i), true)
-		}
+	err = varnam.insertWord(word, weight, false)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -227,7 +200,7 @@ func (varnam *Varnam) Unlearn(word string) error {
 				return err
 			}
 
-			// No need to remove from `patterns_content` since FOREIGN KEY ON DELETE CASCADE will work
+			// No need to remove from `patterns` since FOREIGN KEY ON DELETE CASCADE will work
 
 			if varnam.Debug {
 				fmt.Printf("Removed %s\n", sequence)
@@ -257,7 +230,7 @@ func (varnam *Varnam) Train(pattern string, word string) error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
 
-	query := "INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES (?, ?)"
+	query := "INSERT OR IGNORE INTO patterns(pattern, word_id) VALUES (?, ?)"
 	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
 	if err != nil {
 		return err
@@ -273,7 +246,7 @@ func (varnam *Varnam) Train(pattern string, word string) error {
 }
 
 func (varnam *Varnam) getWordInfo(word string) (*WordInfo, error) {
-	rows, err := varnam.dictConn.Query("SELECT id, confidence, learned_on FROM words WHERE word = ?", word)
+	rows, err := varnam.dictConn.Query("SELECT id, weight, learned_on FROM words WHERE word = ?", word)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +259,7 @@ func (varnam *Varnam) getWordInfo(word string) (*WordInfo, error) {
 		// This loop will only work if there is a word
 		wordExists = true
 
-		rows.Scan(&wordInfo.id, &wordInfo.confidence, &wordInfo.learnedOn)
+		rows.Scan(&wordInfo.id, &wordInfo.weight, &wordInfo.learnedOn)
 	}
 
 	if wordExists {
@@ -310,7 +283,7 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 	// First, see if this is a frequency report file
 	// A frequency report file has the format :
 	//    word frequency
-	// Here the frequency will be the confidence
+	// Here the frequency will be the weight
 	frequencyReport := false
 
 	word := ""
@@ -327,11 +300,11 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 				continue
 			}
 
-			confidence, err := strconv.Atoi(curWord)
+			weight, err := strconv.Atoi(curWord)
 			if err == nil {
 				// It's a number
 				frequencyReport = true
-				varnam.Learn(word, confidence)
+				varnam.Learn(word, weight)
 				word = ""
 			} else {
 				// Not a frequency report, so attempt to leatn those 2 words
@@ -348,10 +321,10 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 				word = curWord
 				continue
 			} else {
-				confidence, err := strconv.Atoi(curWord)
+				weight, err := strconv.Atoi(curWord)
 
 				if err == nil {
-					varnam.Learn(word, confidence)
+					varnam.Learn(word, weight)
 					count++
 				}
 				word = ""
@@ -466,7 +439,7 @@ func (varnam *Varnam) Export(filePath string) error {
 
 	wordsData, err := rowsToJSON(wordsRows)
 
-	patternsRows, err := varnam.dictConn.Query("SELECT * FROM patterns_content")
+	patternsRows, err := varnam.dictConn.Query("SELECT * FROM patterns")
 	if err != nil {
 		return err
 	}
@@ -513,12 +486,12 @@ func (varnam *Varnam) Import(filePath string) error {
 	count := 0
 	for i, item := range dbData.WordsDict {
 		values = append(values, "(?, trim(?), ?, ?)")
-		args = append(args, item["id"], item["word"], item["confidence"], item["learned_on"])
+		args = append(args, item["id"], item["word"], item["weight"], item["learned_on"])
 
 		count++
 		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {
 			query := fmt.Sprintf(
-				"INSERT OR IGNORE INTO words(id, word, confidence, learned_on) VALUES %s",
+				"INSERT OR IGNORE INTO words(id, word, weight, learned_on) VALUES %s",
 				strings.Join(values, ", "),
 			)
 
@@ -559,7 +532,7 @@ func (varnam *Varnam) Import(filePath string) error {
 		count++
 		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {
 			query := fmt.Sprintf(
-				"INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES %s",
+				"INSERT OR IGNORE INTO patterns(pattern, word_id) VALUES %s",
 				strings.Join(values, ", "),
 			)
 

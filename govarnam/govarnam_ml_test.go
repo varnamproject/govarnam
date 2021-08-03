@@ -42,9 +42,9 @@ func TestMLTokenizer(t *testing.T) {
 	// TestML fancy words
 	assertEqual(t, varnam.Transliterate("thaaaaaaaankyoo").GreedyTokenized[0].Word, "താാാാങ്ക്യൂ")
 
-	// Test confidence value
+	// Test weight value
 	sugs := varnam.Transliterate("thuthuru").TokenizerSuggestions
-	assertEqual(t, sugs[0].Weight, 6) // തുതുരു. Greedy. Should have highest confidence
+	assertEqual(t, sugs[0].Weight, 6) // തുതുരു. Greedy. Should have highest weight
 	assertEqual(t, sugs[1].Weight, 4) // തുതുറു. Last conjunct is VARNAM_MATCH_POSSIBILITY symbol
 	assertEqual(t, sugs[7].Weight, 2) // തുത്തുറു. Last 2 conjuncts are VARNAM_MATCH_POSSIBILITY symbols
 }
@@ -78,7 +78,7 @@ func TestMLLearn(t *testing.T) {
 	// varnam.Debug(true)
 	sugs := varnam.Transliterate("malayala").DictionarySuggestions
 
-	assertEqual(t, sugs[0], Suggestion{"മലയാളം", VARNAM_LEARNT_WORD_MIN_CONFIDENCE, sugs[0].LearnedOn})
+	assertEqual(t, sugs[0], Suggestion{"മലയാളം", VARNAM_LEARNT_WORD_MIN_WEIGHT, sugs[0].LearnedOn})
 
 	// Check the time learnt is right (UTC) ?
 	learnedOn := time.Unix(int64(sugs[1].LearnedOn), 0)
@@ -87,16 +87,16 @@ func TestMLLearn(t *testing.T) {
 		t.Errorf("Learn time %v (%v) not in between %v and %v", learnedOn, sugs[1].LearnedOn, start1SecondBefore, end1SecondAfter)
 	}
 
-	assertEqual(t, sugs[1], Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_CONFIDENCE, sugs[1].LearnedOn})
+	assertEqual(t, sugs[1], Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_WEIGHT, sugs[1].LearnedOn})
 
 	// Learn the word again
 	// This word will now be at the top
-	// TestML if confidence has increased by one now
+	// TestML if weight has increased by one now
 	err = varnam.Learn("മലയാളത്തിൽ", 0)
 	checkError(err)
 
 	sug := varnam.Transliterate("malayala").DictionarySuggestions[0]
-	assertEqual(t, sug, Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_CONFIDENCE + 1, sug.LearnedOn})
+	assertEqual(t, sug, Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_WEIGHT + 1, sug.LearnedOn})
 
 	// Subsequent pattern can be smaller now (no need of "thth")
 	assertEqual(t, varnam.Transliterate("malayalathil").ExactMatches[0].Word, "മലയാളത്തിൽ")
@@ -108,12 +108,8 @@ func TestMLLearn(t *testing.T) {
 
 	assertEqual(t, varnam.Transliterate("thudangiyittE").DictionarySuggestions[0].Word, "തുടങ്ങിയിട്ടേ")
 
-	// Shouldn't learn single conjucnts as a word
-	err = varnam.Learn("കാ", 0)
-	checkError(err)
-
-	// A learned word would have LearnedOn timestamp
-	assertEqual(t, varnam.Transliterate("kaa").ExactMatches[0].LearnedOn, 0)
+	// Shouldn't learn single conjucnts as a word. Should give error
+	assertEqual(t, varnam.Learn("കാ", 0) != nil, true)
 }
 
 func TestMLTrain(t *testing.T) {

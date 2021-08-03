@@ -187,9 +187,9 @@ func varnam_set_tokenizer_suggestions_limit(varnamHandleID C.int, val C.int) {
 }
 
 //export varnam_learn
-func varnam_learn(varnamHandleID C.int, word *C.char, confidence C.int) C.int {
+func varnam_learn(varnamHandleID C.int, word *C.char, weight C.int) C.int {
 	handle := getVarnamHandle(varnamHandleID)
-	handle.err = handle.varnam.Learn(C.GoString(word), int(confidence))
+	handle.err = handle.varnam.Learn(C.GoString(word), int(weight))
 	return checkError(handle.err)
 }
 

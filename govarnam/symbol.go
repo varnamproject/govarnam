@@ -362,7 +362,7 @@ func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, sugs 
 
 		for _, sug := range sugs {
 			sugWord := varnam.removeLastVirama(sug.Word)
-			tokensWithWord := []Token{Token{VARNAM_TOKEN_CHAR, []Symbol{}, 0, sugWord}}
+			tokensWithWord := []Token{{VARNAM_TOKEN_CHAR, []Symbol{}, 0, sugWord}}
 			tokensWithWord = append(tokensWithWord, *restOfWordTokens...)
 
 			restOfWordSugs := varnam.tokensToSuggestions(ctx, &tokensWithWord, true, limit)

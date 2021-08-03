@@ -230,10 +230,10 @@ func (handle *VarnamHandle) Train(pattern string, word string) bool {
 }
 
 // Learn a word
-func (handle *VarnamHandle) Learn(word string, confidence int) bool {
+func (handle *VarnamHandle) Learn(word string, weight int) bool {
 	cWord := C.CString(word)
 
-	err := C.varnam_learn(handle.connectionID, cWord, C.int(confidence))
+	err := C.varnam_learn(handle.connectionID, cWord, C.int(weight))
 
 	C.free(unsafe.Pointer(cWord))
 
