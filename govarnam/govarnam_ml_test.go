@@ -108,12 +108,8 @@ func TestMLLearn(t *testing.T) {
 
 	assertEqual(t, varnam.Transliterate("thudangiyittE").DictionarySuggestions[0].Word, "തുടങ്ങിയിട്ടേ")
 
-	// Shouldn't learn single conjucnts as a word
-	err = varnam.Learn("കാ", 0)
-	checkError(err)
-
-	// A learned word would have LearnedOn timestamp
-	assertEqual(t, varnam.Transliterate("kaa").ExactMatches[0].LearnedOn, 0)
+	// Shouldn't learn single conjucnts as a word. Should give error
+	assertEqual(t, varnam.Learn("കാ", 0) != nil, true)
 }
 
 func TestMLTrain(t *testing.T) {

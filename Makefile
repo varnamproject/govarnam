@@ -40,7 +40,7 @@ build-library-nosqlite:
 	go build -tags libsqlite3 -buildmode=c-shared -o libgovarnam.so
 
 build-library:
-	go build -buildmode=c-shared -o libgovarnam.so
+	go build -tags "fts5" -buildmode=c-shared -o libgovarnam.so
 
 .PHONY: build-nix
 build-nix:

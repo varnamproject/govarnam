@@ -28,7 +28,7 @@ type WordInfo struct {
 // Learnings file export format
 type exportFormat struct {
 	WordsDict    []map[string]interface{} `json:"words"`
-	PatternsDict []map[string]interface{} `json:"patterns_content"`
+	PatternsDict []map[string]interface{} `json:"patterns"`
 }
 
 // Insert a word into word DB. Increment confidence if word exists
@@ -138,7 +138,15 @@ func (varnam *Varnam) Learn(word string, confidence int) error {
 		return fmt.Errorf("Nothing to learn")
 	}
 
-	err = varnam.insertWord(word, VARNAM_LEARNT_WORD_MIN_CONFIDENCE-1, false)
+	if len(conjuncts) == 1 {
+		return fmt.Errorf("Can't learn a single conjunct")
+	}
+
+	if confidence == 0 {
+		confidence = VARNAM_LEARNT_WORD_MIN_CONFIDENCE - 1
+	}
+
+	err = varnam.insertWord(word, confidence, false)
 	if err != nil {
 		return err
 	}
@@ -194,7 +202,7 @@ func (varnam *Varnam) Unlearn(word string) error {
 				return err
 			}
 
-			// No need to remove from `patterns_content` since FOREIGN KEY ON DELETE CASCADE will work
+			// No need to remove from `patterns` since FOREIGN KEY ON DELETE CASCADE will work
 
 			if varnam.Debug {
 				fmt.Printf("Removed %s\n", sequence)
@@ -224,7 +232,7 @@ func (varnam *Varnam) Train(pattern string, word string) error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
 
-	query := "INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES (?, ?)"
+	query := "INSERT OR IGNORE INTO patterns(pattern, word_id) VALUES (?, ?)"
 	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
 	if err != nil {
 		return err
@@ -433,7 +441,7 @@ func (varnam *Varnam) Export(filePath string) error {
 
 	wordsData, err := rowsToJSON(wordsRows)
 
-	patternsRows, err := varnam.dictConn.Query("SELECT * FROM patterns_content")
+	patternsRows, err := varnam.dictConn.Query("SELECT * FROM patterns")
 	if err != nil {
 		return err
 	}
@@ -526,7 +534,7 @@ func (varnam *Varnam) Import(filePath string) error {
 		count++
 		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {
 			query := fmt.Sprintf(
-				"INSERT OR IGNORE INTO patterns_content(pattern, word_id) VALUES %s",
+				"INSERT OR IGNORE INTO patterns(pattern, word_id) VALUES %s",
 				strings.Join(values, ", "),
 			)
 
