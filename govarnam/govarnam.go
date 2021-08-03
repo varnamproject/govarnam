@@ -237,7 +237,7 @@ func (varnam *Varnam) setDefaultConfig() {
 	}
 }
 
-// SortSuggestions by confidence and learned on time
+// SortSuggestions by weight and learned on time
 func SortSuggestions(sugs []Suggestion) []Suggestion {
 	// TODO write tests
 	sort.SliceStable(sugs, func(i, j int) bool {

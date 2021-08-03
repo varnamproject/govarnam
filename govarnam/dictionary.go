@@ -58,14 +58,14 @@ func makeDictionary(dictPath string) (*sql.DB, error) {
 		CREATE TABLE IF NOT EXISTS words (
 			id INTEGER PRIMARY KEY,
 			word TEXT UNIQUE,
-			confidence INTEGER DEFAULT 1,
+			weight INTEGER DEFAULT 1,
 			learned_on INTEGER
 		);
 		`,
 		`
 		CREATE VIRTUAL TABLE IF NOT EXISTS words_fts USING FTS5(
 			word,
-			confidence UNINDEXED,
+			weight UNINDEXED,
 			learned_on UNINDEXED,
 			content='words',
 			content_rowid='id',
@@ -149,10 +149,10 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 		}
 
 		if all == true {
-			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT w.* FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' AND w.word != c.match AND learned_on > 0 ORDER BY confidence DESC LIMIT ?"
+			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT w.* FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' AND w.word != c.match AND learned_on > 0 ORDER BY weight DESC LIMIT ?"
 			vals = append(vals, varnam.DictionarySuggestionsLimit)
 		} else {
-			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS word, MAX(w.confidence), MAX(w.learned_on) FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' GROUP BY c.match"
+			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS word, MAX(w.weight), MAX(w.learned_on) FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' GROUP BY c.match"
 		}
 
 		rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
@@ -295,7 +295,7 @@ func (varnam *Varnam) getTrailingFromPatternDictionary(ctx context.Context, patt
 	case <-ctx.Done():
 		return results
 	default:
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT word, confidence FROM words WHERE id IN (SELECT word_id FROM patterns WHERE pattern LIKE ?) ORDER BY confidence DESC LIMIT 10", pattern+"%")
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT word, weight FROM words WHERE id IN (SELECT word_id FROM patterns WHERE pattern LIKE ?) ORDER BY weight DESC LIMIT 10", pattern+"%")
 
 		if err != nil {
 			log.Print(err)
@@ -307,7 +307,7 @@ func (varnam *Varnam) getTrailingFromPatternDictionary(ctx context.Context, patt
 		for rows.Next() {
 			var item Suggestion
 			rows.Scan(&item.Word, &item.Weight)
-			item.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
+			item.Weight += VARNAM_LEARNT_WORD_MIN_WEIGHT
 			results = append(results, item)
 		}
 
@@ -329,7 +329,7 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 	case <-ctx.Done():
 		return results
 	default:
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), words.word, words.confidence, words.learned_on FROM `patterns` pts LEFT JOIN words ON words.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.PatternDictionarySuggestionsLimit)
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), words.word, words.weight, words.learned_on FROM `patterns` pts LEFT JOIN words ON words.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.PatternDictionarySuggestionsLimit)
 
 		if err != nil {
 			log.Print(err)
@@ -341,7 +341,7 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 		for rows.Next() {
 			var item PatternDictionarySuggestion
 			rows.Scan(&item.Length, &item.Sug.Word, &item.Sug.Weight, &item.Sug.LearnedOn)
-			item.Sug.Weight += VARNAM_LEARNT_WORD_MIN_CONFIDENCE
+			item.Sug.Weight += VARNAM_LEARNT_WORD_MIN_WEIGHT
 			results = append(results, item)
 		}
 

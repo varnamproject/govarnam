@@ -67,7 +67,7 @@ func TestMLInscriptTokenizer(t *testing.T) {
 // 	// varnam.Debug(true)
 // 	sugs := varnam.Transliterate("malayala").DictionarySuggestions
 
-// 	assertEqual(t, sugs[0], Suggestion{"മലയാളം", VARNAM_LEARNT_WORD_MIN_CONFIDENCE, sugs[0].LearnedOn})
+// 	assertEqual(t, sugs[0], Suggestion{"മലയാളം", VARNAM_LEARNT_WORD_MIN_WEIGHT, sugs[0].LearnedOn})
 
 // 	// Check the time learnt is right (UTC) ?
 // 	learnedOn := time.Unix(int64(sugs[1].LearnedOn), 0)
@@ -76,16 +76,16 @@ func TestMLInscriptTokenizer(t *testing.T) {
 // 		t.Errorf("Learn time %v (%v) not in between %v and %v", learnedOn, sugs[1].LearnedOn, start1SecondBefore, end1SecondAfter)
 // 	}
 
-// 	assertEqual(t, sugs[1], Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_CONFIDENCE, sugs[1].LearnedOn})
+// 	assertEqual(t, sugs[1], Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_WEIGHT, sugs[1].LearnedOn})
 
 // 	// Learn the word again
 // 	// This word will now be at the top
-// 	// TestMLInscript if confidence has increased by one now
+// 	// TestMLInscript if weight has increased by one now
 // 	err = varnam.Learn("മലയാളത്തിൽ", 0)
 // 	checkError(err)
 
 // 	sug := varnam.Transliterate("malayala").DictionarySuggestions[0]
-// 	assertEqual(t, sug, Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_CONFIDENCE + 1, sug.LearnedOn})
+// 	assertEqual(t, sug, Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_WEIGHT + 1, sug.LearnedOn})
 
 // 	// Subsequent pattern can be smaller now (no need of "thth")
 // 	assertEqual(t, varnam.Transliterate("malayalathil").ExactMatches[0].Word, "മലയാളത്തിൽ")
