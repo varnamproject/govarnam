@@ -69,7 +69,8 @@ func makeDictionary(dictPath string) (*sql.DB, error) {
 			learned_on UNINDEXED,
 			content='words',
 			content_rowid='id',
-			tokenize='ascii'
+			tokenize='ascii',
+			prefix='1 2',
 		);
 		`,
 		`
