@@ -144,6 +144,12 @@ func (handle *VarnamHandle) GetLastError() error {
 	return goStr
 }
 
+// Close db connections and end varnam
+func (handle *VarnamHandle) Close() bool {
+	err := C.varnam_close(handle.connectionID)
+	return checkError(err)
+}
+
 // Debug turn debug on/off
 func (handle *VarnamHandle) Debug(val bool) {
 	if val {
