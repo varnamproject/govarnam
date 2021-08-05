@@ -126,11 +126,7 @@ func (varnam *Varnam) sanitizeWord(word string) string {
 // Learn a word. If already exist, increases weight
 func (varnam *Varnam) Learn(word string, weight int) error {
 	word = varnam.sanitizeWord(word)
-	conjuncts, err := varnam.splitWordByConjunct(word)
-
-	if err != nil {
-		return err
-	}
+	conjuncts := varnam.splitWordByConjunct(word)
 
 	if len(conjuncts) == 0 {
 		return fmt.Errorf("Nothing to learn")
@@ -144,7 +140,7 @@ func (varnam *Varnam) Learn(word string, weight int) error {
 		weight = VARNAM_LEARNT_WORD_MIN_WEIGHT - 1
 	}
 
-	err = varnam.insertWord(word, weight, false)
+	err := varnam.insertWord(word, weight, false)
 	if err != nil {
 		return err
 	}
@@ -154,7 +150,7 @@ func (varnam *Varnam) Learn(word string, weight int) error {
 
 // Unlearn a word, remove from words DB and pattern if there is
 func (varnam *Varnam) Unlearn(word string) error {
-	conjuncts, _ := varnam.splitWordByConjunct(strings.TrimSpace(word))
+	conjuncts := varnam.splitWordByConjunct(strings.TrimSpace(word))
 
 	if len(conjuncts) == 0 {
 		return fmt.Errorf("Nothing to unlearn")
