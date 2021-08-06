@@ -385,31 +385,13 @@ func (varnam *Varnam) ReverseTransliterate(word string) ([]Suggestion, error) {
 	var results []Suggestion
 	ctx := context.Background()
 
-	conjuncts, err := varnam.splitWordByConjunct(word)
+	tokens := varnam.splitTextByConjunct(ctx, word)
 
-	if err != nil {
-		return results, err
-	}
-
-	tokens := make([]Token, len(conjuncts))
-
-	for i, c := range conjuncts {
-		acceptCondition := VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
-
-		if i == 0 {
-			// Trying to make the first token
-			acceptCondition = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
-		} else if i == len(conjuncts)-1 {
-			acceptCondition = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
+	for i, token := range tokens {
+		for j, symbol := range token.symbols {
+			tokens[i].symbols[j].value1 = symbol.pattern
+			tokens[i].symbols[j].value2 = symbol.pattern
 		}
-
-		matches := varnam.searchPattern(ctx, c, VARNAM_MATCH_ALL, acceptCondition)
-
-		for i, m := range matches {
-			matches[i].value1 = m.pattern
-			matches[i].value2 = m.pattern
-		}
-		tokens = append(tokens, Token{VARNAM_TOKEN_SYMBOL, matches, i, c})
 	}
 
 	results = SortSuggestions(varnam.tokensToSuggestions(ctx, &tokens, false, varnam.TokenizerSuggestionsLimit))

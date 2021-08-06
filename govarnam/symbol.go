@@ -115,23 +115,6 @@ func (varnam *Varnam) setSchemeInfo() {
 	}
 }
 
-// Checks if a symbol exist in VST
-func (varnam *Varnam) symbolExist(ch string) (bool, error) {
-	rows, err := varnam.vstConn.Query("SELECT COUNT(*) FROM symbols WHERE value1 = ? OR value2 = ? OR value3 = ?", ch, ch, ch)
-	if err != nil {
-		return false, err
-	}
-
-	count := 0
-	for rows.Next() {
-		err := rows.Scan(&count)
-		if err != nil {
-			return false, err
-		}
-	}
-	return count != 0, nil
-}
-
 func (varnam *Varnam) searchPattern(ctx context.Context, ch string, matchType int, acceptCondition int) []Symbol {
 	var (
 		rows    *sql.Rows
@@ -383,55 +366,81 @@ func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, sugs 
 	}
 }
 
-// Split a word into conjuncts
-func (varnam *Varnam) splitWordByConjunct(input string) ([]string, error) {
-	var results []string
+// Split an input string into tokens of symbols (conjuncts) and characters
+func (varnam *Varnam) splitTextByConjunct(ctx context.Context, inputStr string) []Token {
+	var results []Token
 
-	var prevSequenceMatch string
+	var prevSequence string
+	var prevSequenceMatches []Symbol
+
 	var sequence string
 
 	// Not using len() because it will be wrong for non ASCII characters
 	var sequenceLength int
 
-	word := []rune(input)
+	input := []rune(inputStr)
 
+	position := 0
 	i := 0
-	for i < len(word) {
-		ch := string(word[i])
+	for i < len(input) {
+		ch := string(input[i])
 
 		sequence += ch
 		sequenceLength++
 
-		doesntExist, err := varnam.symbolExist(sequence)
-		if err != nil {
-			return results, err
+		acceptCondition := VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN
+
+		if i == 0 {
+			// Trying to make the first token
+			acceptCondition = VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH
+		} else if i == len(input)-1 {
+			acceptCondition = VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH
 		}
 
-		if !doesntExist {
+		symbols := varnam.searchPattern(ctx, sequence, VARNAM_MATCH_ALL, acceptCondition)
+
+		if len(symbols) == 0 {
 			// No more matches
 
 			if sequenceLength == 1 {
-				// Has non language characters, give error
-				return []string{}, fmt.Errorf("Has non language characters: %s", sequence)
-			} else if len(prevSequenceMatch) > 0 {
+				// Has non language characters, add char token
+				results = append(results, Token{VARNAM_TOKEN_CHAR, []Symbol{}, position, sequence})
+			} else if len(prevSequenceMatches) > 0 {
 				// Backtrack and add the previous sequence matches
 				i--
-				results = append(results, prevSequenceMatch)
+				results = append(results, Token{VARNAM_TOKEN_SYMBOL, prevSequenceMatches, position, prevSequence})
 			}
 
 			sequence = ""
 			sequenceLength = 0
+			position++
 		} else {
-			if i == len(word)-1 {
+			if i == len(input)-1 {
 				// Last character
-				results = append(results, sequence)
+				results = append(results, Token{VARNAM_TOKEN_SYMBOL, symbols, position, sequence})
+				position++
 			} else {
-				prevSequenceMatch = sequence
+				prevSequence = sequence
+				prevSequenceMatches = symbols
 			}
 		}
 		i++
 	}
-	return results, nil
+
+	return results
+}
+
+// Split a word by conjuncts. Returns a string of only conjuncts and no other characters
+func (varnam *Varnam) splitWordByConjunct(word string) []string {
+	ctx := context.Background()
+	var result []string
+	tokens := varnam.splitTextByConjunct(ctx, word)
+	for _, token := range tokens {
+		if token.tokenType == VARNAM_TOKEN_SYMBOL {
+			result = append(result, token.character)
+		}
+	}
+	return result
 }
 
 func getSymbolValue(symbol Symbol, position int) string {
