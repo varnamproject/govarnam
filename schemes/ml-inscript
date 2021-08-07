@@ -106,8 +106,8 @@ tag "chill" do
               "\\" => ["ർ", "ര്‍", "ര"]
 end
 
-joiner "^1" => $zwj
-non_joiner "^2" => $zwnj
+joiner "^1" => $zwj # caret 1
+non_joiner "^2" => $zwnj # caret 2
 
 others "^4" => "₹"
 others "|;" => ";"
