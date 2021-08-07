@@ -210,10 +210,16 @@ func varnam_unlearn(varnamHandleID C.int, word *C.char) C.int {
 }
 
 //export varnam_learn_from_file
-func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char) C.int {
+func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char) *C.struct_LearnStatus_t {
 	handle := getVarnamHandle(varnamHandleID)
-	handle.err = handle.varnam.LearnFromFile(C.GoString(filePath))
-	return checkError(handle.err)
+	learnStatus, err := handle.varnam.LearnFromFile(C.GoString(filePath))
+
+	if err != nil {
+		handle.err = err
+		return nil
+	}
+
+	return C.makeLearnStatus(C.int(learnStatus.TotalWords), C.int(learnStatus.FailedWords))
 }
 
 //export varnam_train_from_file

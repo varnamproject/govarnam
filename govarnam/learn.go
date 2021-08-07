@@ -25,6 +25,12 @@ type WordInfo struct {
 	learnedOn int
 }
 
+// LearnStatus output of bulk learn
+type LearnStatus struct {
+	TotalWords  int
+	FailedWords int
+}
+
 // Learnings file export format
 type exportFormat struct {
 	WordsDict    []map[string]interface{} `json:"words"`
@@ -185,13 +191,15 @@ func (varnam *Varnam) Unlearn(word string) error {
 }
 
 // LearnMany words in bulk. Faster learning
-func (varnam *Varnam) LearnMany(words []WordInfo) error {
+func (varnam *Varnam) LearnMany(words []WordInfo) (LearnStatus, error) {
 	var (
 		insertionValues []string
 		insertionArgs   []interface{}
 
 		updationValues []string
 		updationArgs   []interface{}
+
+		learnStatus LearnStatus = LearnStatus{0, 0}
 	)
 
 	for _, wordInfo := range words {
@@ -201,11 +209,13 @@ func (varnam *Varnam) LearnMany(words []WordInfo) error {
 
 		if len(conjuncts) == 0 {
 			log.Printf("Nothing to learn from %s", word)
+			learnStatus.FailedWords++
 			continue
 		}
 
 		if len(conjuncts) == 1 {
 			log.Printf("Can't learn a single conjunct: %s", word)
+			learnStatus.FailedWords++
 			continue
 		}
 
@@ -224,7 +234,7 @@ func (varnam *Varnam) LearnMany(words []WordInfo) error {
 	}
 
 	if len(insertionArgs) == 0 {
-		return nil
+		return learnStatus, nil
 	}
 
 	query := fmt.Sprintf(
@@ -234,28 +244,30 @@ func (varnam *Varnam) LearnMany(words []WordInfo) error {
 
 	stmt, err := varnam.dictConn.Prepare(query)
 	if err != nil {
-		return err
+		return learnStatus, err
 	}
 
 	_, err = stmt.Exec(insertionArgs...)
 	if err != nil {
-		return err
+		return learnStatus, err
 	}
 
 	query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE " + strings.Join(updationValues, " OR ")
 
 	stmt, err = varnam.dictConn.Prepare(query)
 	if err != nil {
-		return err
+		return learnStatus, err
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(updationArgs...)
 	if err != nil {
-		return err
+		return learnStatus, err
 	}
 
-	return nil
+	learnStatus.TotalWords = len(words)
+
+	return learnStatus, nil
 }
 
 // Train a word with a particular pattern. Pattern => word
@@ -315,10 +327,12 @@ func (varnam *Varnam) getWordInfo(word string) (*WordInfo, error) {
 }
 
 // LearnFromFile Learn all words in a file
-func (varnam *Varnam) LearnFromFile(filePath string) error {
+func (varnam *Varnam) LearnFromFile(filePath string) (LearnStatus, error) {
+	var learnStatus LearnStatus
+
 	file, err := os.Open(filePath)
 	if err != nil {
-		return err
+		return learnStatus, err
 	}
 	defer file.Close()
 
@@ -398,27 +412,34 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 		}
 
 		if count == insertsPerTransaction {
-			varnam.LearnMany(words)
+			learnStatusBatch, err := varnam.LearnMany(words)
+
+			if err != nil {
+				return learnStatus, nil
+			}
+
+			learnStatus.TotalWords += learnStatusBatch.TotalWords
+			learnStatus.FailedWords += learnStatusBatch.FailedWords
 
 			insertions += count
 			count = 0
 			words = []WordInfo{}
 
-			fmt.Printf("Learnt %d words\n", insertions)
+			fmt.Printf("Processed %d words\n", insertions)
 		}
 	}
 
 	if len(words) != 0 {
 		varnam.LearnMany(words)
 		insertions += len(words)
-		fmt.Printf("Learnt %d words\n", insertions)
+		fmt.Printf("Processed %d words\n", insertions)
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err
+		return learnStatus, err
 	}
 
-	return nil
+	return learnStatus, nil
 }
 
 // TrainFromFile Train words with a particular pattern in bulk

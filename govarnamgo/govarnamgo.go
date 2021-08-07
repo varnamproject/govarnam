@@ -52,6 +52,12 @@ type SchemeDetails struct {
 	IsStable     bool
 }
 
+// LearnStatus output of bulk learn
+type LearnStatus struct {
+	TotalWords  int
+	FailedWords int
+}
+
 // Convert a C Suggestion to Go
 func makeSuggestion(cSug *C.struct_Suggestion_t) Suggestion {
 	var sug Suggestion
@@ -161,8 +167,9 @@ func InitFromID(id string) (*VarnamHandle, error) {
 // GetLastError get last error
 func (handle *VarnamHandle) GetLastError() string {
 	cStr := C.varnam_get_last_error(handle.connectionID)
-	defer C.free(unsafe.Pointer(cStr))
-	return C.GoString(cStr)
+	goStr := C.GoString(cStr)
+	C.free(unsafe.Pointer(cStr))
+	return goStr
 }
 
 // Close db connections and end varnam
@@ -279,10 +286,19 @@ func (handle *VarnamHandle) Unlearn(word string) *VarnamError {
 }
 
 // LearnFromFile learn words from a file
-func (handle *VarnamHandle) LearnFromFile(filePath string) *VarnamError {
+func (handle *VarnamHandle) LearnFromFile(filePath string) (LearnStatus, *VarnamError) {
+	var learnStatus LearnStatus
+
 	cFilePath := C.CString(filePath)
-	err := C.varnam_learn_from_file(handle.connectionID, cFilePath)
-	return handle.checkError(err)
+
+	cLearnStatus := C.varnam_learn_from_file(handle.connectionID, cFilePath)
+	if cLearnStatus == nil {
+		return learnStatus, &VarnamError{int(C.VARNAM_ERROR), handle.GetLastError()}
+	}
+
+	learnStatus = LearnStatus{int(cLearnStatus.TotalWords), int(cLearnStatus.FailedWords)}
+
+	return learnStatus, nil
 }
 
 // TrainFromFile train pattern => word from a file

@@ -86,9 +86,9 @@ func main() {
 			log.Fatal(err.Error())
 		}
 	} else if *learnFromFileFlag {
-		err := varnam.LearnFromFile(args[0])
+		learnStatus, err := varnam.LearnFromFile(args[0])
 		if err == nil {
-			fmt.Println("Finished learning from file")
+			fmt.Printf("Finished learning from file. Total words: %d. Failed: %d\n", learnStatus.TotalWords, learnStatus.FailedWords)
 		} else {
 			log.Fatal(err.Error())
 		}

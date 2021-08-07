@@ -40,4 +40,11 @@ SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* Display
 
 void destroySchemeDetailsArray(void* cSchemeDetails);
 
+typedef struct LearnStatus_t {
+  int TotalWords;
+  int FailedWords;
+} LearnStatus;
+
+LearnStatus* makeLearnStatus(int TotalWords, int FailedWords);
+
 #endif /* __C_SHARED_H__ */
