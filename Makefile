@@ -36,7 +36,7 @@ build-install-script:
 	chmod +x install.sh
 
 install:
-	./install.sh
+	./install.sh install
 
 build-cli:
 	go build -o ${CLI_BIN} ./cli
