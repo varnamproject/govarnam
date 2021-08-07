@@ -300,9 +300,17 @@ func varnam_get_vst_path(varnamHandleID C.int) *C.char {
 	return C.CString(handle.varnam.VSTPath)
 }
 
+//export varnam_get_vst_dir
+func varnam_get_vst_dir() *C.char {
+	var dir string
+	dir, generalError = govarnam.FindVSTDir()
+	return C.CString(dir)
+}
+
 //export varnam_get_all_scheme_details
 func varnam_get_all_scheme_details() *C.varray {
-	schemeDetails, generalError := govarnam.GetAllSchemeDetails()
+	var schemeDetails []govarnam.SchemeDetails
+	schemeDetails, generalError = govarnam.GetAllSchemeDetails()
 
 	if generalError != nil {
 		return nil

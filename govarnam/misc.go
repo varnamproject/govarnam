@@ -8,7 +8,7 @@ import (
 
 // GetAllSchemePaths get available IDs' location as a string array
 func GetAllSchemePaths() ([]string, error) {
-	vstsDir, err := findVSTDir()
+	vstsDir, err := FindVSTDir()
 
 	if err != nil {
 		return nil, err

@@ -55,7 +55,8 @@ var VARNAM_VST_DIR = [2]string{
 	"schemes",
 	"/usr/local/share/varnam/vstDEV"}
 
-func findVSTDir() (string, error) {
+//FindVSTDir Get the VST storing directory
+func FindVSTDir() (string, error) {
 	for _, loc := range VARNAM_VST_DIR {
 		if dirExists(loc) {
 			return loc, nil
