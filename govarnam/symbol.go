@@ -102,15 +102,15 @@ func (varnam *Varnam) setSchemeInfo() {
 		)
 		rows.Scan(&key, &value)
 		if key == "scheme-id" {
-			varnam.SchemeInfo.SchemeID = value
+			varnam.SchemeDetails.Identifier = value
 		} else if key == "lang-code" {
-			varnam.SchemeInfo.LangCode = value
+			varnam.SchemeDetails.LangCode = value
 		} else if key == "scheme-display-name" {
-			varnam.SchemeInfo.DisplayName = value
+			varnam.SchemeDetails.DisplayName = value
 		} else if key == "scheme-author" {
-			varnam.SchemeInfo.Author = value
+			varnam.SchemeDetails.Author = value
 		} else if key == "scheme-compiled-date" {
-			varnam.SchemeInfo.CompiledDate = value
+			varnam.SchemeDetails.CompiledDate = value
 		}
 	}
 }

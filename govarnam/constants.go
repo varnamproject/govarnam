@@ -55,6 +55,15 @@ var VARNAM_VST_DIR = [2]string{
 	"schemes",
 	"/usr/local/share/varnam/vstDEV"}
 
+func findVSTDir() (string, error) {
+	for _, loc := range VARNAM_VST_DIR {
+		if dirExists(loc) {
+			return loc, nil
+		}
+	}
+	return "", fmt.Errorf("Couldn't find VST directory")
+}
+
 func findVSTPath(schemeID string) (string, error) {
 	for _, loc := range VARNAM_VST_DIR {
 		temp := path.Join(loc, schemeID+".vst")

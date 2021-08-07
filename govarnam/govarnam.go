@@ -27,9 +27,9 @@ type LangRules struct {
 	PatternLongestLength int // Longest length of pattern in VST
 }
 
-// SchemeInfo of VST
-type SchemeInfo struct {
-	SchemeID     string
+// SchemeDetails of VST
+type SchemeDetails struct {
+	Identifier   string
 	LangCode     string
 	DisplayName  string
 	Author       string
@@ -38,11 +38,11 @@ type SchemeInfo struct {
 
 // Varnam config
 type Varnam struct {
-	vstConn    *sql.DB
-	dictConn   *sql.DB
-	LangRules  LangRules
-	SchemeInfo SchemeInfo
-	Debug      bool
+	vstConn       *sql.DB
+	dictConn      *sql.DB
+	LangRules     LangRules
+	SchemeDetails SchemeDetails
+	Debug         bool
 
 	PatternWordPartializers []func(*Suggestion)
 
@@ -232,7 +232,7 @@ func (varnam *Varnam) setDefaultConfig() {
 	varnam.LangRules.IndicDigits = false
 	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT, VARNAM_TOKEN_ACCEPT_ALL)[0].value1
 
-	if varnam.SchemeInfo.LangCode == "ml" {
+	if varnam.SchemeDetails.LangCode == "ml" {
 		varnam.RegisterPatternWordPartializer(varnam.mlPatternWordPartializer)
 	}
 }
@@ -440,7 +440,7 @@ func InitFromID(schemeID string) (*Varnam, error) {
 	varnam.InitVST(vstPath)
 
 	// One dictionary for one language, not for different scheme
-	dictPath = findLearningsFilePath(varnam.SchemeInfo.LangCode)
+	dictPath = findLearningsFilePath(varnam.SchemeDetails.LangCode)
 
 	err = varnam.InitDict(dictPath)
 	if err != nil {

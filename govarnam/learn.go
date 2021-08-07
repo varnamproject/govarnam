@@ -32,7 +32,7 @@ type exportFormat struct {
 }
 
 func (varnam *Varnam) languageSpecificSanitization(word string) string {
-	if varnam.SchemeInfo.LangCode == "ml" {
+	if varnam.SchemeDetails.LangCode == "ml" {
 		/* Malayalam has got two ways to write chil letters. Converting the old style to new atomic chil one */
 		word = strings.Replace(word, "ന്‍", "ൻ", -1)
 		word = strings.Replace(word, "ണ്‍", "ൺ", -1)
@@ -41,7 +41,7 @@ func (varnam *Varnam) languageSpecificSanitization(word string) string {
 		word = strings.Replace(word, "ര്‍", "ർ", -1)
 	}
 
-	if varnam.SchemeInfo.LangCode == "hi" {
+	if varnam.SchemeDetails.LangCode == "hi" {
 		/* Hindi's DANDA (Purna viram) */
 		word = strings.Replace(word, "।", "", -1)
 	}
