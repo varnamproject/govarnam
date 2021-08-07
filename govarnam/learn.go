@@ -31,58 +31,6 @@ type exportFormat struct {
 	PatternsDict []map[string]interface{} `json:"patterns"`
 }
 
-// Insert a word into word DB. Increment weight if word exists
-// Partial - Whether the word is not a real word, but only part of a pathway to a word
-func (varnam *Varnam) insertWord(word string, weight int, partial bool) error {
-	var query string
-
-	if partial {
-		query = "INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES (trim(?), ?, NULL)"
-	} else {
-		// The learned_on value determines whether it's a complete
-		// word or just partial, i.e part of a path to a word
-		query = "INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES (trim(?), ?, strftime('%s', 'now'))"
-	}
-
-	bgContext := context.Background()
-
-	ctx, cancelFunc := context.WithTimeout(bgContext, 5*time.Second)
-	defer cancelFunc()
-
-	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.ExecContext(ctx, word, weight)
-	if err != nil {
-		return err
-	}
-
-	if partial {
-		query = "UPDATE words SET weight = weight + 1 WHERE word = ?"
-	} else {
-		query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE word = ?"
-	}
-
-	ctx, cancelFunc = context.WithTimeout(bgContext, 5*time.Second)
-	defer cancelFunc()
-
-	stmt, err = varnam.dictConn.PrepareContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.ExecContext(ctx, word)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (varnam *Varnam) languageSpecificSanitization(word string) string {
 	if varnam.SchemeInfo.LangCode == "ml" {
 		/* Malayalam has got two ways to write chil letters. Converting the old style to new atomic chil one */
@@ -140,7 +88,35 @@ func (varnam *Varnam) Learn(word string, weight int) error {
 		weight = VARNAM_LEARNT_WORD_MIN_WEIGHT - 1
 	}
 
-	err := varnam.insertWord(word, weight, false)
+	query := "INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES (trim(?), ?, strftime('%s', 'now'))"
+
+	bgContext := context.Background()
+
+	ctx, cancelFunc := context.WithTimeout(bgContext, 5*time.Second)
+	defer cancelFunc()
+
+	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx, word, weight)
+	if err != nil {
+		return err
+	}
+
+	query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE word = ?"
+	ctx, cancelFunc = context.WithTimeout(bgContext, 5*time.Second)
+	defer cancelFunc()
+
+	stmt, err = varnam.dictConn.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx, word)
 	if err != nil {
 		return err
 	}
