@@ -201,14 +201,19 @@ func (varnam *Varnam) LearnMany(words []WordInfo) error {
 
 		if len(conjuncts) == 0 {
 			log.Printf("Nothing to learn from %s", word)
+			continue
 		}
 
 		if len(conjuncts) == 1 {
 			log.Printf("Can't learn a single conjunct: %s", word)
+			continue
 		}
 
+		// We have a weight + 1 in SQL query later
 		if weight == 0 {
 			weight = VARNAM_LEARNT_WORD_MIN_WEIGHT - 1
+		} else {
+			weight--
 		}
 
 		insertionValues = append(insertionValues, "(trim(?), ?, strftime('%s', 'now'))")
@@ -317,6 +322,12 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 	}
 	defer file.Close()
 
+	limitVariableNumber := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
+	log.Printf("default SQLITE_LIMIT_VARIABLE_NUMBER: %d", limitVariableNumber)
+
+	// We have 2 fields per item, word and weight
+	insertsPerTransaction := int(float64(limitVariableNumber) / 2)
+
 	// io.Reader is a stream, so only one time iteration possible
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanWords)
@@ -327,12 +338,18 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 	// Here the frequency will be the weight
 	frequencyReport := false
 
+	fileFormatDetermined := false
+
+	var words []WordInfo
+
 	word := ""
+	insertions := 0
 	count := 0
+
 	for scanner.Scan() {
 		curWord := scanner.Text()
 
-		if count <= 1 {
+		if !fileFormatDetermined {
 			// Check the first 2 words. If it's of format <word frequency>
 			// Then treat rest of words as frequency report
 			if count == 0 {
@@ -345,14 +362,19 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 			if err == nil {
 				// It's a number
 				frequencyReport = true
-				varnam.Learn(word, weight)
+				words = append(words, WordInfo{0, word, weight, 0})
 				word = ""
+
+				// count is now 1
 			} else {
 				// Not a frequency report, so attempt to leatn those 2 words
-				varnam.Learn(word, 0)
-				varnam.Learn(curWord, 0)
+				words = append(words, WordInfo{0, word, 0, 0})
+				words = append(words, WordInfo{0, curWord, 0, 0})
+
+				count++
 			}
-			count++
+
+			fileFormatDetermined = true
 
 			if varnam.Debug {
 				fmt.Println("Frequency report :", frequencyReport)
@@ -365,18 +387,31 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 				weight, err := strconv.Atoi(curWord)
 
 				if err == nil {
-					varnam.Learn(word, weight)
+					words = append(words, WordInfo{0, word, weight, 0})
 					count++
 				}
 				word = ""
 			}
 		} else {
-			varnam.Learn(curWord, 0)
+			words = append(words, WordInfo{0, curWord, 0, 0})
 			count++
 		}
-		if count%500 == 0 {
-			fmt.Printf("Learnt %d words\n", count)
+
+		if count == insertsPerTransaction {
+			varnam.LearnMany(words)
+
+			insertions += count
+			count = 0
+			words = []WordInfo{}
+
+			fmt.Printf("Learnt %d words\n", insertions)
 		}
+	}
+
+	if len(words) != 0 {
+		varnam.LearnMany(words)
+		insertions += len(words)
+		fmt.Printf("Learnt %d words\n", insertions)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -502,6 +537,7 @@ func (varnam *Varnam) Export(filePath string) error {
 
 // Import learnings from file
 func (varnam *Varnam) Import(filePath string) error {
+	// TODO better reading of JSON. This loads entire file into memory
 	fileContent, _ := ioutil.ReadFile(filePath)
 
 	var dbData exportFormat

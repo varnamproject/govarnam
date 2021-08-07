@@ -435,9 +435,25 @@ func (varnam *Varnam) splitWordByConjunct(word string) []string {
 	ctx := context.Background()
 	var result []string
 	tokens := varnam.splitTextByConjunct(ctx, word)
+
+	if varnam.Debug {
+		log.Println(tokens)
+	}
+
 	for _, token := range tokens {
 		if token.tokenType == VARNAM_TOKEN_SYMBOL {
-			result = append(result, token.character)
+			ok := true
+
+			for _, symbol := range token.symbols {
+				if symbol.generalType == VARNAM_SYMBOL_NUMBER || symbol.generalType == VARNAM_SYMBOL_SYMBOL {
+					ok = false
+					break
+				}
+			}
+
+			if ok {
+				result = append(result, token.character)
+			}
 		}
 	}
 	return result

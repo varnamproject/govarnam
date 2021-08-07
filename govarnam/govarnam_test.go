@@ -63,6 +63,10 @@ func getVarnamInstance(schemeID string) *Varnam {
 	return nil
 }
 
+func tearDownVarnam(schemeID string) {
+	getVarnamInstance(schemeID).Close()
+}
+
 func tearDown() {
 	os.RemoveAll(testTempDir)
 }
@@ -71,5 +75,7 @@ func TestMain(m *testing.M) {
 	setUp("ml", "ml")
 	setUp("ml-inscript", "ml")
 	m.Run()
+	tearDownVarnam("ml")
+	tearDownVarnam("ml-inscript")
 	tearDown()
 }

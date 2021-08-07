@@ -149,6 +149,10 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 			vals = append(vals, word)
 		}
 
+		// Thanks forpas
+		// CC BY-SA 4.0 licensed
+		// https://stackoverflow.com/q/68610241/1372424
+
 		if all == true {
 			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT w.* FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' AND w.word != c.match AND learned_on > 0 ORDER BY weight DESC LIMIT ?"
 			vals = append(vals, varnam.DictionarySuggestionsLimit)
