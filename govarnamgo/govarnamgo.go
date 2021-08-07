@@ -314,7 +314,7 @@ func (handle *VarnamHandle) GetVSTPath() string {
 }
 
 // GetVSTDir Get path to directory containging the VSTs
-func (handle *VarnamHandle) GetVSTDir() string {
+func GetVSTDir() string {
 	cStr := C.varnam_get_vst_dir()
 	defer C.free(unsafe.Pointer(cStr))
 	return C.GoString(cStr)
