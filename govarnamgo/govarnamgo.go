@@ -306,9 +306,16 @@ func (handle *VarnamHandle) Import(filePath string) *VarnamError {
 	return handle.checkError(err)
 }
 
-//GetVSTPath Import learnigns to a file
+// GetVSTPath Get path to VST of current handle
 func (handle *VarnamHandle) GetVSTPath() string {
 	cStr := C.varnam_get_vst_path(handle.connectionID)
+	defer C.free(unsafe.Pointer(cStr))
+	return C.GoString(cStr)
+}
+
+// GetVSTDir Get path to directory containging the VSTs
+func (handle *VarnamHandle) GetVSTDir() string {
+	cStr := C.varnam_get_vst_dir()
 	defer C.free(unsafe.Pointer(cStr))
 	return C.GoString(cStr)
 }
