@@ -295,7 +295,14 @@ func (handle *VarnamHandle) Import(filePath string) bool {
 	return checkError(err)
 }
 
-// GetAllSchemeDetails get all available scheme details
+//GetVSTPath Import learnigns to a file
+func (handle *VarnamHandle) GetVSTPath() string {
+	cStr := C.varnam_get_vst_path(handle.connectionID)
+	defer C.free(unsafe.Pointer(cStr))
+	return C.GoString(cStr)
+}
+
+// GetAllSchemeDetails get all available scheme details. The bool is for error
 func GetAllSchemeDetails() ([]SchemeDetails, bool) {
 	cSchemeDetails := C.varnam_get_all_scheme_details()
 
@@ -326,5 +333,7 @@ func GetAllSchemeDetails() ([]SchemeDetails, bool) {
 		i++
 	}
 
-	go C.destroySchemeDetailsArray(cSchemeDetails)
+	go C.destroySchemeDetailsArray(unsafe.Pointer(cSchemeDetails))
+
+	return schemeDetails, false
 }

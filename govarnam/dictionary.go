@@ -35,6 +35,8 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 		varnam.dictConn, err = openDB(dictPath)
 	}
 
+	varnam.DictPath = dictPath
+
 	return err
 }
 

@@ -64,6 +64,7 @@ func (varnam *Varnam) InitVST(vstPath string) error {
 	varnam.vstConn.Exec("PRAGMA TEMP_STORE=2;")
 	varnam.vstConn.Exec("PRAGMA LOCKING_MODE=EXCLUSIVE;")
 
+	varnam.VSTPath = vstPath
 	varnam.setSchemeInfo()
 	varnam.setPatternLongestLength()
 

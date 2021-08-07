@@ -39,8 +39,12 @@ type SchemeDetails struct {
 
 // Varnam config
 type Varnam struct {
-	vstConn       *sql.DB
-	dictConn      *sql.DB
+	VSTPath  string
+	DictPath string
+
+	vstConn  *sql.DB
+	dictConn *sql.DB
+
 	LangRules     LangRules
 	SchemeDetails SchemeDetails
 	Debug         bool

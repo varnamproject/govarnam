@@ -293,6 +293,13 @@ func varnam_import(varnamHandleID C.int, filePath *C.char) C.int {
 	return checkError(handle.err)
 }
 
+//export varnam_get_vst_path
+func varnam_get_vst_path(varnamHandleID C.int) *C.char {
+	handle := getVarnamHandle(varnamHandleID)
+
+	return C.CString(handle.varnam.VSTPath)
+}
+
 //export varnam_get_all_scheme_details
 func varnam_get_all_scheme_details() *C.varray {
 	schemeDetails, generalError := govarnam.GetAllSchemeDetails()
