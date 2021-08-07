@@ -72,10 +72,21 @@ func tearDown() {
 }
 
 func TestMain(m *testing.M) {
-	setUp("ml", "ml")
-	setUp("ml-inscript", "ml")
+	schemeDetails, err := GetAllSchemeDetails()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, schemeDetail := range schemeDetails {
+		setUp(schemeDetail.Identifier, schemeDetail.LangCode)
+	}
+
 	m.Run()
-	tearDownVarnam("ml")
-	tearDownVarnam("ml-inscript")
+
+	for _, schemeDetail := range schemeDetails {
+		tearDownVarnam(schemeDetail.Identifier)
+	}
+
 	tearDown()
 }

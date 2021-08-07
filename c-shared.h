@@ -27,4 +27,17 @@ TransliterationResult* makeResult(varray* exact_matches, varray* dictionary_sugg
 
 void destroyTransliterationResult(TransliterationResult*);
 
+typedef struct SchemeDetails_t {
+  char* Identifier;
+  char* LangCode;
+  char* DisplayName;
+  char* Author;
+  char* CompiledDate;
+  bool IsStable;
+} SchemeDetails;
+
+SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* DisplayName, char* Author, char* CompiledDate, bool IsStable);
+
+void destroySchemeDetailsArray(void* cSchemeDetails);
+
 #endif /* __C_SHARED_H__ */

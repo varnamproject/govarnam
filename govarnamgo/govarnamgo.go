@@ -41,6 +41,16 @@ type TransliterationResult struct {
 	GreedyTokenized              []Suggestion
 }
 
+// SchemeDetails of VST
+type SchemeDetails struct {
+	Identifier   string
+	LangCode     string
+	DisplayName  string
+	Author       string
+	CompiledDate string
+	IsStable     bool
+}
+
 // Convert a C Suggestion to Go
 func makeSuggestion(cSug *C.struct_Suggestion_t) Suggestion {
 	var sug Suggestion
@@ -283,4 +293,47 @@ func (handle *VarnamHandle) Import(filePath string) bool {
 	cFilePath := C.CString(filePath)
 	err := C.varnam_import(handle.connectionID, cFilePath)
 	return checkError(err)
+}
+
+//GetVSTPath Import learnigns to a file
+func (handle *VarnamHandle) GetVSTPath() string {
+	cStr := C.varnam_get_vst_path(handle.connectionID)
+	defer C.free(unsafe.Pointer(cStr))
+	return C.GoString(cStr)
+}
+
+// GetAllSchemeDetails get all available scheme details. The bool is for error
+func GetAllSchemeDetails() ([]SchemeDetails, bool) {
+	cSchemeDetails := C.varnam_get_all_scheme_details()
+
+	if cSchemeDetails == nil {
+		return nil, true
+	}
+
+	var schemeDetails []SchemeDetails
+	i := 0
+	for i < int(C.varray_length(cSchemeDetails)) {
+		cSD := (*C.SchemeDetails)(C.varray_get(cSchemeDetails, C.int(i)))
+
+		isStable := true
+		if cSD.IsStable == 0 {
+			isStable = false
+		}
+
+		sd := SchemeDetails{
+			C.GoString(cSD.Identifier),
+			C.GoString(cSD.LangCode),
+			C.GoString(cSD.DisplayName),
+			C.GoString(cSD.Author),
+			C.GoString(cSD.CompiledDate),
+			isStable,
+		}
+
+		schemeDetails = append(schemeDetails, sd)
+		i++
+	}
+
+	go C.destroySchemeDetailsArray(unsafe.Pointer(cSchemeDetails))
+
+	return schemeDetails, false
 }

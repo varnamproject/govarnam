@@ -51,3 +51,32 @@ void destroyTransliterationResult(TransliterationResult* result)
   free(result);
   result = NULL;
 }
+
+SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* DisplayName, char* Author, char* CompiledDate, bool IsStable)
+{
+  SchemeDetails* sd = (SchemeDetails*) malloc (sizeof(SchemeDetails));
+  sd->Identifier = Identifier;
+  sd->LangCode = LangCode;
+  sd->DisplayName = DisplayName;
+  sd->Author = Author;
+  sd->CompiledDate = CompiledDate;
+  sd->IsStable = IsStable;
+
+  return sd;
+}
+
+void destroySchemeDetails(void* pointer)
+{
+  if (pointer != NULL) {
+    Suggestion* sug = (Suggestion*) pointer;
+    free(sug->Word);
+    sug->Word = NULL;
+    free(sug);
+    sug = NULL;
+  }
+}
+
+void destroySchemeDetailsArray(void* cSchemeDetails)
+{
+  varray_free(cSchemeDetails, &destroySchemeDetails);
+}

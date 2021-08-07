@@ -17,6 +17,8 @@ import (
 	"gitlab.com/subins2000/govarnam/govarnam"
 )
 
+var generalError error
+
 var backgroundContext = context.Background()
 var cancelFuncs = map[C.int]interface{}{}
 var cancelFuncsMapMutex = sync.RWMutex{}
@@ -223,7 +225,14 @@ func varnam_train_from_file(varnamHandleID C.int, filePath *C.char) C.int {
 
 //export varnam_get_last_error
 func varnam_get_last_error(varnamHandleID C.int) *C.char {
-	err := getVarnamHandle(varnamHandleID).err
+	var err error
+
+	if varnamHandleID == -1 {
+		err = generalError
+	} else {
+		err = getVarnamHandle(varnamHandleID).err
+	}
+
 	if err != nil {
 		return C.CString(err.Error())
 	} else {
@@ -282,6 +291,45 @@ func varnam_import(varnamHandleID C.int, filePath *C.char) C.int {
 	handle.err = handle.varnam.Import(C.GoString(filePath))
 
 	return checkError(handle.err)
+}
+
+//export varnam_get_vst_path
+func varnam_get_vst_path(varnamHandleID C.int) *C.char {
+	handle := getVarnamHandle(varnamHandleID)
+
+	return C.CString(handle.varnam.VSTPath)
+}
+
+//export varnam_get_all_scheme_details
+func varnam_get_all_scheme_details() *C.varray {
+	schemeDetails, generalError := govarnam.GetAllSchemeDetails()
+
+	if generalError != nil {
+		return nil
+	}
+
+	cSchemeDetails := C.varray_init()
+	for _, sd := range schemeDetails {
+		var cIsStable C.int
+
+		if sd.IsStable {
+			cIsStable = C.int(1)
+		} else {
+			cIsStable = C.int(0)
+		}
+
+		cSD := unsafe.Pointer(C.makeSchemeDetails(
+			C.CString(sd.Identifier),
+			C.CString(sd.LangCode),
+			C.CString(sd.DisplayName),
+			C.CString(sd.Author),
+			C.CString(sd.CompiledDate),
+			cIsStable,
+		))
+		C.varray_push(cSchemeDetails, cSD)
+	}
+
+	return cSchemeDetails
 }
 
 func main() {}
