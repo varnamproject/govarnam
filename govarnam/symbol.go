@@ -111,6 +111,12 @@ func (varnam *Varnam) setSchemeInfo() {
 			varnam.SchemeDetails.Author = value
 		} else if key == "scheme-compiled-date" {
 			varnam.SchemeDetails.CompiledDate = value
+		} else if key == "scheme-stable" {
+			if value == "1" {
+				varnam.SchemeDetails.IsStable = true
+			} else {
+				varnam.SchemeDetails.IsStable = false
+			}
 		}
 	}
 }

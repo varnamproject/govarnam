@@ -34,6 +34,7 @@ type SchemeDetails struct {
 	DisplayName  string
 	Author       string
 	CompiledDate string
+	IsStable     bool
 }
 
 // Varnam config
@@ -470,7 +471,11 @@ func dirExists(loc string) bool {
 
 // Close close db connections
 func (varnam *Varnam) Close() error {
-	varnam.vstConn.Close()
-	varnam.dictConn.Close()
+	if varnam.vstConn != nil {
+		varnam.vstConn.Close()
+	}
+	if varnam.dictConn != nil {
+		varnam.dictConn.Close()
+	}
 	return nil
 }
