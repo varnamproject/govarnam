@@ -1,6 +1,10 @@
 package govarnam
 
 import (
+	"context"
+	"io/ioutil"
+	"path"
+	"strings"
 	"testing"
 	"time"
 )
@@ -110,6 +114,10 @@ func TestMLLearn(t *testing.T) {
 
 	// Shouldn't learn single conjucnts as a word. Should give error
 	assertEqual(t, varnam.Learn("കാ", 0) != nil, true)
+
+	// Test unlearn
+	varnam.Unlearn("തുടങ്ങി")
+	assertEqual(t, len(varnam.Transliterate("thudangiyittE").DictionarySuggestions), 0)
 }
 
 func TestMLTrain(t *testing.T) {
@@ -229,4 +237,42 @@ func TestDictionaryLimit(t *testing.T) {
 	// Tokenizer will work on 2 words: എഡിറ്റ് & എഡിറ്റിംഗ്
 	// Total results = 4+
 	assertEqual(t, len(varnam.Transliterate("editingil").PatternDictionarySuggestions), 2)
+}
+
+func TestMLExportAndImport(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	words := []WordInfo{
+		WordInfo{0, "മനുഷ്യൻ", 0, 0},
+		WordInfo{0, "മണ്ഡലം", 0, 0},
+		WordInfo{0, "മിലാൻ", 0, 0},
+	}
+
+	varnam.LearnMany(words)
+
+	exportFilePath := path.Join(testTempDir, "export")
+
+	varnam.Export(exportFilePath)
+
+	// read the whole file at once
+	b, err := ioutil.ReadFile(exportFilePath)
+	if err != nil {
+		panic(err)
+	}
+	exportFileContents := string(b)
+
+	for _, wordInfo := range words {
+		assertEqual(t, strings.Contains(exportFileContents, wordInfo.word), true)
+
+		// Unlearn so that we can import next
+		varnam.Unlearn(wordInfo.word)
+	}
+
+	varnam.Import(exportFilePath)
+
+	for _, wordInfo := range words {
+		results := varnam.searchDictionary(context.Background(), []string{wordInfo.word}, false)
+
+		assertEqual(t, len(results) > 0, true)
+	}
 }

@@ -14,7 +14,7 @@ import (
 
 var varnamInstances = map[string]*Varnam{}
 var mutex = sync.RWMutex{}
-var dictDir string
+var testTempDir string
 
 // AssertEqual checks if values are equal
 // Thanks https://gist.github.com/samalba/6059502#gistcomment-2710184
@@ -39,10 +39,10 @@ func setUp(schemeID string, langCode string) {
 	vstLoc := path.Join(projectRoot, "schemes", schemeID+".vst")
 
 	var err error
-	dictDir, err = ioutil.TempDir("", "govarnam_test")
+	testTempDir, err = ioutil.TempDir("", "govarnam_test")
 	checkError(err)
 
-	dictLoc := path.Join(dictDir, langCode+".vst.learnings")
+	dictLoc := path.Join(testTempDir, langCode+".vst.learnings")
 
 	varnam, err := Init(vstLoc, dictLoc)
 	checkError(err)
@@ -64,7 +64,7 @@ func getVarnamInstance(schemeID string) *Varnam {
 }
 
 func tearDown() {
-	os.RemoveAll(dictDir)
+	os.RemoveAll(testTempDir)
 }
 
 func TestMain(m *testing.M) {

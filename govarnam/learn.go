@@ -184,6 +184,75 @@ func (varnam *Varnam) Unlearn(word string) error {
 	return nil
 }
 
+// LearnMany words in bulk. Faster learning
+func (varnam *Varnam) LearnMany(words []WordInfo) error {
+	var (
+		insertionValues []string
+		insertionArgs   []interface{}
+
+		updationValues []string
+		updationArgs   []interface{}
+	)
+
+	for _, wordInfo := range words {
+		word := varnam.sanitizeWord(wordInfo.word)
+		weight := wordInfo.weight
+		conjuncts := varnam.splitWordByConjunct(word)
+
+		if len(conjuncts) == 0 {
+			log.Printf("Nothing to learn from %s", word)
+		}
+
+		if len(conjuncts) == 1 {
+			log.Printf("Can't learn a single conjunct: %s", word)
+		}
+
+		if weight == 0 {
+			weight = VARNAM_LEARNT_WORD_MIN_WEIGHT - 1
+		}
+
+		insertionValues = append(insertionValues, "(trim(?), ?, strftime('%s', 'now'))")
+		insertionArgs = append(insertionArgs, word, weight)
+
+		updationValues = append(updationValues, "word = ?")
+		updationArgs = append(updationArgs, word)
+	}
+
+	if len(insertionArgs) == 0 {
+		return nil
+	}
+
+	query := fmt.Sprintf(
+		"INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES %s",
+		strings.Join(insertionValues, ", "),
+	)
+
+	stmt, err := varnam.dictConn.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(insertionArgs...)
+	if err != nil {
+		return err
+	}
+
+	query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE " + strings.Join(updationValues, " OR ")
+
+	stmt, err = varnam.dictConn.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(updationArgs...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Train a word with a particular pattern. Pattern => word
 func (varnam *Varnam) Train(pattern string, word string) error {
 	word = varnam.sanitizeWord(word)
@@ -438,7 +507,7 @@ func (varnam *Varnam) Import(filePath string) error {
 	var dbData exportFormat
 
 	if err := json.Unmarshal(fileContent, &dbData); err != nil {
-		return fmt.Errorf("Parsing packs JSON failed, err: %s", err.Error())
+		return fmt.Errorf("Parsing JSON failed, err: %s", err.Error())
 	}
 
 	limitVariableNumber := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
