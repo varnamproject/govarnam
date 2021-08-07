@@ -18,10 +18,6 @@ import (
 
 var varnam *govarnamgo.VarnamHandle
 
-func logVarnamError() {
-	log.Fatal(varnam.GetLastError())
-}
-
 func main() {
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
 	schemeFlag := flag.String("s", "", "Scheme ID")
@@ -50,7 +46,7 @@ func main() {
 	var err error
 	varnam, err = govarnamgo.InitFromID(*schemeFlag)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error())
 	}
 
 	varnam.Debug(*debugFlag)
@@ -64,57 +60,63 @@ func main() {
 		pattern := args[0]
 		word := args[1]
 
-		if varnam.Train(pattern, word) {
-			fmt.Printf("Trained %s => %s\n", pattern, word)
-		} else {
-			logVarnamError()
+		err := varnam.Train(pattern, word)
+		if err != nil {
+			log.Fatal(err.Error())
 		}
+		fmt.Printf("Trained %s => %s\n", pattern, word)
 	} else if *learnFlag {
 		word := args[0]
 
-		if varnam.Learn(word, 0) {
+		err := varnam.Learn(word, 0)
+		if err == nil {
 			fmt.Printf("Learnt %s\n", word)
 		} else {
 			fmt.Printf("Couldn't learn %s", word)
-			logVarnamError()
+			log.Fatal(err.Error())
 		}
 	} else if *unlearnFlag {
 		word := args[0]
 
-		if varnam.Unlearn(word) {
+		err := varnam.Unlearn(word)
+		if err == nil {
 			fmt.Printf("Unlearnt %s\n", word)
 		} else {
 			fmt.Printf("Couldn't learn %s", word)
-			logVarnamError()
+			log.Fatal(err.Error())
 		}
 	} else if *learnFromFileFlag {
-		if varnam.LearnFromFile(args[0]) {
+		err := varnam.LearnFromFile(args[0])
+		if err == nil {
 			fmt.Println("Finished learning from file")
 		} else {
-			logVarnamError()
+			log.Fatal(err.Error())
 		}
 	} else if *trainFromFileFlag {
-		if varnam.TrainFromFile(args[0]) {
+		err := varnam.TrainFromFile(args[0])
+		if err == nil {
 			fmt.Println("Finished training from file")
 		} else {
-			logVarnamError()
+			log.Fatal(err.Error())
 		}
 	} else if *exportFlag {
-		if varnam.Export(args[0]) {
+		err := varnam.Export(args[0])
+		if err == nil {
 			fmt.Println("Finished exporting to file")
 		} else {
-			logVarnamError()
+			log.Fatal(err.Error())
 		}
 	} else if *importFlag {
-		if varnam.Import(args[0]) {
+		err := varnam.Import(args[0])
+		if err == nil {
 			fmt.Println("Finished importing from file")
 		} else {
-			logVarnamError()
+			log.Fatal(err.Error())
 		}
 	} else if *reverseTransliterate {
 		sugs, err := varnam.ReverseTransliterate(args[0])
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(err.Error())
 		}
 
 		probMsg := false

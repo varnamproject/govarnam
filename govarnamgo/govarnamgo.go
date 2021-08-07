@@ -21,6 +21,7 @@ type Config struct {
 	TokenizerSuggestionsAlways bool
 }
 
+// VarnamHandle for making things easier
 type VarnamHandle struct {
 	connectionID C.int
 }
@@ -126,11 +127,22 @@ func makeGoTransliterationResult(ctx context.Context, cResult *C.struct_Translit
 	}
 }
 
-func checkError(code C.int) bool {
+//VarnamError Custom error for varnam
+type VarnamError struct {
+	errorCode int
+	message   string
+}
+
+// Error mimicking error package's function
+func (err *VarnamError) Error() string {
+	return err.message
+}
+
+func (handle *VarnamHandle) checkError(code C.int) *VarnamError {
 	if code == C.VARNAM_SUCCESS {
-		return true
+		return nil
 	}
-	return false
+	return &VarnamError{int(code), handle.GetLastError()}
 }
 
 // InitFromID Initialize
@@ -147,17 +159,16 @@ func InitFromID(id string) (*VarnamHandle, error) {
 }
 
 // GetLastError get last error
-func (handle *VarnamHandle) GetLastError() error {
+func (handle *VarnamHandle) GetLastError() string {
 	cStr := C.varnam_get_last_error(handle.connectionID)
-	goStr := fmt.Errorf(C.GoString(cStr))
-	C.free(unsafe.Pointer(cStr))
-	return goStr
+	defer C.free(unsafe.Pointer(cStr))
+	return C.GoString(cStr)
 }
 
 // Close db connections and end varnam
-func (handle *VarnamHandle) Close() bool {
+func (handle *VarnamHandle) Close() *VarnamError {
 	err := C.varnam_close(handle.connectionID)
-	return checkError(err)
+	return handle.checkError(err)
 }
 
 // Debug turn debug on/off
@@ -219,7 +230,7 @@ func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, err
 
 	result := C.varnam_reverse_transliterate(handle.connectionID, cWord)
 	if result == nil {
-		return sugs, handle.GetLastError()
+		return sugs, fmt.Errorf(handle.GetLastError())
 	}
 
 	i := 0
@@ -233,7 +244,7 @@ func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, err
 }
 
 // Train train a pattern => word
-func (handle *VarnamHandle) Train(pattern string, word string) bool {
+func (handle *VarnamHandle) Train(pattern string, word string) *VarnamError {
 	cPattern := C.CString(pattern)
 	cWord := C.CString(word)
 
@@ -242,57 +253,57 @@ func (handle *VarnamHandle) Train(pattern string, word string) bool {
 	C.free(unsafe.Pointer(cPattern))
 	C.free(unsafe.Pointer(cWord))
 
-	return checkError(err)
+	return handle.checkError(err)
 }
 
 // Learn a word
-func (handle *VarnamHandle) Learn(word string, weight int) bool {
+func (handle *VarnamHandle) Learn(word string, weight int) *VarnamError {
 	cWord := C.CString(word)
 
 	err := C.varnam_learn(handle.connectionID, cWord, C.int(weight))
 
 	C.free(unsafe.Pointer(cWord))
 
-	return checkError(err)
+	return handle.checkError(err)
 }
 
 // Unlearn a word
-func (handle *VarnamHandle) Unlearn(word string) bool {
+func (handle *VarnamHandle) Unlearn(word string) *VarnamError {
 	cWord := C.CString(word)
 
 	err := C.varnam_unlearn(handle.connectionID, cWord)
 
 	C.free(unsafe.Pointer(cWord))
 
-	return checkError(err)
+	return handle.checkError(err)
 }
 
 // LearnFromFile learn words from a file
-func (handle *VarnamHandle) LearnFromFile(filePath string) bool {
+func (handle *VarnamHandle) LearnFromFile(filePath string) *VarnamError {
 	cFilePath := C.CString(filePath)
 	err := C.varnam_learn_from_file(handle.connectionID, cFilePath)
-	return checkError(err)
+	return handle.checkError(err)
 }
 
 // TrainFromFile train pattern => word from a file
-func (handle *VarnamHandle) TrainFromFile(filePath string) bool {
+func (handle *VarnamHandle) TrainFromFile(filePath string) *VarnamError {
 	cFilePath := C.CString(filePath)
 	err := C.varnam_train_from_file(handle.connectionID, cFilePath)
-	return checkError(err)
+	return handle.checkError(err)
 }
 
 // Export learnigns to a file
-func (handle *VarnamHandle) Export(filePath string) bool {
+func (handle *VarnamHandle) Export(filePath string) *VarnamError {
 	cFilePath := C.CString(filePath)
 	err := C.varnam_export(handle.connectionID, cFilePath)
-	return checkError(err)
+	return handle.checkError(err)
 }
 
 // Import learnigns to a file
-func (handle *VarnamHandle) Import(filePath string) bool {
+func (handle *VarnamHandle) Import(filePath string) *VarnamError {
 	cFilePath := C.CString(filePath)
 	err := C.varnam_import(handle.connectionID, cFilePath)
-	return checkError(err)
+	return handle.checkError(err)
 }
 
 //GetVSTPath Import learnigns to a file
