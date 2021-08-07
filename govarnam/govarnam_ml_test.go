@@ -1,6 +1,11 @@
 package govarnam
 
 import (
+	"context"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
 	"testing"
 	"time"
 )
@@ -110,6 +115,10 @@ func TestMLLearn(t *testing.T) {
 
 	// Shouldn't learn single conjucnts as a word. Should give error
 	assertEqual(t, varnam.Learn("കാ", 0) != nil, true)
+
+	// Test unlearn
+	varnam.Unlearn("തുടങ്ങി")
+	assertEqual(t, len(varnam.Transliterate("thudangiyittE").DictionarySuggestions), 0)
 }
 
 func TestMLTrain(t *testing.T) {
@@ -229,4 +238,82 @@ func TestDictionaryLimit(t *testing.T) {
 	// Tokenizer will work on 2 words: എഡിറ്റ് & എഡിറ്റിംഗ്
 	// Total results = 4+
 	assertEqual(t, len(varnam.Transliterate("editingil").PatternDictionarySuggestions), 2)
+}
+
+func TestMLLearnFromFile(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	filePath := path.Join(testTempDir, "text.txt")
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	// CC BY-SA 3.0 licensed
+	// https://ml.wikipedia.org/wiki/National_parks_of_Taiwan
+	file.WriteString("തായ്‌വാനിലെ ദേശീയോദ്യാനങ്ങൾ സംരക്ഷിതപ്രദേശങ്ങളാണ്. 7,489.49 ചതുരശ്ര കിലോമീറ്റർ (2,891.71 sq mi) വിസ്തീർണ്ണത്തിൽ വ്യാപിച്ചുകിടക്കുന്ന ഒൻപത് ദേശീയോദ്യാനങ്ങളാണ് ഇവിടെയുള്ളത്. എല്ലാ ദേശീയോദ്യാനങ്ങളും മിനിസ്ട്രി ഓഫ് ദ ഇന്റീരിയർ ഭരണത്തിൻകീഴിലാണ് നിലനിൽക്കുന്നത്. 1937-ൽ തായ്‌വാനിലെ ജാപ്പനീസ് ഭരണത്തിൻ കീഴിലായിരുന്നു ആദ്യത്തെ ദേശീയോദ്യാനം നിലവിൽവന്നത്.")
+
+	varnam.LearnFromFile(filePath)
+
+	assertEqual(t, len(varnam.Transliterate("thaay_vaanile").ExactMatches) != 0, true)
+
+	// Try learning from a frequency report
+
+	filePath = path.Join(testTempDir, "report.txt")
+
+	file, err = os.Create(filePath)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	file.WriteString(`നിത്യഹരിത 120
+	വൃക്ഷമാണ് 89
+	ഒരേയൊരു 45
+	ഏഷ്യയുടെ 100
+	മേലാപ്പും 12`)
+
+	varnam.LearnFromFile(filePath)
+
+	assertEqual(t, varnam.Transliterate("melaappum").ExactMatches[0].Weight, 12)
+}
+
+func TestMLExportAndImport(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	words := []WordInfo{
+		WordInfo{0, "മനുഷ്യൻ", 0, 0},
+		WordInfo{0, "മണ്ഡലം", 0, 0},
+		WordInfo{0, "മിലാൻ", 0, 0},
+	}
+
+	varnam.LearnMany(words)
+
+	exportFilePath := path.Join(testTempDir, "export")
+
+	varnam.Export(exportFilePath)
+
+	// read the whole file at once
+	b, err := ioutil.ReadFile(exportFilePath)
+	if err != nil {
+		panic(err)
+	}
+	exportFileContents := string(b)
+
+	for _, wordInfo := range words {
+		assertEqual(t, strings.Contains(exportFileContents, wordInfo.word), true)
+
+		// Unlearn so that we can import next
+		varnam.Unlearn(wordInfo.word)
+	}
+
+	varnam.Import(exportFilePath)
+
+	for _, wordInfo := range words {
+		results := varnam.searchDictionary(context.Background(), []string{wordInfo.word}, false)
+
+		assertEqual(t, len(results) > 0, true)
+	}
 }

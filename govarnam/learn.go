@@ -31,58 +31,6 @@ type exportFormat struct {
 	PatternsDict []map[string]interface{} `json:"patterns"`
 }
 
-// Insert a word into word DB. Increment weight if word exists
-// Partial - Whether the word is not a real word, but only part of a pathway to a word
-func (varnam *Varnam) insertWord(word string, weight int, partial bool) error {
-	var query string
-
-	if partial {
-		query = "INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES (trim(?), ?, NULL)"
-	} else {
-		// The learned_on value determines whether it's a complete
-		// word or just partial, i.e part of a path to a word
-		query = "INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES (trim(?), ?, strftime('%s', 'now'))"
-	}
-
-	bgContext := context.Background()
-
-	ctx, cancelFunc := context.WithTimeout(bgContext, 5*time.Second)
-	defer cancelFunc()
-
-	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.ExecContext(ctx, word, weight)
-	if err != nil {
-		return err
-	}
-
-	if partial {
-		query = "UPDATE words SET weight = weight + 1 WHERE word = ?"
-	} else {
-		query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE word = ?"
-	}
-
-	ctx, cancelFunc = context.WithTimeout(bgContext, 5*time.Second)
-	defer cancelFunc()
-
-	stmt, err = varnam.dictConn.PrepareContext(ctx, query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.ExecContext(ctx, word)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (varnam *Varnam) languageSpecificSanitization(word string) string {
 	if varnam.SchemeInfo.LangCode == "ml" {
 		/* Malayalam has got two ways to write chil letters. Converting the old style to new atomic chil one */
@@ -140,7 +88,35 @@ func (varnam *Varnam) Learn(word string, weight int) error {
 		weight = VARNAM_LEARNT_WORD_MIN_WEIGHT - 1
 	}
 
-	err := varnam.insertWord(word, weight, false)
+	query := "INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES (trim(?), ?, strftime('%s', 'now'))"
+
+	bgContext := context.Background()
+
+	ctx, cancelFunc := context.WithTimeout(bgContext, 5*time.Second)
+	defer cancelFunc()
+
+	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx, word, weight)
+	if err != nil {
+		return err
+	}
+
+	query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE word = ?"
+	ctx, cancelFunc = context.WithTimeout(bgContext, 5*time.Second)
+	defer cancelFunc()
+
+	stmt, err = varnam.dictConn.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx, word)
 	if err != nil {
 		return err
 	}
@@ -208,6 +184,80 @@ func (varnam *Varnam) Unlearn(word string) error {
 	return nil
 }
 
+// LearnMany words in bulk. Faster learning
+func (varnam *Varnam) LearnMany(words []WordInfo) error {
+	var (
+		insertionValues []string
+		insertionArgs   []interface{}
+
+		updationValues []string
+		updationArgs   []interface{}
+	)
+
+	for _, wordInfo := range words {
+		word := varnam.sanitizeWord(wordInfo.word)
+		weight := wordInfo.weight
+		conjuncts := varnam.splitWordByConjunct(word)
+
+		if len(conjuncts) == 0 {
+			log.Printf("Nothing to learn from %s", word)
+			continue
+		}
+
+		if len(conjuncts) == 1 {
+			log.Printf("Can't learn a single conjunct: %s", word)
+			continue
+		}
+
+		// We have a weight + 1 in SQL query later
+		if weight == 0 {
+			weight = VARNAM_LEARNT_WORD_MIN_WEIGHT - 1
+		} else {
+			weight--
+		}
+
+		insertionValues = append(insertionValues, "(trim(?), ?, strftime('%s', 'now'))")
+		insertionArgs = append(insertionArgs, word, weight)
+
+		updationValues = append(updationValues, "word = ?")
+		updationArgs = append(updationArgs, word)
+	}
+
+	if len(insertionArgs) == 0 {
+		return nil
+	}
+
+	query := fmt.Sprintf(
+		"INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES %s",
+		strings.Join(insertionValues, ", "),
+	)
+
+	stmt, err := varnam.dictConn.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	_, err = stmt.Exec(insertionArgs...)
+	if err != nil {
+		return err
+	}
+
+	query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE " + strings.Join(updationValues, " OR ")
+
+	stmt, err = varnam.dictConn.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(updationArgs...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Train a word with a particular pattern. Pattern => word
 func (varnam *Varnam) Train(pattern string, word string) error {
 	word = varnam.sanitizeWord(word)
@@ -272,6 +322,12 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 	}
 	defer file.Close()
 
+	limitVariableNumber := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
+	log.Printf("default SQLITE_LIMIT_VARIABLE_NUMBER: %d", limitVariableNumber)
+
+	// We have 2 fields per item, word and weight
+	insertsPerTransaction := int(float64(limitVariableNumber) / 2)
+
 	// io.Reader is a stream, so only one time iteration possible
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanWords)
@@ -282,12 +338,18 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 	// Here the frequency will be the weight
 	frequencyReport := false
 
+	fileFormatDetermined := false
+
+	var words []WordInfo
+
 	word := ""
+	insertions := 0
 	count := 0
+
 	for scanner.Scan() {
 		curWord := scanner.Text()
 
-		if count <= 1 {
+		if !fileFormatDetermined {
 			// Check the first 2 words. If it's of format <word frequency>
 			// Then treat rest of words as frequency report
 			if count == 0 {
@@ -300,14 +362,19 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 			if err == nil {
 				// It's a number
 				frequencyReport = true
-				varnam.Learn(word, weight)
+				words = append(words, WordInfo{0, word, weight, 0})
 				word = ""
+
+				// count is now 1
 			} else {
 				// Not a frequency report, so attempt to leatn those 2 words
-				varnam.Learn(word, 0)
-				varnam.Learn(curWord, 0)
+				words = append(words, WordInfo{0, word, 0, 0})
+				words = append(words, WordInfo{0, curWord, 0, 0})
+
+				count++
 			}
-			count++
+
+			fileFormatDetermined = true
 
 			if varnam.Debug {
 				fmt.Println("Frequency report :", frequencyReport)
@@ -320,18 +387,31 @@ func (varnam *Varnam) LearnFromFile(filePath string) error {
 				weight, err := strconv.Atoi(curWord)
 
 				if err == nil {
-					varnam.Learn(word, weight)
+					words = append(words, WordInfo{0, word, weight, 0})
 					count++
 				}
 				word = ""
 			}
 		} else {
-			varnam.Learn(curWord, 0)
+			words = append(words, WordInfo{0, curWord, 0, 0})
 			count++
 		}
-		if count%500 == 0 {
-			fmt.Printf("Learnt %d words\n", count)
+
+		if count == insertsPerTransaction {
+			varnam.LearnMany(words)
+
+			insertions += count
+			count = 0
+			words = []WordInfo{}
+
+			fmt.Printf("Learnt %d words\n", insertions)
 		}
+	}
+
+	if len(words) != 0 {
+		varnam.LearnMany(words)
+		insertions += len(words)
+		fmt.Printf("Learnt %d words\n", insertions)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -457,12 +537,13 @@ func (varnam *Varnam) Export(filePath string) error {
 
 // Import learnings from file
 func (varnam *Varnam) Import(filePath string) error {
+	// TODO better reading of JSON. This loads entire file into memory
 	fileContent, _ := ioutil.ReadFile(filePath)
 
 	var dbData exportFormat
 
 	if err := json.Unmarshal(fileContent, &dbData); err != nil {
-		return fmt.Errorf("Parsing packs JSON failed, err: %s", err.Error())
+		return fmt.Errorf("Parsing JSON failed, err: %s", err.Error())
 	}
 
 	limitVariableNumber := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
