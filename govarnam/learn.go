@@ -254,7 +254,7 @@ func (varnam *Varnam) LearnMany(words []WordInfo) (LearnStatus, error) {
 
 	// There is a limit on number of OR that can be done
 	// Reference: https://stackoverflow.com/questions/9570197/sqlite-expression-maximum-depth-limit
-	depthLimit := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_EXPR_DEPTH)
+	depthLimit := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_EXPR_DEPTH) - 1
 
 	for len(updationValues) > 0 {
 		lastIndex := int(math.Min(float64(depthLimit), float64(len(updationValues))))
