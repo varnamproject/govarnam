@@ -140,50 +140,25 @@ func (varnam *Varnam) Unlearn(word string) error {
 
 	varnam.dictConn.Exec("PRAGMA foreign_keys = ON")
 
-	for i := range conjuncts {
-		// Loop will be going from full string to the first conjunct
-		sequence := strings.Join(conjuncts[0:len(conjuncts)-i], "")
-		if varnam.Debug {
-			fmt.Println(sequence)
-		}
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
 
-		// Check if there are words starting with this sequence
-		rows, err := varnam.dictConn.Query("SELECT COUNT(*) FROM words WHERE word LIKE ?", sequence+"%")
-		if err != nil {
-			return err
-		}
+	query := "DELETE FROM words WHERE word = ?"
+	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
 
-		count := 0
-		for rows.Next() {
-			err := rows.Scan(&count)
-			if err != nil {
-				return err
-			}
-		}
+	_, err = stmt.ExecContext(ctx, word)
+	if err != nil {
+		return err
+	}
 
-		if count == 1 {
-			// If there's only one, remove it
-			ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancelFunc()
+	// No need to remove from `patterns` since FOREIGN KEY ON DELETE CASCADE will work
 
-			query := "DELETE FROM words WHERE word = ?"
-			stmt, err := varnam.dictConn.PrepareContext(ctx, query)
-			if err != nil {
-				return err
-			}
-			defer stmt.Close()
-
-			_, err = stmt.ExecContext(ctx, sequence)
-			if err != nil {
-				return err
-			}
-
-			// No need to remove from `patterns` since FOREIGN KEY ON DELETE CASCADE will work
-
-			if varnam.Debug {
-				fmt.Printf("Removed %s\n", sequence)
-			}
-		}
+	if varnam.Debug {
+		fmt.Printf("Removed %s\n", word)
 	}
 
 	varnam.dictConn.Exec("PRAGMA foreign_keys = OFF")
