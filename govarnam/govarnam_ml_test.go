@@ -273,10 +273,16 @@ func TestMLLearnFromFile(t *testing.T) {
 	വൃക്ഷമാണ് 89
 	ഒരേയൊരു 45
 	ഏഷ്യയുടെ 100
-	മേലാപ്പും 12`)
+	മേലാപ്പും 12
+	aadc 10`)
 
-	varnam.LearnFromFile(filePath)
+	learnStatus, err := varnam.LearnFromFile(filePath)
+	checkError(err)
 
+	assertEqual(t, learnStatus.TotalWords, 6)
+	assertEqual(t, learnStatus.FailedWords, 1)
+
+	assertEqual(t, varnam.Transliterate("nithyaharitha").ExactMatches[0].Weight, 120)
 	assertEqual(t, varnam.Transliterate("melaappum").ExactMatches[0].Weight, 12)
 }
 

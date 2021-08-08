@@ -199,7 +199,7 @@ func (varnam *Varnam) LearnMany(words []WordInfo) (LearnStatus, error) {
 		updationValues []string
 		updationArgs   []interface{}
 
-		learnStatus LearnStatus = LearnStatus{0, 0}
+		learnStatus LearnStatus = LearnStatus{len(words), 0}
 	)
 
 	for _, wordInfo := range words {
@@ -252,20 +252,29 @@ func (varnam *Varnam) LearnMany(words []WordInfo) (LearnStatus, error) {
 		return learnStatus, err
 	}
 
-	query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE " + strings.Join(updationValues, " OR ")
+	// There is a limit on number of OR that can be done
+	// Reference: https://stackoverflow.com/questions/9570197/sqlite-expression-maximum-depth-limit
+	depthLimit := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_EXPR_DEPTH)
 
-	stmt, err = varnam.dictConn.Prepare(query)
-	if err != nil {
-		return learnStatus, err
+	for len(updationValues) > 0 {
+		lastIndex := int(math.Min(float64(depthLimit), float64(len(updationValues))))
+
+		query = "UPDATE words SET weight = weight + 1, learned_on = strftime('%s', 'now') WHERE " + strings.Join(updationValues[0:lastIndex], " OR ")
+
+		stmt, err = varnam.dictConn.Prepare(query)
+		if err != nil {
+			return learnStatus, err
+		}
+		defer stmt.Close()
+
+		_, err = stmt.Exec(updationArgs[0:lastIndex]...)
+		if err != nil {
+			return learnStatus, err
+		}
+
+		updationValues = updationValues[lastIndex:]
+		updationArgs = updationArgs[lastIndex:]
 	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(updationArgs...)
-	if err != nil {
-		return learnStatus, err
-	}
-
-	learnStatus.TotalWords = len(words)
 
 	return learnStatus, nil
 }
@@ -328,7 +337,7 @@ func (varnam *Varnam) getWordInfo(word string) (*WordInfo, error) {
 
 // LearnFromFile Learn all words in a file
 func (varnam *Varnam) LearnFromFile(filePath string) (LearnStatus, error) {
-	var learnStatus LearnStatus
+	learnStatus := LearnStatus{0, 0}
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -415,13 +424,13 @@ func (varnam *Varnam) LearnFromFile(filePath string) (LearnStatus, error) {
 			learnStatusBatch, err := varnam.LearnMany(words)
 
 			if err != nil {
-				return learnStatus, nil
+				return learnStatus, err
 			}
 
 			learnStatus.TotalWords += learnStatusBatch.TotalWords
 			learnStatus.FailedWords += learnStatusBatch.FailedWords
+			insertions += learnStatusBatch.TotalWords
 
-			insertions += count
 			count = 0
 			words = []WordInfo{}
 
@@ -430,7 +439,15 @@ func (varnam *Varnam) LearnFromFile(filePath string) (LearnStatus, error) {
 	}
 
 	if len(words) != 0 {
-		varnam.LearnMany(words)
+		learnStatusBatch, err := varnam.LearnMany(words)
+
+		if err != nil {
+			return learnStatus, err
+		}
+
+		learnStatus.TotalWords += learnStatusBatch.TotalWords
+		learnStatus.FailedWords += learnStatusBatch.FailedWords
+
 		insertions += len(words)
 		fmt.Printf("Processed %d words\n", insertions)
 	}
