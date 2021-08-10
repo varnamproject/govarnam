@@ -21,7 +21,7 @@ func TestMLTokenizer(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
 	// The order of this will fail if VST weights change
-	expected := []string{"മല", "മാല", "മള", "മലാ", "മളാ", "മാള", "മാലാ", "മാളാ"}
+	expected := []string{"മല", "മള", "മലാ", "മളാ", "മാല", "മാള", "മാലാ", "മാളാ"}
 	for i, sug := range varnam.Transliterate("mala").TokenizerSuggestions {
 		assertEqual(t, sug.Word, expected[i])
 	}
@@ -51,7 +51,7 @@ func TestMLTokenizer(t *testing.T) {
 	sugs := varnam.Transliterate("thuthuru").TokenizerSuggestions
 	assertEqual(t, sugs[0].Weight, 6) // തുതുരു. Greedy. Should have highest weight
 	assertEqual(t, sugs[1].Weight, 4) // തുതുറു. Last conjunct is VARNAM_MATCH_POSSIBILITY symbol
-	assertEqual(t, sugs[7].Weight, 2) // തുത്തുറു. Last 2 conjuncts are VARNAM_MATCH_POSSIBILITY symbols
+	assertEqual(t, sugs[7].Weight, 4) // തുത്തുറു. Last 2 conjuncts are VARNAM_MATCH_POSSIBILITY symbols
 }
 
 func TestMLLearn(t *testing.T) {
@@ -198,7 +198,7 @@ func TestMLReverseTransliteration(t *testing.T) {
 	checkError(err)
 
 	// The order of this will fail if VST weights change
-	expected := []string{"malayaaLam", "malayALam", "malayaLam", "malayaalam", "malayAlam", "malayalam"}
+	expected := []string{"malayaaLam", "malayALam", "malayaalam", "malayAlam", "malayaLam", "malayalam"}
 	for i, sug := range sugs {
 		assertEqual(t, sug.Word, expected[i])
 	}
