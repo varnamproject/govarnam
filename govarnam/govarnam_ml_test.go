@@ -2,6 +2,7 @@ package govarnam
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -332,5 +333,19 @@ func TestMLExportAndImport(t *testing.T) {
 		results := varnam.searchDictionary(context.Background(), []string{wordInfo.word}, false)
 
 		assertEqual(t, len(results) > 0, true)
+	}
+}
+
+func TestMLSearchSymbolTable(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	var search Symbol
+	search.value1 = "ക"
+	results, err := varnam.SearchSymbolTable(context.Background(), search)
+	checkError(err)
+
+	fmt.Println(results)
+	for _, result := range results {
+		assertEqual(t, result.value1, "ക")
 	}
 }

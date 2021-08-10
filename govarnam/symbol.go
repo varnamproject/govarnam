@@ -5,6 +5,7 @@ import (
 	sql "database/sql"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/mattn/go-sqlite3"
 )
@@ -137,44 +138,6 @@ func (varnam *Varnam) searchPattern(ctx context.Context, ch string, matchType in
 			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE value1 = ? AND (accept_condition = 0 OR accept_condition = ?) ORDER BY match_type ASC, weight DESC, priority DESC", ch, acceptCondition)
 		} else {
 			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE value1 = ? AND match_type = ? AND (accept_condition = 0 OR accept_condition = ?)", ch, matchType, acceptCondition)
-		}
-
-		if err != nil {
-			log.Print(err)
-			return results
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var item Symbol
-			rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
-			results = append(results, item)
-		}
-
-		err = rows.Err()
-		if err != nil {
-			log.Print(err)
-		}
-
-		return results
-	}
-}
-
-func (varnam *Varnam) searchSymbol(ctx context.Context, ch string, matchType int, acceptCondition int) []Symbol {
-	var (
-		rows    *sql.Rows
-		err     error
-		results []Symbol
-	)
-
-	select {
-	case <-ctx.Done():
-		return results
-	default:
-		if matchType == VARNAM_MATCH_ALL {
-			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND (accept_condition = 0 OR accept_condition = ?) ORDER BY match_type ASC, weight DESC, priority DESC", ch, acceptCondition)
-		} else {
-			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE pattern = ? AND match_type = ? AND (accept_condition = 0 OR accept_condition = ?)", ch, matchType, acceptCondition)
 		}
 
 		if err != nil {
@@ -527,4 +490,102 @@ func removeNonExactTokens(tokens []Token) []Token {
 		}
 	}
 	return tokens
+}
+
+// SearchSymbolTable For searching symbol table
+func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symbol) ([]Symbol, error) {
+	var (
+		clauses []string
+		values  []interface{}
+	)
+
+	if searchCriteria.id != 0 {
+		clauses = append(clauses, "id = ?")
+		values = append(values, searchCriteria.id)
+	}
+
+	if searchCriteria.generalType != 0 {
+		clauses = append(clauses, "type = ?")
+		values = append(values, searchCriteria.generalType)
+	}
+
+	if searchCriteria.matchType != 0 {
+		clauses = append(clauses, "match_type = ?")
+		values = append(values, searchCriteria.matchType)
+	}
+
+	if searchCriteria.pattern != "" {
+		clauses = append(clauses, "pattern = ?")
+		values = append(values, searchCriteria.pattern)
+	}
+
+	if searchCriteria.value1 != "" {
+		clauses = append(clauses, "value1 = ?")
+		values = append(values, searchCriteria.value1)
+	}
+
+	if searchCriteria.value2 != "" {
+		clauses = append(clauses, "value2 = ?")
+		values = append(values, searchCriteria.value2)
+	}
+
+	if searchCriteria.value3 != "" {
+		clauses = append(clauses, "value3 = ?")
+		values = append(values, searchCriteria.value3)
+	}
+
+	if searchCriteria.tag != "" {
+		clauses = append(clauses, "tag = ?")
+		values = append(values, searchCriteria.tag)
+	}
+
+	if searchCriteria.weight != 0 {
+		clauses = append(clauses, "weight = ?")
+		values = append(values, searchCriteria.weight)
+	}
+
+	if searchCriteria.priority != 0 {
+		clauses = append(clauses, "priority = ?")
+		values = append(values, searchCriteria.priority)
+	}
+
+	if searchCriteria.acceptCondition != 0 {
+		clauses = append(clauses, "accept_condition = ?")
+		values = append(values, searchCriteria.acceptCondition)
+	}
+
+	if searchCriteria.flags != 0 {
+		clauses = append(clauses, "flags = ?")
+		values = append(values, searchCriteria.flags)
+	}
+
+	query := "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags FROM symbols"
+
+	if len(values) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+
+	if varnam.Debug {
+		fmt.Println(query)
+	}
+
+	var results []Symbol
+
+	select {
+	case <-ctx.Done():
+		return results, nil
+	default:
+		rows, err := varnam.vstConn.QueryContext(ctx, query, values...)
+		if err != nil {
+			return nil, err
+		}
+
+		for rows.Next() {
+			var item Symbol
+			rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
+			results = append(results, item)
+		}
+
+		return results, nil
+	}
 }

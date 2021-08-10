@@ -235,7 +235,11 @@ func (varnam *Varnam) setDefaultConfig() {
 	varnam.TokenizerSuggestionsAlways = true
 
 	varnam.LangRules.IndicDigits = false
-	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT, VARNAM_TOKEN_ACCEPT_ALL)[0].value1
+
+	var viramaSymbol Symbol
+	viramaSymbol.pattern = "~"
+	results, _ := varnam.SearchSymbolTable(ctx, viramaSymbol)
+	varnam.LangRules.Virama = results[0].value1
 
 	if varnam.SchemeDetails.LangCode == "ml" {
 		varnam.RegisterPatternWordPartializer(varnam.mlPatternWordPartializer)
