@@ -20,7 +20,7 @@ file = sys.argv[2]
 con = sqlite3.connect(db)
 cur = con.cursor()
 
-cur.execute("SELECT pattern, value1 FROM symbols WHERE match_type = 2 AND pattern IN (SELECT pattern from symbols GROUP by pattern HAVING COUNT(pattern) > 1)")
+cur.execute("SELECT pattern, value1, type FROM symbols WHERE match_type = 2 AND pattern IN (SELECT pattern from symbols GROUP by pattern HAVING COUNT(pattern) > 1)")
 patternsAndSymbols = cur.fetchall()
 
 freqs = {}
@@ -30,23 +30,42 @@ with open(file, "r", encoding="utf8", errors='ignore') as f:
         freqs[symbol] = int(frequency)
 
 patternAndSymbols = {}
-for pattern, symbol in patternsAndSymbols:
+for pattern, symbol, symbolType in patternsAndSymbols:
     if pattern not in patternAndSymbols:
-        patternAndSymbols[pattern] = [(symbol, freqs[symbol] if symbol in freqs else 0)]
+        patternAndSymbols[pattern] = [(
+            symbol,
+            symbolType,
+            freqs[symbol] if symbol in freqs else 0
+        )]
     else:
-        patternAndSymbols[pattern].append((symbol, freqs[symbol] if symbol in freqs else 0))
+        patternAndSymbols[pattern].append((
+            symbol,
+            symbolType,
+            freqs[symbol] if symbol in freqs else 0
+        ))
 
 for pattern, symbols in patternAndSymbols.items():
+    CONSONANT = 2  # ണ്ട
+    CONSONANT_VOWEL = 4  # ണ്ടാ
+
     ranks = {}
 
-    s = 0
-    for symbol, freq in symbols:
-        s += freq
+    # Find the consonant with least frequency value
+    minConsonantFrequency = 100
+    maxConsonantVowelFrequency = 1
+    for symbol, symbolType, frequency in symbols:
+        if symbolType == CONSONANT and minConsonantFrequency > frequency:
+            minConsonantFrequency = frequency
 
-    for symbol, freq in symbols:
-        if freq == 0:
-            continue
-        ranks[symbol] = int((int(freq) / s) * 100)
+        if symbolType == CONSONANT_VOWEL and maxConsonantVowelFrequency < frequency:
+            maxConsonantVowelFrequency = frequency
+
+        if symbolType != CONSONANT_VOWEL:
+            ranks[symbol] = frequency
+
+    for symbol, symbolType, frequency in symbols:
+        if symbolType == CONSONANT_VOWEL:
+            ranks[symbol] = int((frequency / maxConsonantVowelFrequency) * (minConsonantFrequency / 2))
 
     ranks = dict(sorted(ranks.items(), key=lambda item: item[1], reverse=True))
 
