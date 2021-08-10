@@ -12,18 +12,18 @@ import (
 
 // Symbol result from VST
 type Symbol struct {
-	id              int
-	generalType     int
-	matchType       int
-	pattern         string
-	value1          string
-	value2          string
-	value3          string
-	tag             string
-	weight          int
-	priority        int
-	acceptCondition int
-	flags           int
+	Identifier      int
+	Type            int
+	MatchType       int
+	Pattern         string
+	Value1          string
+	Value2          string
+	Value3          string
+	Tag             string
+	Weight          int
+	Priority        int
+	AcceptCondition int
+	Flags           int
 }
 
 // Token info for making a suggestion
@@ -135,9 +135,9 @@ func (varnam *Varnam) searchPattern(ctx context.Context, ch string, matchType in
 		return results
 	default:
 		if matchType == VARNAM_MATCH_ALL {
-			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE value1 = ? AND (accept_condition = 0 OR accept_condition = ?) ORDER BY match_type ASC, weight DESC, priority DESC", ch, acceptCondition)
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT * FROM symbols WHERE value1 = ? AND (accept_condition = 0 OR accept_condition = ?) ORDER BY match_type ASC, weight DESC, priority DESC", ch, acceptCondition)
 		} else {
-			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags from symbols WHERE value1 = ? AND match_type = ? AND (accept_condition = 0 OR accept_condition = ?)", ch, matchType, acceptCondition)
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT * FROM symbols WHERE value1 = ? AND match_type = ? AND (accept_condition = 0 OR accept_condition = ?)", ch, matchType, acceptCondition)
 		}
 
 		if err != nil {
@@ -148,7 +148,7 @@ func (varnam *Varnam) searchPattern(ctx context.Context, ch string, matchType in
 
 		for rows.Next() {
 			var item Symbol
-			rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
+			rows.Scan(&item.Identifier, &item.Type, &item.Pattern, &item.Value1, &item.Value2, &item.Value3, &item.Tag, &item.MatchType, &item.Priority, &item.AcceptCondition, &item.Flags, &item.Weight)
 			results = append(results, item)
 		}
 
@@ -198,9 +198,9 @@ func (varnam *Varnam) findLongestPatternMatchSymbols(ctx context.Context, patter
 		return results
 	default:
 		if matchType == VARNAM_MATCH_ALL {
-			query = "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags FROM `symbols` WHERE (accept_condition = 0 OR accept_condition = ?) AND pattern IN (? " + patternINs + ") ORDER BY LENGTH(pattern) DESC, match_type ASC, weight DESC, priority DESC"
+			query = "SELECT * FROM `symbols` WHERE (accept_condition = 0 OR accept_condition = ?) AND pattern IN (? " + patternINs + ") ORDER BY LENGTH(pattern) DESC, match_type ASC, weight DESC, priority DESC"
 		} else {
-			query = "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags FROM `symbols` WHERE match_type = ? AND (accept_condition = 0 OR accept_condition = ?) AND pattern IN (? " + patternINs + ") ORDER BY LENGTH(pattern) DESC"
+			query = "SELECT * FROM `symbols` WHERE match_type = ? AND (accept_condition = 0 OR accept_condition = ?) AND pattern IN (? " + patternINs + ") ORDER BY LENGTH(pattern) DESC"
 		}
 
 		rows, err := varnam.vstConn.QueryContext(ctx, query, vals...)
@@ -213,7 +213,7 @@ func (varnam *Varnam) findLongestPatternMatchSymbols(ctx context.Context, patter
 
 		for rows.Next() {
 			var item Symbol
-			rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
+			rows.Scan(&item.Identifier, &item.Type, &item.Pattern, &item.Value1, &item.Value2, &item.Value3, &item.Tag, &item.MatchType, &item.Priority, &item.AcceptCondition, &item.Flags, &item.Weight)
 			results = append(results, item)
 		}
 
@@ -264,12 +264,12 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 
 				i++
 			} else {
-				if matches[0].generalType == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
+				if matches[0].Type == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
 					// Skip numbers
 					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, string(sequence)}
 					results = append(results, token)
 
-					i += len(matches[0].pattern)
+					i += len(matches[0].Pattern)
 				} else {
 					// Add matches
 					var refinedMatches []Symbol
@@ -278,10 +278,10 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 					for _, match := range matches {
 						if longestPatternLength == 0 {
 							// Sort is by length of pattern, so we will get length from first iterations.
-							longestPatternLength = len(match.pattern)
+							longestPatternLength = len(match.Pattern)
 							refinedMatches = append(refinedMatches, match)
 						} else {
-							if len(match.pattern) != longestPatternLength {
+							if len(match.Pattern) != longestPatternLength {
 								break
 							}
 							refinedMatches = append(refinedMatches, match)
@@ -289,7 +289,7 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 					}
 					i += longestPatternLength
 
-					token := Token{VARNAM_TOKEN_SYMBOL, refinedMatches, i - 1, string(refinedMatches[0].pattern)}
+					token := Token{VARNAM_TOKEN_SYMBOL, refinedMatches, i - 1, string(refinedMatches[0].Pattern)}
 					results = append(results, token)
 				}
 			}
@@ -415,7 +415,7 @@ func (varnam *Varnam) splitWordByConjunct(word string) []string {
 			ok := true
 
 			for _, symbol := range token.symbols {
-				if symbol.generalType == VARNAM_SYMBOL_NUMBER || symbol.generalType == VARNAM_SYMBOL_SYMBOL {
+				if symbol.Type == VARNAM_SYMBOL_NUMBER || symbol.Type == VARNAM_SYMBOL_SYMBOL {
 					ok = false
 					break
 				}
@@ -433,19 +433,19 @@ func getSymbolValue(symbol Symbol, position int) string {
 	// Ignore render_value2 tag. It's only applicable for libvarnam
 	// https://gitlab.com/subins2000/govarnam/-/issues/3
 
-	if symbol.generalType == VARNAM_SYMBOL_VOWEL && position > 0 {
+	if symbol.Type == VARNAM_SYMBOL_VOWEL && position > 0 {
 		// If in between word, we use the vowel and not the consonant
-		return symbol.value2 // ാ
+		return symbol.Value2 // ാ
 	}
-	return symbol.value1 // ആ
+	return symbol.Value1 // ആ
 }
 
 func getSymbolWeight(symbol Symbol) int {
-	if symbol.matchType == VARNAM_MATCH_EXACT {
+	if symbol.MatchType == VARNAM_MATCH_EXACT {
 		// 200 because there might be possibility matches having weight 100
 		return 200
 	}
-	return symbol.weight
+	return symbol.Weight
 }
 
 // Removes less weighted symbols
@@ -474,7 +474,7 @@ func removeNonExactTokens(tokens []Token) []Token {
 		if token.tokenType == VARNAM_TOKEN_SYMBOL {
 			var reducedSymbols []Symbol
 			for _, symbol := range token.symbols {
-				if symbol.matchType == VARNAM_MATCH_EXACT {
+				if symbol.MatchType == VARNAM_MATCH_EXACT {
 					reducedSymbols = append(reducedSymbols, symbol)
 				} else {
 					if len(reducedSymbols) == 0 {
@@ -499,67 +499,67 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 		values  []interface{}
 	)
 
-	if searchCriteria.id != 0 {
+	if searchCriteria.Identifier != 0 {
 		clauses = append(clauses, "id = ?")
-		values = append(values, searchCriteria.id)
+		values = append(values, searchCriteria.Identifier)
 	}
 
-	if searchCriteria.generalType != 0 {
+	if searchCriteria.Type != 0 {
 		clauses = append(clauses, "type = ?")
-		values = append(values, searchCriteria.generalType)
+		values = append(values, searchCriteria.Type)
 	}
 
-	if searchCriteria.matchType != 0 {
+	if searchCriteria.MatchType != 0 {
 		clauses = append(clauses, "match_type = ?")
-		values = append(values, searchCriteria.matchType)
+		values = append(values, searchCriteria.MatchType)
 	}
 
-	if searchCriteria.pattern != "" {
+	if searchCriteria.Pattern != "" {
 		clauses = append(clauses, "pattern = ?")
-		values = append(values, searchCriteria.pattern)
+		values = append(values, searchCriteria.Pattern)
 	}
 
-	if searchCriteria.value1 != "" {
+	if searchCriteria.Value1 != "" {
 		clauses = append(clauses, "value1 = ?")
-		values = append(values, searchCriteria.value1)
+		values = append(values, searchCriteria.Value1)
 	}
 
-	if searchCriteria.value2 != "" {
+	if searchCriteria.Value2 != "" {
 		clauses = append(clauses, "value2 = ?")
-		values = append(values, searchCriteria.value2)
+		values = append(values, searchCriteria.Value2)
 	}
 
-	if searchCriteria.value3 != "" {
+	if searchCriteria.Value3 != "" {
 		clauses = append(clauses, "value3 = ?")
-		values = append(values, searchCriteria.value3)
+		values = append(values, searchCriteria.Value3)
 	}
 
-	if searchCriteria.tag != "" {
+	if searchCriteria.Tag != "" {
 		clauses = append(clauses, "tag = ?")
-		values = append(values, searchCriteria.tag)
+		values = append(values, searchCriteria.Tag)
 	}
 
-	if searchCriteria.weight != 0 {
+	if searchCriteria.Weight != 0 {
 		clauses = append(clauses, "weight = ?")
-		values = append(values, searchCriteria.weight)
+		values = append(values, searchCriteria.Weight)
 	}
 
-	if searchCriteria.priority != 0 {
+	if searchCriteria.Priority != 0 {
 		clauses = append(clauses, "priority = ?")
-		values = append(values, searchCriteria.priority)
+		values = append(values, searchCriteria.Priority)
 	}
 
-	if searchCriteria.acceptCondition != 0 {
+	if searchCriteria.AcceptCondition != 0 {
 		clauses = append(clauses, "accept_condition = ?")
-		values = append(values, searchCriteria.acceptCondition)
+		values = append(values, searchCriteria.AcceptCondition)
 	}
 
-	if searchCriteria.flags != 0 {
+	if searchCriteria.Flags != 0 {
 		clauses = append(clauses, "flags = ?")
-		values = append(values, searchCriteria.flags)
+		values = append(values, searchCriteria.Flags)
 	}
 
-	query := "SELECT id, type, match_type, pattern, value1, value2, value3, tag, weight, priority, accept_condition, flags FROM symbols"
+	query := "SELECT * FROM symbols"
 
 	if len(values) > 0 {
 		query += " WHERE " + strings.Join(clauses, " AND ")
@@ -582,7 +582,7 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 
 		for rows.Next() {
 			var item Symbol
-			rows.Scan(&item.id, &item.generalType, &item.matchType, &item.pattern, &item.value1, &item.value2, &item.value3, &item.tag, &item.weight, &item.priority, &item.acceptCondition, &item.flags)
+			rows.Scan(&item.Identifier, &item.Type, &item.Pattern, &item.Value1, &item.Value2, &item.Value3, &item.Tag, &item.MatchType, &item.Priority, &item.AcceptCondition, &item.Flags, &item.Weight)
 			results = append(results, item)
 		}
 

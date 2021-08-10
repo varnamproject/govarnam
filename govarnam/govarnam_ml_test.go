@@ -340,12 +340,12 @@ func TestMLSearchSymbolTable(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
 	var search Symbol
-	search.value1 = "ക"
+	search.Value1 = "ക"
 	results, err := varnam.SearchSymbolTable(context.Background(), search)
 	checkError(err)
 
 	fmt.Println(results)
 	for _, result := range results {
-		assertEqual(t, result.value1, "ക")
+		assertEqual(t, result.Value1, "ക")
 	}
 }
