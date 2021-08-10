@@ -161,6 +161,13 @@ func TestMLTrain(t *testing.T) {
 	// Unlearning should remove pattern from DB too
 	varnam.Unlearn("കോളേജ്")
 	assertEqual(t, len(varnam.Transliterate("collegeil").PatternDictionarySuggestions), 0)
+
+	// Unlearn by pattern english
+	varnam.Unlearn("computer")
+	assertEqual(t, len(varnam.Transliterate("computeril").PatternDictionarySuggestions), 0)
+
+	err = varnam.Unlearn("computer")
+	assertEqual(t, err.Error(), "nothing to unlearn")
 }
 
 // TestML zero width joiner/non-joiner things

@@ -135,22 +135,39 @@ func (varnam *Varnam) Unlearn(word string) error {
 	conjuncts := varnam.splitWordByConjunct(strings.TrimSpace(word))
 
 	if len(conjuncts) == 0 {
-		return fmt.Errorf("Nothing to unlearn")
+		// Word must be english ? See if that's the case
+		stmt, err := varnam.dictConn.Prepare("DELETE FROM patterns WHERE pattern = ?")
+		if err != nil {
+			return err
+		}
+		defer stmt.Close()
+
+		result, err := stmt.Exec(word)
+		if err != nil {
+			return err
+		}
+
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if affected == 0 {
+			return fmt.Errorf("nothing to unlearn")
+		}
+		return nil
 	}
 
 	varnam.dictConn.Exec("PRAGMA foreign_keys = ON")
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancelFunc()
-
 	query := "DELETE FROM words WHERE word = ?"
-	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
+	stmt, err := varnam.dictConn.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.ExecContext(ctx, word)
+	_, err = stmt.Exec(word)
 	if err != nil {
 		return err
 	}
