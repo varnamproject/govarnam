@@ -98,8 +98,8 @@ func makeDictionary(dictPath string) (*sql.DB, error) {
 		`,
 		`
 		CREATE TABLE IF NOT EXISTS patterns (
-			pattern TEXT,
-			word_id INTEGER,
+			pattern TEXT NOT NULL COLLATE NOCASE,
+			word_id INTEGER NOT NULL,
 			FOREIGN KEY(word_id) REFERENCES words(id) ON DELETE CASCADE,
 			PRIMARY KEY(pattern, word_id)
 		);
