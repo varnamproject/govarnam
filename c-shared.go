@@ -331,28 +331,34 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 	goSearchCriteria.Flags = int(searchCriteria.Flags)
 
 	var results []govarnam.Symbol
-	results, handle.err = handle.varnam.SearchSymbolTable(ctx, goSearchCriteria)
 
-	cSymbols := C.varray_init()
-	for _, symbol := range results {
-		cSymbol := unsafe.Pointer(C.makeSymbol(
-			C.int(symbol.Identifier),
-			C.int(symbol.Type),
-			C.int(symbol.MatchType),
-			C.CString(symbol.Pattern),
-			C.CString(symbol.Value1),
-			C.CString(symbol.Value2),
-			C.CString(symbol.Value3),
-			C.CString(symbol.Tag),
-			C.int(symbol.Weight),
-			C.int(symbol.Priority),
-			C.int(symbol.AcceptCondition),
-			C.int(symbol.Flags),
-		))
-		C.varray_push(cSymbols, cSymbol)
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+		results, handle.err = handle.varnam.SearchSymbolTable(ctx, goSearchCriteria)
+
+		cSymbols := C.varray_init()
+		for _, symbol := range results {
+			cSymbol := unsafe.Pointer(C.makeSymbol(
+				C.int(symbol.Identifier),
+				C.int(symbol.Type),
+				C.int(symbol.MatchType),
+				C.CString(symbol.Pattern),
+				C.CString(symbol.Value1),
+				C.CString(symbol.Value2),
+				C.CString(symbol.Value3),
+				C.CString(symbol.Tag),
+				C.int(symbol.Weight),
+				C.int(symbol.Priority),
+				C.int(symbol.AcceptCondition),
+				C.int(symbol.Flags),
+			))
+			C.varray_push(cSymbols, cSymbol)
+		}
+
+		return cSymbols
 	}
-
-	return cSymbols
 }
 
 //export varnam_get_vst_dir
