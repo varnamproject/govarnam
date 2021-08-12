@@ -278,9 +278,8 @@ func varnam_cancel(id C.int) C.int {
 		(*cancelFunc.(*context.CancelFunc))()
 		delete(cancelFuncs, id)
 		return C.VARNAM_SUCCESS
-	} else {
-		return C.VARNAM_ERROR
 	}
+	return C.VARNAM_ERROR
 }
 
 //export varnam_export
@@ -304,6 +303,62 @@ func varnam_get_vst_path(varnamHandleID C.int) *C.char {
 	handle := getVarnamHandle(varnamHandleID)
 
 	return C.CString(handle.varnam.VSTPath)
+}
+
+//export varnam_search_symbol_table
+func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C.struct_Symbol_t) *C.varray {
+	ctx, cancel := context.WithCancel(backgroundContext)
+	defer cancel()
+
+	cancelFuncsMapMutex.Lock()
+	cancelFuncs[id] = &cancel
+	cancelFuncsMapMutex.Unlock()
+
+	handle := getVarnamHandle(varnamHandleID)
+
+	var goSearchCriteria govarnam.Symbol
+	goSearchCriteria.Identifier = int(searchCriteria.Identifier)
+	goSearchCriteria.Type = int(searchCriteria.Type)
+	goSearchCriteria.MatchType = int(searchCriteria.MatchType)
+	goSearchCriteria.Pattern = C.GoString(searchCriteria.Pattern)
+	goSearchCriteria.Value1 = C.GoString(searchCriteria.Value1)
+	goSearchCriteria.Value2 = C.GoString(searchCriteria.Value2)
+	goSearchCriteria.Value3 = C.GoString(searchCriteria.Value3)
+	goSearchCriteria.Tag = C.GoString(searchCriteria.Tag)
+	goSearchCriteria.Weight = int(searchCriteria.Weight)
+	goSearchCriteria.Priority = int(searchCriteria.Priority)
+	goSearchCriteria.AcceptCondition = int(searchCriteria.AcceptCondition)
+	goSearchCriteria.Flags = int(searchCriteria.Flags)
+
+	var results []govarnam.Symbol
+
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+		results, handle.err = handle.varnam.SearchSymbolTable(ctx, goSearchCriteria)
+
+		cSymbols := C.varray_init()
+		for _, symbol := range results {
+			cSymbol := unsafe.Pointer(C.makeSymbol(
+				C.int(symbol.Identifier),
+				C.int(symbol.Type),
+				C.int(symbol.MatchType),
+				C.CString(symbol.Pattern),
+				C.CString(symbol.Value1),
+				C.CString(symbol.Value2),
+				C.CString(symbol.Value3),
+				C.CString(symbol.Tag),
+				C.int(symbol.Weight),
+				C.int(symbol.Priority),
+				C.int(symbol.AcceptCondition),
+				C.int(symbol.Flags),
+			))
+			C.varray_push(cSymbols, cSymbol)
+		}
+
+		return cSymbols
+	}
 }
 
 //export varnam_get_vst_dir

@@ -169,7 +169,7 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]
 							symbolValue = getSymbolValue(symbol, 0)
 							symbolWeight = getSymbolWeight(symbol)
 						}
-					} else if symbol.generalType == VARNAM_SYMBOL_VIRAMA {
+					} else if symbol.Type == VARNAM_SYMBOL_VIRAMA {
 						/*
 							we are resolving a virama. If the output ends with a virama already,
 							add a ZWNJ to it, so that following character will not be combined.
@@ -235,7 +235,11 @@ func (varnam *Varnam) setDefaultConfig() {
 	varnam.TokenizerSuggestionsAlways = true
 
 	varnam.LangRules.IndicDigits = false
-	varnam.LangRules.Virama = varnam.searchSymbol(ctx, "~", VARNAM_MATCH_EXACT, VARNAM_TOKEN_ACCEPT_ALL)[0].value1
+
+	var viramaSymbol Symbol
+	viramaSymbol.Pattern = "~"
+	results, _ := varnam.SearchSymbolTable(ctx, viramaSymbol)
+	varnam.LangRules.Virama = results[0].Value1
 
 	if varnam.SchemeDetails.LangCode == "ml" {
 		varnam.RegisterPatternWordPartializer(varnam.mlPatternWordPartializer)
@@ -394,8 +398,8 @@ func (varnam *Varnam) ReverseTransliterate(word string) ([]Suggestion, error) {
 
 	for i, token := range tokens {
 		for j, symbol := range token.symbols {
-			tokens[i].symbols[j].value1 = symbol.pattern
-			tokens[i].symbols[j].value2 = symbol.pattern
+			tokens[i].symbols[j].Value1 = symbol.Pattern
+			tokens[i].symbols[j].Value2 = symbol.Pattern
 		}
 	}
 

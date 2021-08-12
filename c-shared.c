@@ -88,3 +88,45 @@ LearnStatus* makeLearnStatus(int TotalWords, int FailedWords)
   ls->FailedWords = FailedWords;
   return ls;
 }
+
+Symbol* makeSymbol(int Identifier, int Type, int MatchType, char* Pattern, char* Value1, char* Value2, char* Value3, char* Tag, int Weight, int Priority, int AcceptCondition, int Flags)
+{
+  Symbol *symbol = (Symbol*) malloc (sizeof(Symbol));
+  symbol->Identifier = Identifier;
+  symbol->Type = Type;
+  symbol->MatchType = MatchType;
+  symbol->Pattern = Pattern;
+  symbol->Value1 = Value1;
+  symbol->Value2 = Value2;
+  symbol->Value3 = Value3;
+  symbol->Tag = Tag;
+  symbol->Weight = Weight;
+  symbol->Priority = Priority;
+  symbol->AcceptCondition = AcceptCondition;
+  symbol->Flags = Flags;
+  return symbol;
+}
+
+void destroySymbol(void* pointer)
+{
+  if (pointer != NULL) {
+    Symbol* symbol = (Symbol*) pointer;
+    free(symbol->Pattern),
+    free(symbol->Value1);
+    free(symbol->Value2);
+    free(symbol->Value3);
+    free(symbol->Tag);
+    symbol->Pattern = NULL;
+    symbol->Value1 = NULL;
+    symbol->Value2 = NULL;
+    symbol->Value3 = NULL;
+    symbol->Tag = NULL;
+    free(symbol);
+    symbol = NULL;
+  }
+}
+
+void destroySymbolArray(void* cSymbols)
+{
+  varray_free(cSymbols, &destroySymbol);
+}

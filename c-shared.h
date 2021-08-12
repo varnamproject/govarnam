@@ -47,4 +47,21 @@ typedef struct LearnStatus_t {
 
 LearnStatus* makeLearnStatus(int TotalWords, int FailedWords);
 
+typedef struct Symbol_t {
+  int Identifier;
+  int Type;
+  int MatchType;
+  char* Pattern;
+  char* Value1;
+  char* Value2;
+  char* Value3;
+  char* Tag;
+  int Weight;
+  int Priority;
+  int AcceptCondition;
+  int Flags;
+} Symbol;
+
+Symbol* makeSymbol(int Identifier, int Type, int MatchType, char* Pattern, char* Value1, char* Value2, char* Value3, char* Tag, int Weight, int Priority, int AcceptCondition, int Flags);
+
 #endif /* __C_SHARED_H__ */
