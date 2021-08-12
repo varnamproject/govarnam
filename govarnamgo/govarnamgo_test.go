@@ -1,6 +1,7 @@
 package govarnamgo
 
 import (
+	"context"
 	"reflect"
 	"runtime/debug"
 	"testing"
@@ -21,7 +22,7 @@ func TestSearchSymbolTable(t *testing.T) {
 
 	var symbol Symbol
 	symbol.Pattern = "la"
-	result := varnam.SearchSymbolTable(symbol)
+	result := varnam.SearchSymbolTable(context.Background(), symbol)
 
 	assertEqual(t, result[0].Value1, "ല")
 }

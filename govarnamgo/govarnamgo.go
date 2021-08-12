@@ -225,12 +225,12 @@ func (handle *VarnamHandle) cgoGetTransliterationResult(operationID C.int, resul
 	close(resultChannel)
 }
 
-var transliterationOperationCount = C.int(0)
+var contextOperationCount = C.int(0)
 
 // Transliterate transilterate
 func (handle *VarnamHandle) Transliterate(ctx context.Context, word string) TransliterationResult {
-	operationID := transliterationOperationCount
-	transliterationOperationCount++
+	operationID := contextOperationCount
+	contextOperationCount++
 
 	channel := make(chan *C.struct_TransliterationResult_t)
 
@@ -345,56 +345,62 @@ func (handle *VarnamHandle) GetVSTPath() string {
 	return C.GoString(cStr)
 }
 
-var searchSymbolTableCount = C.int(0)
-
 // SearchSymbolTable search VST
-func (handle *VarnamHandle) SearchSymbolTable(searchCriteria Symbol) []Symbol {
-	Identifier := C.int(searchCriteria.Identifier)
-	Type := C.int(searchCriteria.Type)
-	MatchType := C.int(searchCriteria.MatchType)
-	Pattern := C.CString(searchCriteria.Pattern)
-	Value1 := C.CString(searchCriteria.Value1)
-	Value2 := C.CString(searchCriteria.Value2)
-	Value3 := C.CString(searchCriteria.Value3)
-	Tag := C.CString(searchCriteria.Tag)
-	Weight := C.int(searchCriteria.Weight)
-	Priority := C.int(searchCriteria.Priority)
-	AcceptCondition := C.int(searchCriteria.AcceptCondition)
-	Flags := C.int(searchCriteria.Flags)
-
-	symbol := C.makeSymbol(Identifier, Type, MatchType, Pattern, Value1, Value2, Value3, Tag, Weight, Priority, AcceptCondition, Flags)
-
-	cResult := C.varnam_search_symbol_table(handle.connectionID, searchSymbolTableCount, *symbol)
-
+func (handle *VarnamHandle) SearchSymbolTable(ctx context.Context, searchCriteria Symbol) []Symbol {
 	var goResults []Symbol
 
-	if cResult == nil {
+	operationID := contextOperationCount
+	contextOperationCount++
+
+	select {
+	case <-ctx.Done():
+		return goResults
+	default:
+		Identifier := C.int(searchCriteria.Identifier)
+		Type := C.int(searchCriteria.Type)
+		MatchType := C.int(searchCriteria.MatchType)
+		Pattern := C.CString(searchCriteria.Pattern)
+		Value1 := C.CString(searchCriteria.Value1)
+		Value2 := C.CString(searchCriteria.Value2)
+		Value3 := C.CString(searchCriteria.Value3)
+		Tag := C.CString(searchCriteria.Tag)
+		Weight := C.int(searchCriteria.Weight)
+		Priority := C.int(searchCriteria.Priority)
+		AcceptCondition := C.int(searchCriteria.AcceptCondition)
+		Flags := C.int(searchCriteria.Flags)
+
+		symbol := C.makeSymbol(Identifier, Type, MatchType, Pattern, Value1, Value2, Value3, Tag, Weight, Priority, AcceptCondition, Flags)
+
+		cResult := C.varnam_search_symbol_table(handle.connectionID, operationID, *symbol)
+
+		if cResult == nil {
+			return goResults
+		}
+
+		i := 0
+		for i < int(C.varray_length(cResult)) {
+			result := (*C.Symbol)(C.varray_get(cResult, C.int(i)))
+
+			var goResult Symbol
+			goResult.Identifier = int(result.Identifier)
+			goResult.Type = int(result.Type)
+			goResult.MatchType = int(result.MatchType)
+			goResult.Pattern = C.GoString(result.Pattern)
+			goResult.Value1 = C.GoString(result.Value1)
+			goResult.Value2 = C.GoString(result.Value2)
+			goResult.Value3 = C.GoString(result.Value3)
+			goResult.Tag = C.GoString(result.Tag)
+			goResult.Weight = int(result.Weight)
+			goResult.Priority = int(result.Priority)
+			goResult.AcceptCondition = int(result.AcceptCondition)
+			goResult.Flags = int(result.Flags)
+
+			goResults = append(goResults, goResult)
+			i++
+		}
+
 		return goResults
 	}
-
-	i := 0
-	for i < int(C.varray_length(cResult)) {
-		result := (*C.Symbol)(C.varray_get(cResult, C.int(i)))
-
-		var goResult Symbol
-		goResult.Identifier = int(result.Identifier)
-		goResult.Type = int(result.Type)
-		goResult.MatchType = int(result.MatchType)
-		goResult.Pattern = C.GoString(result.Pattern)
-		goResult.Value1 = C.GoString(result.Value1)
-		goResult.Value2 = C.GoString(result.Value2)
-		goResult.Value3 = C.GoString(result.Value3)
-		goResult.Tag = C.GoString(result.Tag)
-		goResult.Weight = int(result.Weight)
-		goResult.Priority = int(result.Priority)
-		goResult.AcceptCondition = int(result.AcceptCondition)
-		goResult.Flags = int(result.Flags)
-
-		goResults = append(goResults, goResult)
-		i++
-	}
-
-	return goResults
 }
 
 // GetVSTDir Get path to directory containging the VSTs
