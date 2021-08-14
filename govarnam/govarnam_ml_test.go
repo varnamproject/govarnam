@@ -2,7 +2,6 @@ package govarnam
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -344,8 +343,15 @@ func TestMLSearchSymbolTable(t *testing.T) {
 	results, err := varnam.SearchSymbolTable(context.Background(), search)
 	checkError(err)
 
-	fmt.Println(results)
 	for _, result := range results {
 		assertEqual(t, result.Value1, "ക")
 	}
+
+	search.Value1 = "LIKE ക%"
+	search.Pattern = "ka"
+	results, err = varnam.SearchSymbolTable(context.Background(), search)
+	checkError(err)
+
+	assertEqual(t, results[0].Value1, "ക")
+	assertEqual(t, results[1].Value1, "കാ")
 }

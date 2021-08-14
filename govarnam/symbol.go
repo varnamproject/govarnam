@@ -505,65 +505,41 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 		values  []interface{}
 	)
 
-	if searchCriteria.Identifier != 0 {
-		clauses = append(clauses, "id = ?")
-		values = append(values, searchCriteria.Identifier)
+	addItem := func(name string, val interface{}) {
+		if valString, isString := val.(string); isString {
+			if valString == "" {
+				return
+			}
+
+			// Format should be LIKE value
+			if len(valString) > 5 && valString[0:5] == "LIKE " {
+				valString = valString[5:]
+				clauses = append(clauses, name+" LIKE ?")
+				values = append(values, valString)
+
+				return
+			}
+		} else {
+			if val.(int) == 0 {
+				return
+			}
+		}
+		clauses = append(clauses, name+" = ?")
+		values = append(values, val)
 	}
 
-	if searchCriteria.Type != 0 {
-		clauses = append(clauses, "type = ?")
-		values = append(values, searchCriteria.Type)
-	}
-
-	if searchCriteria.MatchType != 0 {
-		clauses = append(clauses, "match_type = ?")
-		values = append(values, searchCriteria.MatchType)
-	}
-
-	if searchCriteria.Pattern != "" {
-		clauses = append(clauses, "pattern = ?")
-		values = append(values, searchCriteria.Pattern)
-	}
-
-	if searchCriteria.Value1 != "" {
-		clauses = append(clauses, "value1 = ?")
-		values = append(values, searchCriteria.Value1)
-	}
-
-	if searchCriteria.Value2 != "" {
-		clauses = append(clauses, "value2 = ?")
-		values = append(values, searchCriteria.Value2)
-	}
-
-	if searchCriteria.Value3 != "" {
-		clauses = append(clauses, "value3 = ?")
-		values = append(values, searchCriteria.Value3)
-	}
-
-	if searchCriteria.Tag != "" {
-		clauses = append(clauses, "tag = ?")
-		values = append(values, searchCriteria.Tag)
-	}
-
-	if searchCriteria.Weight != 0 {
-		clauses = append(clauses, "weight = ?")
-		values = append(values, searchCriteria.Weight)
-	}
-
-	if searchCriteria.Priority != 0 {
-		clauses = append(clauses, "priority = ?")
-		values = append(values, searchCriteria.Priority)
-	}
-
-	if searchCriteria.AcceptCondition != 0 {
-		clauses = append(clauses, "accept_condition = ?")
-		values = append(values, searchCriteria.AcceptCondition)
-	}
-
-	if searchCriteria.Flags != 0 {
-		clauses = append(clauses, "flags = ?")
-		values = append(values, searchCriteria.Flags)
-	}
+	addItem("id", searchCriteria.Identifier)
+	addItem("type", searchCriteria.Type)
+	addItem("match_type", searchCriteria.MatchType)
+	addItem("pattern", searchCriteria.Pattern)
+	addItem("value1", searchCriteria.Value1)
+	addItem("value2", searchCriteria.Value2)
+	addItem("value3", searchCriteria.Value3)
+	addItem("tag", searchCriteria.Tag)
+	addItem("weight", searchCriteria.Weight)
+	addItem("priority", searchCriteria.Priority)
+	addItem("accept_condition", searchCriteria.AcceptCondition)
+	addItem("flags", searchCriteria.Flags)
 
 	query := "SELECT * FROM symbols"
 
