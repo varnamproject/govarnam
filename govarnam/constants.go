@@ -93,4 +93,4 @@ func findLearningsFilePath(langCode string) string {
 	return loc
 }
 
-var LOG_TIME_TAKEN = true
+var LOG_TIME_TAKEN = os.Getenv("GOVARNAM_LOG_TIME_TAKEN") != ""
