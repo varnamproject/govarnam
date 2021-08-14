@@ -1,5 +1,11 @@
 package govarnam
 
+/**
+ * govarnam - An Indian language transliteration library
+ * Copyright Subin Siby <mail at subinsb (.) com>, 2021
+ * Licensed under AGPL-3.0-only. See LICENSE.txt
+ */
+
 func (varnam *Varnam) mlPatternWordPartializer(sug *Suggestion) {
 	lastChar, size := getLastCharacter(sug.Word)
 	if lastChar == "ർ" {

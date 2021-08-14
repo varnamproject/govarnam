@@ -2,8 +2,8 @@ package govarnam
 
 /**
  * govarnam - An Indian language transliteration library
- * Copyright Subin Siby, 2021
- * Licensed under AGPL-3.0-only
+ * Copyright Subin Siby <mail at subinsb (.) com>, 2021
+ * Licensed under AGPL-3.0-only. See LICENSE.txt
  */
 
 import (

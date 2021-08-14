@@ -74,3 +74,5 @@ release:
 
 test:
 	go test -tags fts5 -count=1 govarnam/*.go
+	$(MAKE) build-library
+	go test -count=1 govarnamgo/*.go

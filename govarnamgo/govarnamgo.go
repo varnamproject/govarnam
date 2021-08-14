@@ -1,5 +1,11 @@
 package govarnamgo
 
+/**
+ * govarnam - An Indian language transliteration library
+ * Copyright Subin Siby <mail at subinsb (.) com>, 2021
+ * Licensed under AGPL-3.0-only. See LICENSE.txt
+ */
+
 /* Golang bindings for govarnam library */
 
 // #cgo pkg-config: govarnam
