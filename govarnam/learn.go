@@ -96,6 +96,9 @@ func (varnam *Varnam) Learn(word string, weight int) error {
 		return fmt.Errorf("Can't learn a single conjunct")
 	}
 
+	// reconstruct word
+	word = strings.Join(conjuncts, "")
+
 	if weight == 0 {
 		weight = VARNAM_LEARNT_WORD_MIN_WEIGHT - 1
 	}
@@ -216,6 +219,9 @@ func (varnam *Varnam) LearnMany(words []WordInfo) (LearnStatus, error) {
 			learnStatus.FailedWords++
 			continue
 		}
+
+		// reconstruct word
+		word = strings.Join(conjuncts, "")
 
 		// We have a weight + 1 in SQL query later
 		if weight == 0 {

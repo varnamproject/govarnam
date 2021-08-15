@@ -60,6 +60,14 @@ func TestMLLearn(t *testing.T) {
 	// Non language word. Should give error
 	assertEqual(t, varnam.Learn("Шаблон", 0) != nil, true)
 
+	// Varnam will find the first word to find. Here it will be just "ഉ".
+	// Since it's single conjunct, will produce an error
+	assertEqual(t, varnam.Learn("ഉaള്ളിൽ", 0) != nil, true)
+
+	assertEqual(t, varnam.Learn("Шаблонഉള്ളിൽ", 0) != nil, true)
+
+	assertEqual(t, varnam.Learn("വ...", 0) != nil, true)
+
 	// Before learning
 	assertEqual(t, varnam.Transliterate("malayalam").TokenizerSuggestions[0].Word, "മലയലം")
 
@@ -187,7 +195,8 @@ func TestMLZW(t *testing.T) {
 func TestMLAtomicChil(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
-	varnam.Train("professor", "പ്രൊഫസര്‍")
+	err := varnam.Train("professor", "പ്രൊഫസര്‍")
+	checkError(err)
 	assertEqual(t, varnam.Transliterate("professor").ExactMatches[0].Word, "പ്രൊഫസർ")
 }
 

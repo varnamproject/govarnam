@@ -141,9 +141,9 @@ func (varnam *Varnam) searchPattern(ctx context.Context, ch string, matchType in
 		return results
 	default:
 		if matchType == VARNAM_MATCH_ALL {
-			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT * FROM symbols WHERE value1 = ? AND (accept_condition = 0 OR accept_condition = ?) ORDER BY match_type ASC, weight DESC, priority DESC", ch, acceptCondition)
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT * FROM symbols WHERE (value1 = ? OR value2 = ?) AND (accept_condition = 0 OR accept_condition = ?) ORDER BY match_type ASC, weight DESC, priority DESC", ch, ch, acceptCondition)
 		} else {
-			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT * FROM symbols WHERE value1 = ? AND match_type = ? AND (accept_condition = 0 OR accept_condition = ?)", ch, matchType, acceptCondition)
+			rows, err = varnam.vstConn.QueryContext(ctx, "SELECT * FROM symbols WHERE (value1 = ? OR value2 = ?) AND match_type = ? AND (accept_condition = 0 OR accept_condition = ?)", ch, ch, matchType, acceptCondition)
 		}
 
 		if err != nil {
@@ -406,7 +406,7 @@ func (varnam *Varnam) splitTextByConjunct(ctx context.Context, inputStr string) 
 	return results
 }
 
-// Split a word by conjuncts. Returns a string of only conjuncts and no other characters
+// Split a word by conjuncts. Returns string of conjuncts of first full word found
 func (varnam *Varnam) splitWordByConjunct(word string) []string {
 	ctx := context.Background()
 	var result []string
@@ -421,7 +421,7 @@ func (varnam *Varnam) splitWordByConjunct(word string) []string {
 			ok := true
 
 			for _, symbol := range token.symbols {
-				if symbol.Type == VARNAM_SYMBOL_NUMBER || symbol.Type == VARNAM_SYMBOL_SYMBOL {
+				if symbol.Type == VARNAM_SYMBOL_NUMBER || symbol.Type == VARNAM_SYMBOL_PERIOD || symbol.Type == VARNAM_SYMBOL_SYMBOL {
 					ok = false
 					break
 				}
@@ -430,6 +430,8 @@ func (varnam *Varnam) splitWordByConjunct(word string) []string {
 			if ok {
 				result = append(result, token.character)
 			}
+		} else {
+			break
 		}
 	}
 	return result
