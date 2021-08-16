@@ -272,7 +272,8 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 			} else {
 				if matches[0].Type == VARNAM_SYMBOL_NUMBER && !varnam.LangRules.IndicDigits {
 					// Skip numbers
-					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, string(sequence)}
+					// Note that we just add 1 character, and move on
+					token := Token{VARNAM_TOKEN_CHAR, []Symbol{}, i, string(sequence[:1])}
 					results = append(results, token)
 
 					i += len(matches[0].Pattern)
