@@ -19,5 +19,7 @@ func (varnam *Varnam) mlPatternWordPartializer(sug *Suggestion) {
 		sug.Word = sug.Word[0:len(sug.Word)-size] + "ണ"
 	} else if lastChar == "ൾ" {
 		sug.Word = sug.Word[0:len(sug.Word)-size] + "ള"
+	} else if lastChar == "ം" {
+		sug.Word = sug.Word[0:len(sug.Word)-size] + "മ"
 	}
 }
