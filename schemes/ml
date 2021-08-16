@@ -199,13 +199,14 @@ consonants [["ru"]] => "ര്",
 
 # value1 = atomic chil. value2 = old style. value3 = base letter
 tag "chill" do
-   consonants "m" => ["ം","ം","മ"],
-              "n" => ["ൻ", "ന്‍", "ന"],
+   consonants "n" => ["ൻ", "ന്‍", "ന"],
               ["N", ["n"]] => ["ൺ", "ണ്‍", "ണ"],
               "l" => ["ൽ", "ല്‍", "ല"],
               ["L", ["l"]] => ["ൾ", "ള്‍", "ള"],
               ["r"] => ["ർ", "ര്‍", "ര"]
 end
+
+anusvara ["m"] => ["ം","ം","മ"]
 
 # START July 7, 2021 change
 # https://gitlab.com/subins2000/govarnam/-/issues/2
@@ -218,6 +219,14 @@ tag "chill" do
       },
       combine(get_chill, ["*_"] => ["*1", "*2", "*3"])
    )
+
+  anusvara(
+    {
+      :accept_if => :in_between,
+      :match_type => :match_exact
+    },
+    "m_" =>  ["ം","ം","മ"]
+  )
 end
 
 # END July 7, 2021 change
