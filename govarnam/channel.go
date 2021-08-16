@@ -58,21 +58,7 @@ func (varnam *Varnam) channelTokensToGreedySuggestions(ctx context.Context, toke
 	default:
 		start := time.Now()
 
-		// Altering tokens directly will affect others
-		tokensCopy := make([]Token, len(*tokens))
-		copy(tokensCopy, *tokens)
-
-		tokensCopy = removeNonExactTokens(tokensCopy)
-
-		if len(tokensCopy) == 0 {
-			var result []Suggestion
-			channel <- result
-			close(channel)
-			return
-		}
-
-		sugs := varnam.tokensToSuggestions(ctx, &tokensCopy, false, varnam.TokenizerSuggestionsLimit)
-		tokensCopy = nil
+		sugs := varnam.tokensToSuggestions(ctx, tokens, false, varnam.TokenizerSuggestionsLimit)
 
 		if LOG_TIME_TAKEN {
 			log.Printf("%s took %v\n", "channelTokensToGreedySuggestions", time.Since(start))

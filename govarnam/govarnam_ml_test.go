@@ -364,3 +364,17 @@ func TestMLSearchSymbolTable(t *testing.T) {
 	assertEqual(t, results[0].Value1, "ക")
 	assertEqual(t, results[1].Value1, "കാ")
 }
+
+func TestMLDictionaryMatchExact(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	varnam.DictionaryMatchExact = true
+
+	varnam.Learn("പനിയിൽ", 0)
+	varnam.Learn("പണിയിൽ", 0)
+
+	result := varnam.Transliterate("pani")
+	assertEqual(t, len(result.DictionarySuggestions), 1)
+
+	varnam.DictionaryMatchExact = false
+}

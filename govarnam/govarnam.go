@@ -64,6 +64,10 @@ type Varnam struct {
 	// Tokenizer results are not exactly the best, but it's alright
 	TokenizerSuggestionsAlways bool
 
+	// Whether only exact scheme match should be considered
+	// for dictionary search and discard possibility matches
+	DictionaryMatchExact bool
+
 	// See setDefaultConfig() for the default values
 }
 
@@ -234,6 +238,8 @@ func (varnam *Varnam) setDefaultConfig() {
 	varnam.TokenizerSuggestionsLimit = 10
 	varnam.TokenizerSuggestionsAlways = true
 
+	varnam.DictionaryMatchExact = false
+
 	varnam.LangRules.IndicDigits = false
 
 	var viramaSymbol Symbol
@@ -290,7 +296,18 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 		patternDictSugsChan := make(chan channelDictionaryResult)
 		greedyTokenizedChan := make(chan []Suggestion)
 
-		go varnam.channelGetFromDictionary(ctx, word, tokensPointer, dictSugsChan)
+		// Only exact tokens
+		exactTokens := make([]Token, len(*tokensPointer))
+		copy(exactTokens, *tokensPointer)
+
+		exactTokens = removeNonExactTokens(exactTokens)
+
+		if varnam.DictionaryMatchExact {
+			go varnam.channelGetFromDictionary(ctx, word, &exactTokens, dictSugsChan)
+		} else {
+			go varnam.channelGetFromDictionary(ctx, word, tokensPointer, dictSugsChan)
+		}
+
 		go varnam.channelGetFromPatternDictionary(ctx, word, patternDictSugsChan)
 		go varnam.channelTokensToGreedySuggestions(ctx, tokensPointer, greedyTokenizedChan)
 
