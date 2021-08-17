@@ -15,13 +15,13 @@ ifeq ($(UNAME), Darwin)
   SED := sed -i ""
 endif
 
-build-pc:
+pc:
 	cp govarnam.pc.in govarnam.pc
 	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" govarnam.pc
 	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
 
 # Used only for building the CLI
-build-temp-pc:
+temp-pc:
 	cp govarnam.pc.in govarnam.pc
 	${SED} "s#@INSTALL_PREFIX@#$(realpath .)#g" govarnam.pc
 	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
@@ -29,7 +29,7 @@ build-temp-pc:
 	${SED} "s#/include/libgovarnam##g" govarnam.pc
 	${SED} "s#/lib##g" govarnam.pc
 
-build-install-script:
+install-script:
 	cp install.sh.in install.sh
 	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
 	${SED} "s#@VERSION@#${VERSION}#g" install.sh
@@ -38,27 +38,28 @@ build-install-script:
 install:
 	./install.sh install
 
-build-cli:
+cli:
 	go build -o ${CLI_BIN} ./cli
 
-build-library-nosqlite:
+library-nosqlite:
 	go build -tags libsqlite3 -buildmode=c-shared -o libgovarnam.so
 
-build-library:
+library:
 	go build -tags "fts5" -buildmode=c-shared -o libgovarnam.so
 
-.PHONY: build-nix
-build-nix:
-	$(MAKE) build-library
+.PHONY: nix
+nix:
+	$(MAKE) library
 
-	$(MAKE) build-temp-pc
-	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH $(MAKE) build-cli
+	$(MAKE) temp-pc
+	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH $(MAKE) cli
 
-	$(MAKE) build-pc
-	$(MAKE) build-install-script
+	$(MAKE) pc
+	$(MAKE) install-script
 
+.PHONY:
 build:
-	$(MAKE) build-nix
+	$(MAKE) nix
 
 release:
 	mkdir -p ${RELEASE_NAME} ${RELEASE_NAME}/schemes
@@ -74,5 +75,5 @@ release:
 
 test:
 	go test -tags fts5 -count=1 govarnam/*.go
-	$(MAKE) build-library
+	$(MAKE) library
 	go test -count=1 govarnamgo/*.go
