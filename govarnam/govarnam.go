@@ -309,7 +309,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 		}
 
 		go varnam.channelGetFromPatternDictionary(ctx, word, patternDictSugsChan)
-		go varnam.channelTokensToGreedySuggestions(ctx, tokensPointer, greedyTokenizedChan)
+		go varnam.channelTokensToGreedySuggestions(ctx, &exactTokens, greedyTokenizedChan)
 
 		tokenizerSugsChan := make(chan []Suggestion)
 		tokenizerSugsCalled := false
