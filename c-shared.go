@@ -234,16 +234,18 @@ func varnam_unlearn(varnamHandleID C.int, word *C.char) C.int {
 }
 
 //export varnam_learn_from_file
-func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char) *C.struct_LearnStatus_t {
+func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char, resultPointer *C.struct_LearnStatus_t) C.int {
 	handle := getVarnamHandle(varnamHandleID)
 	learnStatus, err := handle.varnam.LearnFromFile(C.GoString(filePath))
 
 	if err != nil {
 		handle.err = err
-		return nil
+		return C.VARNAM_ERROR
 	}
 
-	return C.makeLearnStatus(C.int(learnStatus.TotalWords), C.int(learnStatus.FailedWords))
+	*resultPointer = C.makeLearnStatus(C.int(learnStatus.TotalWords), C.int(learnStatus.FailedWords))
+
+	return C.VARNAM_SUCCESS
 }
 
 //export varnam_train_from_file

@@ -15,6 +15,7 @@ import "C"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"unsafe"
 )
@@ -157,20 +158,40 @@ func makeGoTransliterationResult(ctx context.Context, cResult *C.struct_Translit
 
 //VarnamError Custom error for varnam
 type VarnamError struct {
-	errorCode int
-	message   string
+	ErrorCode int
+	Err       error
 }
 
 // Error mimicking error package's function
 func (err *VarnamError) Error() string {
-	return err.message
+	return err.Err.Error()
 }
 
 func (handle *VarnamHandle) checkError(code C.int) *VarnamError {
 	if code == C.VARNAM_SUCCESS {
 		return nil
 	}
-	return &VarnamError{int(code), handle.GetLastError()}
+	return &VarnamError{
+		ErrorCode: int(code),
+		Err:       errors.New(handle.GetLastError()),
+	}
+}
+
+// Init Initialize
+func Init(vstLoc string, dictLoc string) (*VarnamHandle, error) {
+	handleID := C.int(0)
+	cVSTFile := C.CString(vstLoc)
+	cDictLoc := C.CString(dictLoc)
+
+	err := C.varnam_init(cVSTFile, cDictLoc, unsafe.Pointer(&handleID))
+
+	C.free(unsafe.Pointer(cVSTFile))
+	C.free(unsafe.Pointer(cDictLoc))
+
+	if err != C.VARNAM_SUCCESS {
+		return nil, fmt.Errorf(C.GoString(C.varnam_get_last_error(handleID)))
+	}
+	return &VarnamHandle{handleID}, nil
 }
 
 // InitFromID Initialize
@@ -227,9 +248,8 @@ func (handle *VarnamHandle) cgoGetTransliterationResult(operationID C.int, resul
 	defer C.free(unsafe.Pointer(cWord))
 
 	ptr := C.malloc(C.sizeof_TransliterationResult)
-	defer C.free(unsafe.Pointer(ptr))
 
-	resultPointer := (*C.struct_TransliterationResult_t)(ptr)
+	resultPointer := (*C.TransliterationResult)(ptr)
 
 	if C.varnam_transliterate(handle.connectionID, operationID, cWord, resultPointer) == C.VARNAM_SUCCESS {
 		resultChannel <- resultPointer
@@ -319,13 +339,25 @@ func (handle *VarnamHandle) LearnFromFile(filePath string) (LearnStatus, *Varnam
 	var learnStatus LearnStatus
 
 	cFilePath := C.CString(filePath)
+	defer C.free(unsafe.Pointer(cFilePath))
 
-	cLearnStatus := C.varnam_learn_from_file(handle.connectionID, cFilePath)
-	if cLearnStatus == nil {
-		return learnStatus, &VarnamError{int(C.VARNAM_ERROR), handle.GetLastError()}
+	ptr := C.malloc(C.sizeof_LearnStatus)
+	defer C.free(unsafe.Pointer(ptr))
+
+	resultPointer := (*C.struct_LearnStatus_t)(ptr)
+
+	code := C.varnam_learn_from_file(handle.connectionID, cFilePath, resultPointer)
+	if code != C.VARNAM_SUCCESS {
+		return learnStatus, &VarnamError{
+			ErrorCode: int(code),
+			Err:       errors.New(handle.GetLastError()),
+		}
 	}
 
-	learnStatus = LearnStatus{int(cLearnStatus.TotalWords), int(cLearnStatus.FailedWords)}
+	learnStatus = LearnStatus{
+		int((*resultPointer).TotalWords),
+		int((*resultPointer).FailedWords),
+	}
 
 	return learnStatus, nil
 }

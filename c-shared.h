@@ -46,7 +46,7 @@ typedef struct LearnStatus_t {
   int FailedWords;
 } LearnStatus;
 
-LearnStatus* makeLearnStatus(int TotalWords, int FailedWords);
+LearnStatus makeLearnStatus(int TotalWords, int FailedWords);
 
 typedef struct Symbol_t {
   int Identifier;

@@ -80,11 +80,11 @@ void destroySchemeDetailsArray(void* cSchemeDetails)
   varray_free(cSchemeDetails, &destroySchemeDetails);
 }
 
-LearnStatus* makeLearnStatus(int TotalWords, int FailedWords)
+LearnStatus makeLearnStatus(int TotalWords, int FailedWords)
 {
-  LearnStatus* ls = (LearnStatus*) malloc (sizeof(LearnStatus));
-  ls->TotalWords = TotalWords;
-  ls->FailedWords = FailedWords;
+  LearnStatus ls;
+  ls.TotalWords = TotalWords;
+  ls.FailedWords = FailedWords;
   return ls;
 }
 
