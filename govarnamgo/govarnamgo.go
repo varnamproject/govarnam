@@ -225,9 +225,16 @@ func (handle *VarnamHandle) SetConfig(config Config) {
 func (handle *VarnamHandle) cgoGetTransliterationResult(operationID C.int, resultChannel chan<- *C.struct_TransliterationResult_t, word string) {
 	cWord := C.CString(word)
 	defer C.free(unsafe.Pointer(cWord))
-	cResult := C.varnam_transliterate_with_id(handle.connectionID, operationID, cWord)
 
-	resultChannel <- cResult
+	ptr := C.malloc(C.sizeof_TransliterationResult)
+	defer C.free(unsafe.Pointer(ptr))
+
+	resultPointer := (*C.struct_TransliterationResult_t)(ptr)
+
+	if C.varnam_transliterate(handle.connectionID, operationID, cWord, resultPointer) == C.VARNAM_SUCCESS {
+		resultChannel <- resultPointer
+	}
+
 	close(resultChannel)
 }
 

@@ -36,10 +36,10 @@ func checkError(err error) C.int {
 	return C.VARNAM_SUCCESS
 }
 
-func makeCTransliterationResult(ctx context.Context, goResult govarnam.TransliterationResult) *C.struct_TransliterationResult_t {
+func makeCTransliterationResult(ctx context.Context, goResult govarnam.TransliterationResult, resultPointer *C.struct_TransliterationResult_t) C.int {
 	select {
 	case <-ctx.Done():
-		return nil
+		return C.VARNAM_CANCELLED
 	default:
 		// Note that C.CString uses malloc()
 		// They should be freed manually. GC won't pick it.
@@ -75,7 +75,9 @@ func makeCTransliterationResult(ctx context.Context, goResult govarnam.Translite
 			C.varray_push(cGreedyTokenized, cSug)
 		}
 
-		return C.makeResult(cExactMatch, cDictionarySuggestions, cPatternDictionarySuggestions, cTokenizerSuggestions, cGreedyTokenized)
+		*resultPointer = C.makeResult(cExactMatch, cDictionarySuggestions, cPatternDictionarySuggestions, cTokenizerSuggestions, cGreedyTokenized)
+
+		return C.VARNAM_SUCCESS
 	}
 }
 
@@ -143,8 +145,24 @@ func varnam_close(varnamHandleID C.int) C.int {
 }
 
 //export varnam_transliterate
-func varnam_transliterate(varnamHandleID C.int, word *C.char) *C.struct_TransliterationResult_t {
-	return makeCTransliterationResult(backgroundContext, getVarnamHandle(varnamHandleID).varnam.Transliterate(C.GoString(word)))
+func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPointer *C.struct_TransliterationResult_t) C.int {
+	ctx, cancel := context.WithCancel(backgroundContext)
+	defer cancel()
+
+	cancelFuncsMapMutex.Lock()
+	cancelFuncs[id] = &cancel
+	cancelFuncsMapMutex.Unlock()
+
+	channel := make(chan govarnam.TransliterationResult)
+
+	go getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word), channel)
+
+	select {
+	case <-ctx.Done():
+		return C.VARNAM_CANCELLED
+	case result := <-channel:
+		return makeCTransliterationResult(ctx, result, resultPointer)
+	}
 }
 
 //export varnam_reverse_transliterate
@@ -249,28 +267,6 @@ func varnam_get_last_error(varnamHandleID C.int) *C.char {
 		return C.CString(err.Error())
 	} else {
 		return C.CString("")
-	}
-}
-
-//export varnam_transliterate_with_id
-func varnam_transliterate_with_id(varnamHandleID C.int, id C.int, word *C.char) *C.struct_TransliterationResult_t {
-	ctx, cancel := context.WithCancel(backgroundContext)
-	defer cancel()
-
-	cancelFuncsMapMutex.Lock()
-	cancelFuncs[id] = &cancel
-	cancelFuncsMapMutex.Unlock()
-
-	channel := make(chan govarnam.TransliterationResult)
-
-	go getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word), channel)
-
-	select {
-	case <-ctx.Done():
-		return nil
-	case result := <-channel:
-		cResult := makeCTransliterationResult(ctx, result)
-		return cResult
 	}
 }
 
