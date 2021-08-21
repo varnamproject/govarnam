@@ -6,6 +6,7 @@
 #define VARNAM_SUCCESS 0
 #define VARNAM_MISUSE  1
 #define VARNAM_ERROR   2
+#define VARNAM_CANCELLED  3
 
 typedef struct Suggestion_t {
   char* Word;
@@ -21,10 +22,13 @@ typedef struct TransliterationResult_t {
   varray* GreedyTokenized;
 } TransliterationResult;
 
+void update_pointer(varray* a, varray* b);
+
 Suggestion* makeSuggestion(char* word, int weight, int learned_on);
 
-TransliterationResult* makeResult(varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized);
+TransliterationResult makeResult(varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized);
 
+void destroySuggestionsArray(varray* pointer);
 void destroyTransliterationResult(TransliterationResult*);
 
 typedef struct SchemeDetails_t {
@@ -45,7 +49,7 @@ typedef struct LearnStatus_t {
   int FailedWords;
 } LearnStatus;
 
-LearnStatus* makeLearnStatus(int TotalWords, int FailedWords);
+LearnStatus makeLearnStatus(int TotalWords, int FailedWords);
 
 typedef struct Symbol_t {
   int Identifier;
@@ -63,5 +67,7 @@ typedef struct Symbol_t {
 } Symbol;
 
 Symbol* makeSymbol(int Identifier, int Type, int MatchType, char* Pattern, char* Value1, char* Value2, char* Value3, char* Tag, int Weight, int Priority, int AcceptCondition, int Flags);
+
+void destroySymbolArray(void* cSymbols);
 
 #endif /* __C_SHARED_H__ */

@@ -36,10 +36,10 @@ func checkError(err error) C.int {
 	return C.VARNAM_SUCCESS
 }
 
-func makeCTransliterationResult(ctx context.Context, goResult govarnam.TransliterationResult) *C.struct_TransliterationResult_t {
+func makeCTransliterationResult(ctx context.Context, goResult govarnam.TransliterationResult, resultPointer *C.struct_TransliterationResult_t) C.int {
 	select {
 	case <-ctx.Done():
-		return nil
+		return C.VARNAM_CANCELLED
 	default:
 		// Note that C.CString uses malloc()
 		// They should be freed manually. GC won't pick it.
@@ -75,7 +75,9 @@ func makeCTransliterationResult(ctx context.Context, goResult govarnam.Translite
 			C.varray_push(cGreedyTokenized, cSug)
 		}
 
-		return C.makeResult(cExactMatch, cDictionarySuggestions, cPatternDictionarySuggestions, cTokenizerSuggestions, cGreedyTokenized)
+		*resultPointer = C.makeResult(cExactMatch, cDictionarySuggestions, cPatternDictionarySuggestions, cTokenizerSuggestions, cGreedyTokenized)
+
+		return C.VARNAM_SUCCESS
 	}
 }
 
@@ -143,27 +145,42 @@ func varnam_close(varnamHandleID C.int) C.int {
 }
 
 //export varnam_transliterate
-func varnam_transliterate(varnamHandleID C.int, word *C.char) *C.struct_TransliterationResult_t {
-	return makeCTransliterationResult(backgroundContext, getVarnamHandle(varnamHandleID).varnam.Transliterate(C.GoString(word)))
+func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPointer *C.struct_TransliterationResult_t) C.int {
+	ctx, cancel := context.WithCancel(backgroundContext)
+	defer cancel()
+
+	cancelFuncsMapMutex.Lock()
+	cancelFuncs[id] = &cancel
+	cancelFuncsMapMutex.Unlock()
+
+	channel := make(chan govarnam.TransliterationResult)
+
+	go getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word), channel)
+
+	select {
+	case <-ctx.Done():
+		return C.VARNAM_CANCELLED
+	case result := <-channel:
+		return makeCTransliterationResult(ctx, result, resultPointer)
+	}
 }
 
 //export varnam_reverse_transliterate
-func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char) *C.varray {
+func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char, resultPointer *C.varray) C.int {
 	handle := getVarnamHandle(varnamHandleID)
 	sugs, err := handle.varnam.ReverseTransliterate(C.GoString(word))
 
 	if err != nil {
 		handle.err = err
-		return nil
+		return C.VARNAM_ERROR
 	}
 
-	cVArray := C.varray_init()
 	for _, sug := range sugs {
 		cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
-		C.varray_push(cVArray, cSug)
+		C.varray_push(resultPointer, cSug)
 	}
 
-	return cVArray
+	return C.VARNAM_SUCCESS
 }
 
 //export varnam_debug
@@ -216,16 +233,18 @@ func varnam_unlearn(varnamHandleID C.int, word *C.char) C.int {
 }
 
 //export varnam_learn_from_file
-func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char) *C.struct_LearnStatus_t {
+func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char, resultPointer *C.struct_LearnStatus_t) C.int {
 	handle := getVarnamHandle(varnamHandleID)
 	learnStatus, err := handle.varnam.LearnFromFile(C.GoString(filePath))
 
 	if err != nil {
 		handle.err = err
-		return nil
+		return C.VARNAM_ERROR
 	}
 
-	return C.makeLearnStatus(C.int(learnStatus.TotalWords), C.int(learnStatus.FailedWords))
+	*resultPointer = C.makeLearnStatus(C.int(learnStatus.TotalWords), C.int(learnStatus.FailedWords))
+
+	return C.VARNAM_SUCCESS
 }
 
 //export varnam_train_from_file
@@ -249,28 +268,6 @@ func varnam_get_last_error(varnamHandleID C.int) *C.char {
 		return C.CString(err.Error())
 	} else {
 		return C.CString("")
-	}
-}
-
-//export varnam_transliterate_with_id
-func varnam_transliterate_with_id(varnamHandleID C.int, id C.int, word *C.char) *C.struct_TransliterationResult_t {
-	ctx, cancel := context.WithCancel(backgroundContext)
-	defer cancel()
-
-	cancelFuncsMapMutex.Lock()
-	cancelFuncs[id] = &cancel
-	cancelFuncsMapMutex.Unlock()
-
-	channel := make(chan govarnam.TransliterationResult)
-
-	go getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word), channel)
-
-	select {
-	case <-ctx.Done():
-		return nil
-	case result := <-channel:
-		cResult := makeCTransliterationResult(ctx, result)
-		return cResult
 	}
 }
 
@@ -312,7 +309,7 @@ func varnam_get_vst_path(varnamHandleID C.int) *C.char {
 }
 
 //export varnam_search_symbol_table
-func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C.struct_Symbol_t) *C.varray {
+func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C.struct_Symbol_t, resultPointer *C.varray) C.int {
 	ctx, cancel := context.WithCancel(backgroundContext)
 	defer cancel()
 
@@ -340,11 +337,10 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 
 	select {
 	case <-ctx.Done():
-		return nil
+		return C.VARNAM_CANCELLED
 	default:
 		results, handle.err = handle.varnam.SearchSymbolTable(ctx, goSearchCriteria)
 
-		cSymbols := C.varray_init()
 		for _, symbol := range results {
 			cSymbol := unsafe.Pointer(C.makeSymbol(
 				C.int(symbol.Identifier),
@@ -360,10 +356,10 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 				C.int(symbol.AcceptCondition),
 				C.int(symbol.Flags),
 			))
-			C.varray_push(cSymbols, cSymbol)
+			C.varray_push(resultPointer, cSymbol)
 		}
 
-		return cSymbols
+		return C.VARNAM_SUCCESS
 	}
 }
 
