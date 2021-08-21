@@ -166,22 +166,21 @@ func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPo
 }
 
 //export varnam_reverse_transliterate
-func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char) *C.varray {
+func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char, resultPointer *C.varray) C.int {
 	handle := getVarnamHandle(varnamHandleID)
 	sugs, err := handle.varnam.ReverseTransliterate(C.GoString(word))
 
 	if err != nil {
 		handle.err = err
-		return nil
+		return C.VARNAM_ERROR
 	}
 
-	cVArray := C.varray_init()
 	for _, sug := range sugs {
 		cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
-		C.varray_push(cVArray, cSug)
+		C.varray_push(resultPointer, cSug)
 	}
 
-	return cVArray
+	return C.VARNAM_SUCCESS
 }
 
 //export varnam_debug

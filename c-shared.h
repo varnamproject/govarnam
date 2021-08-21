@@ -22,10 +22,14 @@ typedef struct TransliterationResult_t {
   varray* GreedyTokenized;
 } TransliterationResult;
 
+void update_pointer(varray* a, varray* b);
+
 Suggestion* makeSuggestion(char* word, int weight, int learned_on);
 
 TransliterationResult makeResult(varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized);
 
+void destroySuggestions(void* pointer);
+void destroySuggestionsArray(varray* pointer);
 void destroyTransliterationResult(TransliterationResult*);
 
 typedef struct SchemeDetails_t {

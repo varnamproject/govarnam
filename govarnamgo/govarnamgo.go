@@ -280,18 +280,29 @@ func (handle *VarnamHandle) Transliterate(ctx context.Context, word string) Tran
 }
 
 // ReverseTransliterate reverse transilterate
-func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, error) {
+func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, *VarnamError) {
 	var sugs []Suggestion
-	cWord := C.CString(word)
 
-	result := C.varnam_reverse_transliterate(handle.connectionID, cWord)
-	if result == nil {
-		return sugs, fmt.Errorf(handle.GetLastError())
+	cWord := C.CString(word)
+	defer C.free(unsafe.Pointer(cWord))
+
+	ptr := C.varray_init()
+	defer C.destroySuggestionsArray(ptr)
+
+	resultPointer := (*C.varray)(ptr)
+
+	code := C.varnam_reverse_transliterate(handle.connectionID, cWord, resultPointer)
+	if code != C.VARNAM_SUCCESS {
+		return sugs, &VarnamError{
+			ErrorCode: int(code),
+			Err:       errors.New(handle.GetLastError()),
+		}
 	}
 
+	fmt.Println("ccc" + fmt.Sprint(int(C.varray_length(resultPointer))))
 	i := 0
-	for i < int(C.varray_length(result)) {
-		cSug := (*C.Suggestion)(C.varray_get(result, C.int(i)))
+	for i < int(C.varray_length(resultPointer)) {
+		cSug := (*C.Suggestion)(C.varray_get(resultPointer, C.int(i)))
 		sug := makeSuggestion(cSug)
 		sugs = append(sugs, sug)
 		i++
@@ -344,7 +355,7 @@ func (handle *VarnamHandle) LearnFromFile(filePath string) (LearnStatus, *Varnam
 	ptr := C.malloc(C.sizeof_LearnStatus)
 	defer C.free(unsafe.Pointer(ptr))
 
-	resultPointer := (*C.struct_LearnStatus_t)(ptr)
+	resultPointer := (*C.LearnStatus)(ptr)
 
 	code := C.varnam_learn_from_file(handle.connectionID, cFilePath, resultPointer)
 	if code != C.VARNAM_SUCCESS {

@@ -3,6 +3,11 @@
 #include "stdlib.h"
 #include "c-shared-varray.h"
 
+void update_pointer(varray* a, varray* b)
+{
+  a = b;
+}
+
 Suggestion* makeSuggestion(char* word, int weight, int learned_on)
 {
   Suggestion *sug = (Suggestion*) malloc (sizeof(Suggestion));
@@ -35,13 +40,19 @@ void destroySuggestions(void* pointer)
   }
 }
 
+void destroySuggestionsArray(varray* pointer)
+{
+  varray_free(pointer, &destroySuggestions);
+  pointer = NULL;
+}
+
 void destroyTransliterationResult(TransliterationResult* result)
 {
-  varray_free(result->ExactMatches, &destroySuggestions);
-  varray_free(result->DictionarySuggestions, &destroySuggestions);
-  varray_free(result->PatternDictionarySuggestions, &destroySuggestions);
-  varray_free(result->TokenizerSuggestions, &destroySuggestions);
-  varray_free(result->GreedyTokenized, &destroySuggestions);
+  destroySuggestionsArray(result->ExactMatches);
+  destroySuggestionsArray(result->DictionarySuggestions);
+  destroySuggestionsArray(result->PatternDictionarySuggestions);
+  destroySuggestionsArray(result->TokenizerSuggestions);
+  destroySuggestionsArray(result->GreedyTokenized);
   result->ExactMatches = NULL;
   result->DictionarySuggestions = NULL;
   result->PatternDictionarySuggestions = NULL;

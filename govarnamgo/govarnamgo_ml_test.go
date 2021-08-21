@@ -2,11 +2,19 @@ package govarnamgo
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path"
 	"testing"
 )
+
+func TestTransliterate(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	rt, err := varnam.ReverseTransliterate("നിത്യം")
+	checkVarnamError(err)
+
+	assertEqual(t, rt[0].Word, "nithyam")
+}
 
 func TestLearn(t *testing.T) {
 	varnam := getVarnamInstance("ml")
@@ -31,8 +39,6 @@ func TestLearn(t *testing.T) {
 
 	assertEqual(t, learnStatus.TotalWords, 6)
 	assertEqual(t, learnStatus.FailedWords, 1)
-
-	fmt.Println(varnam.Transliterate(context.Background(), "nithyaharitha"))
 
 	assertEqual(t, varnam.Transliterate(context.Background(), "nithyaharitha").ExactMatches[0].Weight, 120)
 	assertEqual(t, varnam.Transliterate(context.Background(), "melaappum").ExactMatches[0].Weight, 12)
