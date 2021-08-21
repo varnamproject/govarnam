@@ -1,4 +1,4 @@
-module gitlab.com/subins2000/govarnam
+module github.com/varnamproject/govarnam
 
 go 1.15
 
