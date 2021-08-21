@@ -655,7 +655,12 @@ def add_weight_column()
 end
 
 def compile_scheme(scheme_path)
-  $vst_name = File.basename(scheme_path) + ".vst"
+  file_name = File.basename(scheme_path)
+  if file_name.include?(".")
+    file_name = file_name.split(".")[0]
+  end
+
+  $vst_name = file_name + ".vst"
   $vst_path = File.join(Dir.pwd, $vst_name)
 
   if File.exists?($vst_path)

@@ -1,0 +1,141 @@
+# encoding: utf-8
+
+##
+# Copyright (C) Amanpreet Kaur
+#
+# This is part of libvarnam. See LICENSE.txt for the license
+##
+
+language_code "pa"
+identifier "pa"
+display_name "Punjabi"
+author "Amanpreet Kaur"
+
+ignore_duplicates false
+
+$virama = "\u{0A4D}"
+$nukta = "\u{0A3C}"
+$addak = "\u{0A71}"
+$an = "\u{0A01}"
+$am = "\u{0A02}"
+
+virama "~" => "\u{0A4D}"
+visarga "H" => "\u{0A03}"
+
+vowels "a" => "ਅ",
+       ["aa", "A", ["a"]]  => ["ਆ", "\u{0A3E}"],
+       "i" => ["ਇ", "\u{0A3F}"],
+       ["ee", "I", "ii", ["i"]]   => ["ਈ", "\u{0A40}"],
+       "u" => ["ਉ", "\u{0A41}"],
+       ["uu", "oo", "U", ["u"]]   => ["ਊ", "\u{0A42}"],
+       ["e", "ae"] => ["ਏ", "\u{0A47}"],
+       ["ai", "ei"] => ["ਐ", "\u{0A48}"],
+       ["o", ["O"]] => ["ਓ", "\u{0A4B}"],
+       ["ou", "ow"]  => ["ਔ", "\u{0A4C}"],
+       ["an",["en"]] => "\u{0A70}"
+
+list :can_make_cluster do
+consonants "k" => "ਕ",
+           ["kh", ["Kh"]] => "ਖ",
+           [["kh"], "KH"] => ["ਖ਼", "ਖ#{$nukta}"],
+           "g"  => "ਗ",
+           ["G"] => ["ਗ਼", "ਗ#{$nukta}"],
+           ["gh", ["Gh"]] => "ਘ",
+           "ng" =>  "ਙ",
+           "ch" => "ਚ",
+           ["CH", ["ch"]] => "ਛ",
+           "j"  => "ਜ",
+           "z" => ["ਜ਼", "ਜ#{$nukta}"],
+           "jh" => "ਝ",
+           "ny" => "ਞ",
+           ["T", ["t"]] => "ਟ",
+           "Th" => "ਠ",
+           ["D", ["d"]] => "ਡ",
+           "Dh" => ["ਢ"],
+           ["N",["n"]] => "ਣ",
+
+           "t" => "ਤ",
+           ["th", ["dh"]] => "ਥ",
+           "d" => "ਦ",
+           "dh" => "ਧ",
+           [["n"]] => "ਨ",
+           "p" => "ਪ",
+           "ph" => "ਫ",
+           "f" => ["ਫ਼", "ਫ#{$nukta}"],
+           "b" => "ਬ",
+           "bh" => "ਭ",
+           [["m"]] => "ਮ",
+           "y" => "ਯ",
+           "ya" => "ਆ",
+           "r" => ["ਰ", "ਰ#{$virama}"],
+           "l" => ["ਲ", "ਲ#{$virama}"],
+           "ll" => "ਲ਼",
+           ["v", "w"] => "ਵ",
+           ["sh", ["Sh", "SH"]]  => "ਸ਼",
+           ["s"] => "ਸ",
+           ["h"] => "ਹ",
+           ["R","RR", ["ri", "ru"]] => "ੜ"
+end
+
+
+ignore_duplicates true
+can_make_cluster.each do |c1|
+   can_make_cluster.each do |c2|
+     if c1.match_type == 1
+        consonants ["#{c1.pattern}#{c2.pattern}"] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+     else
+        consonants [["#{c1.pattern}#{c2.pattern}"]] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+     end
+
+     if c1.value1 == c2.value1
+      consonants [["#{c1.pattern}#{c2.pattern}", "#{c1.pattern}"]] => ["#{$addak}#{c1.value1}"]
+     end
+   end
+end
+
+# Half forms for ਮ
+consonants(combine can_make_cluster, ["m*"] => ["ਮ#{$virama}*1"])
+consonants(combine can_make_cluster, ["n*"] => ["ਨ#{$virama}*1"])
+
+generate_cv
+
+consonants(combine get_consonants, ["*a"] => ["*1"])
+
+# Need to replace this when we have a way to pass value2 and value3 in combine
+get_vowels.each do |vowel|
+  if vowel.match_type == 1
+     consonant_vowel_combinations ["m#{vowel.pattern}"] => ["ਮ#{vowel.value2}"]
+  else
+     consonant_vowel_combinations [["m#{vowel.pattern}"]] => ["ਮ#{vowel.value2}"]
+  end
+end
+
+tag "chill" do
+   consonants  "n" => ["\u{0A70}"],
+                "au" => ["\u{0A4C}"]
+
+end
+
+symbols ["m", ["n"]] => $am,
+        ["n", ["m"]] => $an,
+        ["|"] => "।",
+        "om" => "ੴ",
+        "#" => $addak,
+        "." => $nukta,
+	  "M" => ["\u{0A70}"]
+
+symbols({:priority => :low}, ["aan", "aam"] => $an,  "om" => "ੴ")
+
+ignore_duplicates false
+
+
+numbers "0" => "੦",
+        "1" => "੧",
+        "2" => "੨",
+        "3" => "੩",
+        "4" => "੪",
+        "5" => "੫",
+        "6" => "੬",
+        "7" => "੭",
+        "8" => "੮",
+        "9" => "੯"

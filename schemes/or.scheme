@@ -1,0 +1,191 @@
+# encoding: utf-8
+
+##
+# Copyright (C) Nilakanta Mallick
+#
+# This is part of libvarnam. See LICENSE.txt for the license
+##
+
+language_code "or"
+identifier "or"
+display_name "Odia"
+author "Nilakanta Mallick"
+
+ignore_duplicates false
+
+$virama = "\u{0B4D}"
+$nukta = "\u{0B3C}"
+
+$an = "\u{0B01}"
+$am = "\u{0B02}"
+
+virama "~" => "\u{0B4D}"
+visarga "H" => "\u{0B03}"
+$visarga = "\u{0B03}"
+
+vowels "a" => "ଅ",
+       ["aa", "A", ["a"]]  => ["ଆ", "ା"],
+        ["AA", ["aa"]] => ["ଆଽଽ", "ାଽଽ"],
+       "i" => ["ଇ", "ି"],
+       ["ee", "I", "ii", ["i"]]   => ["ଈ", "ୀ"],
+       "u" => ["ଉ", "ୁ"],
+       ["uu", "oo", "U", ["u"]]   => ["ଊ", "ୂ"],
+
+       ["Ru", "ru"] => ["ଋ","ୃ"],
+       ["RRu", ["Rru"]] => ["ୠ", "ୄ"],
+       ["L", ["li", "lu"]] => ["ଌ","\u{0B62}"],
+       ["LL", ["LLi", "LLu", "Lli", "Llu"]] => ["ୡ", "\u{0B63}"], 
+
+       "e" => ["ଏ", "େ"],
+       "ea" => ["ଏଽ", "େଽ"],
+       ["ai", "ei"] => ["ଐ", "\u{0B48}"],
+       ["o", ["O"]] => ["ଓ", "\u{0B4B}"],
+       "oa" => ["ଓଽ", "\u{0B4B}ଽ"],
+       ["ou", "au", "ow"]  => ["ଔ", "\u{0B4C}"],
+
+	["AN", "AM"] => ["ଅଂ ", $am],
+	["aH"] => ["ଅଃ ", $visarga]
+
+list :can_make_cluster do
+consonants "k" => "କ",
+           ["kh", ["k", "Kh"]] => "ଖ",
+           "g"  => "ଗ",
+           ["gh", ["g"]] => "ଘ",
+           "ng" =>  "ଙ",            
+
+           "ch" => "ଚ",
+           ["Ch", ["ch"]] => "ଛ",
+           "j"  => "ଜ",
+           ["jh", ["j"]] => "ଝ",
+           "ny" => "ଞ",
+
+           "T" => "ଟ",
+           ["Th", ["T"]] => "ଠ",
+           "D" => "ଡ",
+           ["Dd", ["dd", "D"]] => ["\u{0B5C}", "ଡ#{$nukta}"],
+           "Dh" => "ଢ", 
+           ["DH", ["Dh", "D"]] => ["\u{0B5D}", "ଢ#{$nukta}"],
+           "N" => "ଣ",
+
+           "t" => "ତ",
+           ["th", ["t"]] => "ଥ",
+           "d" => "ଦ",
+           ["dh", ["d"]] => "ଧ",
+           "n" => "ନ",                   
+
+           "p" => "ପ",
+           ["f", ["ph"]] => "ଫ",
+           ["ph", ["f"]] => "ਫ਼",
+           ["b", ["v"]] => "ବ",
+           ["bh", ["b"]] => "ଭ",
+           "m" => "ମ",
+
+           ["y", ["j"]] => "ଯ",
+           "Y" => "ୟ",
+           "r" => ["ର", "ର#{$virama}"],
+           "l" => ["ଲ", "ଲ#{$virama}"],
+           ["ll", ["l"]] => "ଳ",
+           ["v", ["b"]] => "ଵ",
+           "w" => "ୱ",    # it is o + v
+           "s" => "ସ",
+           ["sh", ["Sh", "s"]]  => "ଶ",
+           ["Sh", ["sh"]] => "ଷ",
+           "h" => "ହ"
+end
+
+# consonant conjuncts of 2 or more consonants
+consonants "ktr" => "କ୍ତ୍ର",
+           "kShsh" => "କ୍ଷ୍ଶ",
+           "kShN" => "କ୍ଷ୍ଣ",
+           "kShm" => "କ୍ଷ୍ମ",
+           "kShY" => "କ୍ଷ୍ୟ",
+           "ngkSh" => "ଙ୍କ୍ଷ",
+           "chChb" => "ଚ୍ଛ୍ବ",
+           "jjb" => "ଜ୍ଜ୍ବ",
+           "jjw" => "ଜ୍ଜ୍ୱ",
+           "jjv" => "ଜ୍ଜ୍ଵ",
+           "ttb" => "ତ୍ତ୍ବ",
+           "tmy" => "ତ୍ମ୍ଯ",
+           "tmY" => "ତ୍ମ୍ୟ",
+           "tsm" => "ତ୍ସ୍ମ",
+           "tsn" => "ତ୍ସ୍ନ",
+           "tsy" => "ତ୍ସ୍ଯ",
+           "tsY" => "ତ୍ସ୍ୟ",
+           "ddhw" => "ଦ୍ଧ୍ୱ",
+           "ntb" => "ନ୍ତ୍ବ",
+           "ntr" => "ନ୍ତ୍ର",
+           "ntrY" => "ନ୍ତ୍ର୍ୟ",
+           "ndb" => "ନ୍ଦ୍ବ",
+           "ndY" => "ନ୍ଦ୍ୟ",
+           "ndr" => "ନ୍ଦ୍ର",
+           "ndhr" => "ନ୍ଧ୍ର",
+           "ndw" => "ନ୍ଧ୍ୱ",
+           "nwtw" => "ନ୍ୱ୍ତ୍ୱ",
+           "nnY" => "ନ୍ନ୍ୟ",
+           "rghY" => "ର୍ଘ୍ୟ",
+           "rchCh" => "ର୍ଚ୍ଛ",
+           "rshsh" => "ର୍ଶ୍ଶ",
+           "rttY" => "ର୍ତ୍ତ୍ୟ",
+           "rtsY" => "ର୍ତ୍ସ୍ୟ",
+           "rdr" => "ର୍ଦ୍ର",
+           "rdDhY" => "ର୍ଦ୍ଢ୍ୟ",
+           "ryY" => "ର୍ଯ୍ୟ",
+           "rshb" => "ର୍ଶ୍ବ",
+           "shDb" => "ଶ୍ଡ୍ବ",
+           "Shkr" => "ଷ୍କ୍ର",
+           "Shtr" => "ଷ୍ତ୍ର",
+           "ShThr" => "ଷ୍ଠ୍ର",
+           "Shpr" => "ଷ୍ପ୍ର",
+           "ShTr" => "ଷ୍ଟ୍ର",
+           "stb" => "ସ୍ତ୍ବ",
+           "stY" => "ସ୍ତ୍ୟ",
+           "str" => "ସ୍ତ୍ର",
+           "sthy" => "ସ୍ଥ୍ଯ",
+           "sthY" => "ସ୍ଥ୍ୟ"
+
+ignore_duplicates true
+can_make_cluster.each do |c1|
+   can_make_cluster.each do |c2|
+     if c1.match_type == 1
+        consonants ["#{c1.pattern}#{c2.pattern}"] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+     else
+        consonants [["#{c1.pattern}#{c2.pattern}"]] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+     end 
+   end
+end
+
+# Half forms for ମ
+consonants(combine can_make_cluster, ["m*"] => ["ମ#{$virama}*1"])
+
+generate_cv
+
+consonants(combine get_consonants, ["*a"] => ["*1"])
+
+ignore_duplicates true
+
+#consonants [["m"]] => "ମ"
+
+# Need to replace this when we have a way to pass value2 and value3 in combine
+get_vowels.each do |vowel|
+  if vowel.match_type == 1
+     consonant_vowel_combinations ["m#{vowel.pattern}"] => ["ମ#{vowel.value2}"]
+  else
+     consonant_vowel_combinations [["m#{vowel.pattern}"]] => ["ମ#{vowel.value2}"]
+  end
+end
+symbols ["m", ["n"]] => $am,
+        [["n", "m"]] => $an,
+        ["|"] => "।"
+
+symbols({:priority => :low}, ["aan", "aam"] => $an)
+
+numbers "0" => "୦",
+        "1" => "୧",
+        "2" => "୨",
+        "3" => "୩",
+        "4" => "୪",
+        "5" => "୫",
+        "6" => "୬",
+        "7" => "୭",
+        "8" => "୮",
+        "9" => "୯"

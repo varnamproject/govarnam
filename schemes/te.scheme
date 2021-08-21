@@ -1,0 +1,115 @@
+# encoding: utf-8
+
+##
+# Copyright (C) Raja Reddy Karri
+#
+# This is part of libvarnam. See LICENSE.txt for the license
+##
+
+language_code "te"
+identifier "te"
+display_name "Telugu"
+author "Raja Reddy Karri, Varun Reddy"
+stable true
+
+ignore_duplicates false
+
+$virama = "\u{0C4D}"
+$visarga = "\u{0C03}"
+$avagraha = "\u{0C3D}"
+
+$an = "\u{0C01}"
+$am = "\u{0C02}"
+
+virama "~" => $virama
+visarga "H" => "\u{0C03}"
+
+vowels "a" => "అ",
+       ["aa", "A", ["a"]]  => ["ఆ", "\u{0C3E}"],
+       "i" => ["ఇ", "\u{0C3F}"],
+       ["ee", "I", "ii", ["i"]]   => ["ఈ", "\u{0C40}"],
+       "u" => ["ఉ", "\u{0C41}"],
+       ["uu", "oo", "U", ["u"]]   => ["ఊ", "\u{0C42}"],
+       "Ru" => ["ఋ", "\u{0C43}"],
+       ["RRu", ["Ru"]] => ["ౠ", "\u{0C44}"],
+       "lLu" => ["ఌ", "\u{0C62}"],
+       ["lLLu", ["Lu"]] => ["ౡ", "\u{0C63}"],
+       "e" => ["ఎ", "\u{0C46}"],
+       ["E", ["ee", "ae", "ye"]] => ["ఏ", "\u{0C47}"],
+       ["ai", "ei"] => ["ఐ", "\u{0C48}"],
+       ["o", ["O"]] => ["ఒ", "\u{0C4A}"],
+       ["O", ["oo"]] => ["ఓ", "\u{0C4B}"],
+       ["au", "ou", "ow"]  => ["ఔ", "\u{0C4C}"]
+
+infer_dead_consonants true
+
+consonants ["ka"] => "క",
+           ["kha", ["ka"]] => "ఖ",
+           "ga"  => "గ",
+           ["gha", ["ga"]] => "ఘ",
+           ["NGa",["nga"]] =>  "ఙ",
+
+           "cha" => "చ",
+           ["Cha", ["cha"]] => "ఛ",
+           "ja"  => "జ",
+           ["jha", ["ja"]] => "ఝ",
+           "Nnya" => "ఞ",
+
+           "ta" => "ట",
+           ["Ta"] => "ఠ",
+           ["da"] => "డ",
+           ["Da", ["da"]] => "ఢ",
+
+           ["tha", ["ta"]] => "త",
+           ["Tha" , ["dha"]]=> "థ",
+           ["dha"] => "ద",
+           ["Dha"] => "ధ",
+
+           "pa" => "ప",
+           ["pha", ["pa"]] => "ఫ",
+           "ba" => "బ",
+           ["bha", ["ba"]] => "భ",
+
+           "ya" => "య",
+           "ra" => "ర",
+           ["RRA", ["rra"]] => "ఱ",
+           "la" => "ల",
+           ["lla",["La"]] => "ళ",
+           ["llla", ["LLLa"]] => "\u{0C34}",
+           ["va", ["wa"]] => "వ",
+           "sa" => "స",
+           [["Sa"],"sha"]  => "శ",
+           ["Sha", ["sa"]] => "ష",
+           "ha" => "హ"
+
+consonants({:accept_if => :starts_with}, ["ca"] => "క")
+
+infer_dead_consonants false
+
+consonants "na" => "న",
+           [["na"], "Na"] => "ణ",
+           "ma" => "మ"
+
+infer_dead_consonants true
+
+generate_cv
+
+symbols({:priority => :low}, ["aan", "aam"] => $an)
+
+tag "chill" do
+   consonants ["m", ["n"]] => ["ం"]
+   consonants ["M"] => ["మ\u{0C4D}"]
+   consonants "N" => ["ణ\u{0C4D}"]
+   consonants "n" => ["న\u{0C4D}"]
+end
+
+numbers "0" => "౦",
+        "1" => "౧",
+        "2" => "౨",
+        "3" => "౩",
+        "4" => "౪",
+        "5" => "౫",
+        "6" => "౬",
+        "7" => "౭",
+        "8" => "౮",
+        "9" => "౯"

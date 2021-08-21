@@ -1,0 +1,90 @@
+# encoding: utf-8
+
+##
+# Copyright (C) Navaneeth.K.N
+#
+# This is part of libvarnam. See LICENSE.txt for the license
+##
+
+language_code "ta"
+identifier "ta"
+display_name "Tamil"
+author "Navaneeth KN/Kumaran Venkataraman"
+
+$virama = "்"
+virama "~" => "்"
+
+infer_dead_consonants true
+
+vowels "a" => "அ",
+       ["aa", "A", ["a"]]  => ["ஆ", "ா"],
+       ["i", ["y", "e"]] => ["இ", "ி"],
+       ["ii", "I", "ee", ["i"]]   => ["ஈ", "ீ"],
+       "u" => ["உ", "ு"],
+       ["uu", "oo", "U", ["u"]]   => ["ஊ","ூ"],
+       ["e",["ye"]] => ["எ", "ெ"],
+       ["E", ["e"]] => ["ஏ", "ே"],
+       ["ai", ["ei"]] => ["ஐ", "ை"],
+       "o" => ["ஒ", "ொ"],
+       ["O", ["o"]] => ["ஓ", "ோ"],
+       ["au", "ow", "ou"]  => ["ஔ", "ௌ"],
+	   ["q"] => "ஃ"
+
+consonants ["ka", "qa", "ga", ["ha"]] => "க",
+           ["nga"] =>  "ங#{$virama}க",
+           ["sa", "cha"] => "ச",
+           ["ja"]  => "ஜ",
+           ["NJa", ["nja", "ncha"]] => "ஞ",
+           ["ta","da", ["tha"]] => "ட",
+           ["Na"] => "ண",
+           ["tha", "dha", ["ta","da"]] => "த",
+           ["nna",["Na"]] => "ன",
+           ["pa", "ba", ["pha", "bha"]] => "ப",
+           ["ma"] => "ம",
+           ["ya"] => "ய",
+           ["ra"] => "ர",
+		      ["va", "wa"] => "வ",
+           ["Ra", "RRa", ["ra", "tra", "dra"]] => "ற",
+		      "la" => "ல",
+		      ["La", ["lla", "la"]] => "ள",
+		      ["zha",["la"]] => "ழ",
+		      ["Sa"] => "ஶ",
+		      ["sha"] => "ஷ",
+		      ["sa"] => "ஸ",
+		      ["ha"] => "ஹ"
+
+
+consonants ["kk*"] => ["க#{$virama}க#{$virama}*1"]
+
+infer_dead_consonants false
+
+consonants   ["na"] => "ந"
+
+generate_cv
+
+# generating combination for ei
+# sei = செய்(sey)
+get_dead_consonants.each do |dead_c|
+  if dead_c.match_type == 1
+    consonant_vowel_combinations ["#{dead_c.pattern}ei"] => ["#{dead_c.value1.chomp($virama)}ெய#{$virama}"]
+  else
+    consonant_vowel_combinations [["#{dead_c.pattern}ei"]] => ["#{dead_c.value1.chomp($virama)}ெய#{$virama}"]
+  end
+end
+
+infer_dead_consonants true
+
+tag "chill" do
+   consonants "n" => ["ன்"]
+end
+
+numbers "0" => "௦",
+        "1" => "௧",
+        "2" => "௨",
+        "3" => "௩",
+        "4" => "௪",
+        "5" => "௫",
+        "6" => "௬",
+        "7" => "௭",
+        "8" => "௮",
+        "9" => "௯"

@@ -1,0 +1,122 @@
+# encoding: utf-8
+
+##
+# Copyright (C) Shwetha Thammaiah, Sharath Battaje
+#
+# This is part of libvarnam. See LICENSE.txt for the license
+#
+# This is a Ruby file, and hence follows Ruby syntax
+##
+
+language_code "kn"
+identifier "kn"
+display_name "Kannada"
+author "Shwetha Thammaiah, Sharath Kr. Battaje"
+
+ignore_duplicates false
+
+$am = "\u{0C82}"
+$an = "\u{0C81}"
+
+$virama = "\u{0CCD}"
+$nukta = "\u{0CBC}"
+$avagraha = "\u{0CBD}"
+
+virama "~" => "\u{0CCD}"
+
+infer_dead_consonants true
+
+vowels "a" => "ಅ",
+       ["aa", "A", ["a"]] => ["ಆ", "ಾ"],
+       "i" => ["ಇ", "ಿ"],
+       ["ee", "I", "ii", ["i"]] => ["ಈ", "ೀ"],
+       "u" => ["ಉ", "ು"],
+       ["uu", "oo", "U", ["u"]]   => ["ಊ", "ೂ"],
+       ["rRu"] => ["ಋ", "\u{0CC3}"],
+       ["Rru"] => ["ೠ", "\u{0CC4}"],
+       ["e",["y"]] => ["ಎ", "ೆ"],
+       ["E", ["e"]] => ["ಏ", "\u{0CC7}"],
+       ["ai", "ei"] => ["ಐ", "ೈ"],
+       "o" => ["ಒ", "ೊ"],
+       ["O", ["o"]] => ["ಓ", "ೋ"],
+       ["ou", "au", "ow"]  => ["ಔ", "ೌ"],
+	["aN", "aM"] => ["ಅಂ" ,"ಂ"],
+	["oN", "oM"] => ["ಒಂ" ,"ಂ"],
+	["aH"] => ["ಅಃ", "ಃ"]
+
+vowels({:priority => :low, :accept_if => :ends_with}, [["y"]] => ["ഇ", "ി"])
+
+
+consonants  ["ka", "ca"] => "ಕ",
+           ["kha", ["gha"]] => "ಖ",
+            "ga" => "ಗ",
+           ["gha", ["kha"]] => "ಘ",
+           ["NGa", ["nga"]] => "ಙ",
+           "cha" => "ಚ",
+           ["CHa", ["cha", "jha"]]  => "ಛ",
+           "ja" => "ಜ",
+           ["jha", "JHa"]  => "ಝ",
+           [["nja"], "NJa"]  => "ಞ",
+           ["ta", ["tta"]] => "ಟ",
+           [["da", "ta"], "Ta"] => "ಠ",
+            [["da", "ta"], "Da"] => "ಡ",
+           [["da"], "Dha"]   => "ಢ",
+           ["Na"] => "ಣ",
+           ["tha", ["ta"]]  => "ತ",
+           ["THa"]  => "ತ್ತ",
+           [["tha", "dha"], "thha"] => "ಥ",
+           "da"=> "ದ",
+            "dha" => "ಧ",
+            "pa" => "ಪ",
+          ["pha", ["fa"]] => "ಫ",
+           [["pha"], "fa"] => "ೞ",
+           "ba" => "ಬ",
+            "bha" => "ಭ",
+          "ya" => "ಯ",
+           ["Ra"] => "ಱ",
+           "la" => ["ಲ"],
+           ["La"] => ["ಳ", "\u{0CE2}"],
+           ['mma'] => ["ಮ್ಮ"],
+           [['tha']] => 'ತ್ತ',
+          ["va","wa"] => "ವ",
+           ["sha", ["sa"]]  => "ಶ",
+           ["Sha"] => "ಷ",
+           "sa" => "ಸ",
+           "ha" => "ಹ",
+           ["ksha", "Ksha"] => "ಕ್ಷ",
+          # ["tra", "Tra"] => "ಱ",
+           ["`jn"] => "ಜ್ಞ",
+           ["x"] => "ಕ್ಸ್",
+           ["za"] => "ಜ\u{0CBC}",
+           ["rra"] => "\u{0CB0}#{$virama}\u{0CB0}"
+
+infer_dead_consonants false
+
+consonants ["na"] => "ನ",
+           ["ma"] => "ಮ",
+           "ra" => "ರ"
+infer_dead_consonants true
+
+generate_cv
+
+
+tag "chill" do
+   consonants "m" => ["ಂ","ಮ"]
+   consonants "n" => ["ಂ","ನ\u0CCD"]
+   consonants "r" => ["ರ\u0CCD"]
+end
+
+symbols({:priority => :low}, ["aan", "aam"] => $an)
+
+
+
+numbers "0" => "೦",
+        "1" => "೧",
+        "2" => "೨",
+        "3" => "೩",
+        "4" => "೪",
+        "5" => "೫",
+        "6" => "೬",
+        "7" => "೭",
+        "8" => "೮",
+        "9" => "೯"

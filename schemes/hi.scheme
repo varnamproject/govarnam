@@ -1,0 +1,133 @@
+# encoding: utf-8
+
+##
+# Copyright (C) Prateek Kumar Baheti
+#
+# This is part of libvarnam. See LICENSE.txt for the license
+##
+
+language_code "hi"
+identifier "hi"
+display_name "Hindi"
+author "Prateek Kumar Baheti"
+stable true
+
+ignore_duplicates false
+
+$virama = "\u{094D}"
+$am = "\u{0902}"
+$an = "\u{0901}"
+$nukta = "\u{093c}"
+
+virama "~" => "\u{094d}"
+period "\u{0964}"
+
+visarga "H" => "\u{0903}"
+
+vowels "a" => "अ",
+       ["aa", "A", ["a"]]  => ["आ", "ा"],
+       "i" => ["इ", "ि"],
+       ["ee", "I", "ii", ["i"]]   => ["ई", "ी"],
+       "u" => ["उ", "ु"],
+       ["uu", "oo", "U", ["u"]]   => ["ऊ", "ू"],
+       [["ri", "ru", "r"], "R"] => ["ऋ", "\u{0943}"],
+       "e" => ["ए", "े"],
+       ["ai", "ei"] => ["ऐ", "ै"],
+       "o" => ["ओ", "ो"],
+       "O" => ["ओ", "\u{0949}"],
+       ["ou", "au", "ow"]  => ["औ", "ौ"],
+	["aN", "aM",] => ["अं" ,"ं"],
+	["aH"] => ["अः", "ः"]              
+
+list :can_make_cluster do
+consonants "k" => "क",
+           [["k"], "q"] => ["\u{0958}", "क#{$nukta}"],
+           ["kh", ["gh"]] => "ख",
+           [["kh"], "KH"] => ["\u{0959}", "ख#{$nukta}"],
+           ["gh", ["kh"]] => "घ",
+           ["T", ["t"]] => "ट",
+           ["Th"] => "ठ",
+           ["D", ["d"]] => "ड",
+           [["d"], "dd"] => ["\u{095C}", "ड#{$nukta}"],
+           "d" => "द",
+           ["Dh"] => ["ढ"],
+           "DH" => ["\u{095D}", "ढ#{$nukta}"],
+           "p" => "प",
+           "ph" => "फ",
+           "b" => "ब",
+           "bh" => "भ",
+           ["t"] => "त",
+           ["th", ["dh"]] => "थ",
+	   "g"  => "ग",
+           ["G"] => ["\u{095A}", "ग#{$nukta}"],
+           ["j"]  => "ज",  
+	   "ng" =>  "ङ",                   
+           "ch" => "च",
+           ["CH", ["ch"]] => "छ",
+           ["jh"] => "झ",
+           ["nj"] => "ञ",
+           ["N"] => "ण",
+           ["dh"] => "ध",
+           ["n"] => "न",                   
+           "y" => "य",
+           "r" => ["र", "र#{$virama}"],
+           "l" => ["ल", "ल#{$virama}"],
+           ["v", "w"] => "व",
+           ["sh", ["s"]]  => "श",
+           ["Sh", ["sh"]] => "ष",
+           ["h"] => "ह",
+           ["z"] => "ज#{$nukta}",
+           ["s"] => "स",
+           "f" => ["\u{095E}", "फ#{$nukta}"],
+           "y" => "य",
+           [["y"], "YY"] => ["\u{095F}", "य#{$nukta}"]
+end
+
+ignore_duplicates true
+can_make_cluster.each do |c1|
+   can_make_cluster.each do |c2|
+     if c1.match_type == 1
+        consonants ["#{c1.pattern}#{c2.pattern}"] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+     else
+        consonants [["#{c1.pattern}#{c2.pattern}"]] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+     end 
+   end
+end
+
+# Half forms for म
+consonants(combine can_make_cluster, ["m*"] => ["म#{$virama}*1"])
+
+generate_cv
+
+consonants(combine get_consonants, ["*a"] => ["*1"])
+
+ignore_duplicates false
+
+consonants [["m"]] => "म"
+
+# Need to replace this when we have a way to pass value2 and value3 in combine
+get_vowels.each do |vowel|
+  if vowel.match_type == 1
+     consonant_vowel_combinations ["m#{vowel.pattern}"] => ["म#{vowel.value2}"]
+  else
+     consonant_vowel_combinations [["m#{vowel.pattern}"]] => ["म#{vowel.value2}"]
+  end
+end
+symbols ["m", ["n"]] => $am,
+        [["n", "m"]] => $an,
+        ["|"] => "।"
+
+symbols({:priority => :low}, ["aan", "aam"] => $an)
+
+
+
+numbers "0" => "०",
+        "1" => "१",
+        "2" => "२",
+        "3" => "३",
+        "4" => "४",
+        "5" => "५",
+        "6" => "६",
+        "7" => "७",
+        "8" => "८",
+        "9" => "९"

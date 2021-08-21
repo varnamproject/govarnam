@@ -1,0 +1,312 @@
+# encoding: utf-8
+
+##
+# Copyright (C) Rohit Bansal 
+#
+# This is part of libvarnam. See LICENSE.txt for the license
+##
+
+language_code "sa"
+identifier "sa"
+display_name "Sanskrit"
+author "Rohit Bansal"
+
+stable true
+
+#
+# since Sanskrit uses Devnagri script, this file should be very similar to Hindi file
+# Sanskrit has no concept of "nukta", "anuswar" (except trailing m sound) or chandrabindu
+#
+
+ignore_duplicates false
+
+$virama = "\u{094D}"
+$an = "\u{0901}"
+$am = "\u{0902}"
+
+virama "~" => "\u{094D}"
+
+vowels "a" => "अ",
+       ["aa", "A", ["a"]]  => ["आ", "ा"],
+       ["AA", ["aa"]] => ["आऽऽ", "ाऽऽ"],
+       "i" => ["इ", "ि"],
+       ["ee", "I", "ii", ["i"]]   => ["ई", "ी"],
+       "u" => ["उ", "ु"],
+       ["uu", "oo", "U", ["u"]]   => ["ऊ", "ू"],
+       ["R", ["Ri"]] => ["ऋ", "\u{0943}"],
+       ["RR", ["R"]] => ["ॠ", "\u{0944}"],
+       ["Lr", ["l"]] => ["ऌ", "\u{0962}"],
+       ["LLr", ["Lr"]] => ["ॡ", "\u{0963}"],
+       "e" => ["ए", "े"],
+       "ea" => ["एऽ", "ेऽ"],
+       ["eA", ["ea"]] => ["एऽऽ", "ेऽऽ"],
+       ["ai", "ei"] => ["ऐ", "ै"],
+       "o" => ["ओ", "ो"],
+       "oa" => ["ओऽ", "ोऽ"],
+       ["ou", "au", "ow"] => ["औ", "ौ"],
+       ["M"] => ["अं" ,"ं"],
+       ["H"] => ["अः", "ः"]  
+
+list :can_make_cluster do
+consonants "k" => "क",
+           ["kh", ["k"]] => "ख",
+	         "g"  => "ग",
+           ["gh", ["g"]] => "घ",
+	         "NG" =>  "ङ",                   
+
+           ["ch", ["c"]] => "च",
+           ["Ch", ["ch"]] => "छ",
+           "j"  => "ज",  
+           ["jh", ["J", "j"]] => "झ",
+           "NY" => "ञ",
+
+           "T" => "ट",
+           ["Th", ["T"]] => "ठ",
+           "D" => "ड",
+           ["Dh", ["D"]] => ["ढ"],
+           "N" => "ण",
+
+           "t" => "त",
+           ["th", ["t"]] => "थ",
+           "d" => "द",
+           ["dh", ["d"]] => "ध",
+           "n" => "न",                   
+
+           "p" => "प",
+           ["f", ["ph"]] => "फ",
+           "b" => "ब",
+           ["bh", ["b"]] => "भ",
+           "m" => "म",
+
+           "y" => "य",
+#           "r" => ["र", "र#{$virama}"],
+#           "l" => ["ल", "ल#{$virama}"],
+           "r" => "र",
+           "l" => "ल",
+           ["v", "w"] => "व",
+           "s" => "स",
+           ["sh", ["s"]]  => "श",
+           ["Sh", ["sh"]] => "ष",
+           "h" => "ह"
+end
+
+ignore_duplicates true
+can_make_cluster.each do |c1|
+   can_make_cluster.each do |c2|
+     if c1.match_type == 1
+        consonants ["#{c1.pattern}#{c2.pattern}"] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+     else
+        consonants [["#{c1.pattern}#{c2.pattern}"]] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+     end 
+   end
+end
+
+# following are the consonants clusters, having more than 2 consonants
+# few sequences are commented as the software can't handle such a long sequence
+consonants "kkN" => "क्क्ण",
+           "kky" => "क्क्य",
+           "kty" => "क्त्य",
+           "ktr" => "क्त्र",
+           ["ktv", "ktw"] => "क्त्व",
+           "kpr" => "क्प्र",
+           "kthn" => "क्थ्न",
+           "kny" => "क्न्य",
+           "kShN" => "क्ष्ण",
+           "kShm" => "क्ष्म",
+#           "kShmy" => "क्ष्म्य",
+           "kShy" => "क्ष्य",
+           ["kShv", "kShw"] => "क्ष्व",
+           ["ksv", "ksw"] => "क्स्व",
+           "gjy" => "ग्ज्य",
+           ["gdhv", "gdhw"] => "ग्ध्व",
+           "gny" => "ग्न्य",
+           "gbhy" => "ग्ब्य",
+           "gry" => "ग्र्य",
+           ["ghny", ["gny"]] => "घ्न्य",
+           ["NGkt", "NGqt"] => "ङ्क्त",
+           ["NGkSh", "NGqSh"] => "ङ्क्ष",
+#           ["NGkShv", "NGkShw", ["NGqShv", "NGqShw"]] => "ङ्क्ष्व",
+           ["NGkhy", ["NGky"]] => "ङ्ख्य",
+           "NGgy" => "ङ्ग्य",
+           "NGgr" => "ङ्ग्र",
+           ["NGghy", ["NGgy"]] => "ङ्घ्य",
+           ["NGghr", ["NGgr"]] => "ङ्घ्र",
+           ["chchy", "ccy"] => "च्च्य",
+           ["chChr", "cChr"] => "च्छ्र",
+           ["chChv", "chChw", ["cChv", "cChw"]] => "च्छ्व",
+           "jjNY" => "ज्ज्ञ",
+           "jjy" => "ज्ज्य",
+           ["jjv", "jjw"] => "ज्ज्व",
+           "jNYy" => "ज्ञ्य",
+           "NYjNY" => "ञ्ज्ञ",
+           "NYshr" => "ञ्श्र",
+           ["NYshv", "NYshw"] => "ञ्श्व",
+           "NDy" => "ण्ड्य",
+           "NDr" => "ण्ड्र",
+           "tkr" => "त्क्र",
+           "tkSh" => "त्क्ष",
+           "tty" => "त्त्य",
+           "ttr" => "त्त्र",
+           ["ttv", "ttw"] => "त्त्व",
+           "tny" => "त्न्य",
+           "tpr" => "त्प्र",
+           "tmy" => "त्म्य",
+           "try" => "त्र्य",
+           ["tvy", "twy"] => "त्व्य",
+           "tst" => "त्स्त",
+#           "tstr" => "त्स्त्र",
+           "tsth" => "त्स्थ",
+           "tsn" => "त्स्न",
+           "tsm" => "त्स्म",
+#           "tsny" => "त्स्न्य",
+           "tsy" => "त्स्य",
+           "tsr" => "त्स्र",
+           ["tsv", "tsw"] => "त्स्व",
+           "dgr" => "द्ग्र",
+           "ddy" => "द्द्य",
+           "ddr" => "द्द्र",
+           ["ddv", "ddw"] => "द्द्व",
+           "ddhy" => "द्ध्य",
+           "ddhr" => "द्ध्र",
+           ["ddhv", "ddhw"] => "द्ध्व",
+           "dbr" => "द्ब्र",
+           "dbh" => "द्ब्ह",
+           "dbhy" => "द्ब्य",
+           "dbhr" => "द्ब्र",
+           "dry" => "द्र्य",
+           ["dvy", "dwy"] => "द्व्य",
+           ["dvr", "dwr"] => "द्व्र",
+           "dhny" => "ध्न्य",
+           "dhry" => "ध्र्य",
+           "nkr" => "न्क्र",
+           "nkl" => "न्क्ल",
+           "nkSh" => "न्क्ष",
+           "nty" => "न्त्य",
+           "ntr" => "न्त्र",
+#           "ntry" => "न्त्र्य",
+           ["ntv", "ntw"] => "न्त्व",
+#           "ntsy" => "न्त्स्य",
+           "ndy" => "न्द्य",
+           "ndr" => "न्द्र",
+           ["ndv", "ndw"] => "न्द्व",
+           "ndhy" => "न्ध्य",
+           "ndhr" => "न्ध्र",
+           "nny" => "न्न्य",
+           ["nnv", "nnw"] => "न्न्व",
+           "npr" => "न्प्र",
+           "nbr" => "न्ब्र",
+           "nbhr" => "न्भ्र",
+           ["nvy", "nwy"] => "न्व्य",
+           "nsth" => "न्स्थ",
+           "nsm" => "न्स्म",
+           ["nsv", "nsw"] => "न्स्व",
+           "pty" => "प्त्य",
+           ["ptv", "ptw"] => "प्त्व",
+           "psy" => "प्स्य",
+           ["psv", "psw"] => "प्स्व",
+           "bdhv" => "ब्ध्व",
+           "mby" => "म्ब्य",
+           "mpr" => "म्प्र",
+           "rkSh" => "र्क्ष",
+#           "rkShy" => "र्क्ष्य",
+           "rgy" => "र्ग्य",
+           "rgr" => "र्ग्र",
+           "rghy" => "र्घ्य",
+           "rNGg" => "र्ङ्ग",
+           ["rchCh", "rcCh"] => "र्च्छ",
+           ["rchy", "rcy"] => "र्च्य",
+           "rjNY" => "र्ज्ञ",
+           ["rjv", "rjw"] => "र्ज्व",
+           "rNy" => "र्ण्य",
+           "rtm" => "र्त्म",
+           "rty" => "र्त्य",
+           "rtr" => "र्त्र",
+           ["rtv", "rtw"] => "र्त्व",
+           "rts" => "र्त्स",
+#           "rtsny" => "र्त्स्न्य",
+           "rtt" => "र्त्त",
+#           "rtty" => "र्त्त्य",
+#           "rtsy" => "र्त्स्य",
+           "rthy" => "र्थ्य",
+           "rddh" => "र्द्ध",
+#           "rddhr" => "र्द्ध्र",
+           "rdy" => "र्द्य",
+           "rdr" => "र्द्र",
+           ["rdv", "rdw"] => "र्द्व",
+           "rdhn" => "र्ध्न",
+           "rdhm" => "र्ध्म",
+           "rdhy" => "र्ध्य",
+           "rdhr" => "र्ध्र",
+           ["rdhv", "rdhw"] => "र्ध्व",
+           "rny" => "र्न्य",
+           "rbr" => "र्ब्र",
+           "rbhy" => "र्भ्य",
+           "rbhr" => "र्भ्र",
+           "rmy" => "र्म्य",
+           ["rvy", "rwy"] => "र्व्य",
+           ["rShv", "rShw"] => "र्ष्व",
+           "rShT" => "र्ष्ट",
+           "rShN" => "र्ष्ण",
+           "rShy" => "र्ष्य",
+           "rhy" => "र्ह्य",
+           "rhr" => "र्ह्र",
+           "lky" => "ल्क्य",
+           ["shchy", "shcy"] => "श्च्य",
+           "shry" => "श्र्य",
+           ["shvy", "shwy"] => "श्व्य",
+           "Shkr" => "ष्क्र",
+           "ShTy" => "ष्ट्य",
+           "ShTr" => "ष्ट्र",
+#           "ShTry" => "ष्ट्र्य",
+           ["ShTv", "ShTw"] => "ष्ट्व",
+           "ShThy" => "ष्ठ्य",
+           "Shthr" => "ष्थ्र",
+           "Shthy" => "ष्थ्य",
+           "ShNy" => "ष्ण्य",
+           "Shpr" => "ष्प्र",
+           "sty" => "स्त्य",
+           "str" => "स्त्र",
+#           "stry" => "स्त्र्य",
+           ["stv", "stw"] => "स्त्व",
+           "sthy" => "स्थ्य",
+           "smy" => "स्म्य",
+           "sny" => "स्न्य",
+           ["ssv", "ssw"] => "स्स्व"
+
+# Half forms for म
+consonants(combine can_make_cluster, ["m*"] => ["म#{$virama}*1"])
+
+generate_cv
+
+consonants(combine get_consonants, ["*a"] => ["*1"])
+
+ignore_duplicates false
+
+#consonants ["m"] => "म"
+
+# Need to replace this when we have a way to pass value2 and value3 in combine
+get_vowels.each do |vowel|
+  if vowel.match_type == 1
+#     consonant_vowel_combinations ["m#{vowel.pattern}"] => ["म#{vowel.value2}"]
+  else
+#     consonant_vowel_combinations [["m#{vowel.pattern}"]] => ["म#{vowel.value2}"]
+  end
+end
+
+#symbols ["m", ["n"]] => $am,
+#        [["n", "m"]] => $an,
+symbols [".","|"] => "।",
+        ["om"] => "\u{0950}"
+
+symbols({:priority => :low}, ["aan", "aam"] => $an)
+
+numbers "0" => "०",
+        "1" => "१",
+        "2" => "२",
+        "3" => "३",
+        "4" => "४",
+        "5" => "५",
+        "6" => "६",
+        "7" => "७",
+        "8" => "८",
+        "9" => "९"

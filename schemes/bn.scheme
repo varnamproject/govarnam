@@ -1,0 +1,211 @@
+# encoding: utf-8
+
+##
+# Copyright (C) Madhumita Ghar
+#
+# This is part of libvarnam. See LICENSE.txt for the license
+##
+
+language_code "bn"
+identifier "bn"
+display_name "Bengali"
+author "Madhumita Ghar"
+
+ignore_duplicates false
+
+$virama = "\u{09CD}"
+$nukta = "\u{09BC}"
+
+$an = "\u{0981}"
+$am = "\u{0982}"
+
+virama "~" => "\u{09CD}"
+visarga "H" => "\u{0983}"
+
+# default sound in Bengali is "o" or "au"
+# a is pronounced as au
+vowels ["a", ["o", "au"]] => "অ",
+       ["aa", "A", ["a"]]  => ["আ", "া"],
+       "i" => ["ই", "ি"],
+       ["ee", "I", "ii", ["i"]] => ["ঈ", "ী"],
+       "u" => ["উ", "ু"],
+       ["uu", "oo", "U", ["u"]] => ["ঊ", "ূ"],
+
+       ["R", ["ri", "ru"]] => ["ঋ", "ৃ"],
+       ["Rr", ["Ri", "Ru", "R"]] => ["ৠ", "ৄ"],
+       ["L", ["li", "lu"]] => ["ঌ", "ৢ"],
+       ["Ll", ["Li", "Lu", "L"]] => ["ৡ", "ৣ"], 
+
+       "e" => ["এ", "ে"],
+
+# ai is pronounced is oi
+       ["oi", "ai", "ei"] => ["ঐ", "ৈ"],
+       ["o", ["a"]] => ["ও", "\u{09CB}"],
+       ["ou", "ow", ["au"]] => ["ঔ", "\u{09CC}"],
+
+       ["AN"] => ["আ#{$an}", "া#{$an}"],
+       ["uN"] => ["উ#{$an}", "ু#{$an}"],
+       ["UN"] => ["ঊ#{$an}", "ূ#{$an}"],
+       ["N", "M"] => ["অং","\u{0982}"],
+       ["aH"] => ["অঃ", "\u{0983}"]             
+
+list :can_make_cluster do
+consonants ["k", ["c"]] => "ক",
+           ["kh", ["k"]] => "খ",
+           "g" => "গ",
+           ["gh", ["g"]] => "ঘ",
+           "ng" => "ঙ",
+
+           "ch" => "চ",
+           ["Ch", ["ch"]] => "ছ",
+           "j" => ["জ", ["য"]],
+           ["jh", ["j"]] => "ঝ",
+           "Ny" => "ঞ",
+
+           "T" => "ট",
+           ["Th", ["T"]] => "ঠ",
+           "D" => "ড",
+           ["DD", ["r", "d"]] => ["ড়", "ড#{$nukta}"],
+           ["Dh", ["D"]] => "ঢ",
+           "DH" => ["ঢ়", "ঢ#{$nukta}"],
+           ["NN", ["n"]] => "ণ",
+
+           "t" => ["ত", ["ৎ"]],
+           ["th", ["t"]] => "থ",
+           "d" => "দ",
+           ["dh", ["d"]] => "ধ",
+           "n" => "ন",                   
+
+           "p" => "প",
+           ["ph", "f"] => "ফ",
+           ["b", "v", "w"] => "ব",
+           ["bh", ["b"]] => "ভ",
+           "m" => "ম",
+
+# ya is pronounced as ja 
+# ya+nukta is pronounced as ya
+           ["y", ["j", "ae"]] => "য",
+           ["Y", ["y"]] => ["য়", "য#{$nukta}"],
+           "r" => "র",
+           "l" => "ল",
+           "s" => "স",
+# sha also expands to swa
+           ["sh", ["s"]] => ["শ", ["স্ব"]],
+           ["Sh", ["sh"]] => "ষ",
+           "h" => "হ"
+end
+
+# conjuncts for more than 2 consonants (except first one)
+# low-priority ones are added due to rule mentioned in line 150 onwards
+consonants ["kkh", ["kSh"]] => "ক্ষ",     # mapping kkh also to क्ष
+           ["kry", "krj", ["krr"]] => "ক্র্য",
+           ["kShNN", "kkhNN"] => "ক্ষ্ণ",
+           ["kShn", "kkhn"] => "ক্ষ্ন",
+           ["kShm", "kkhm"] => "ক্ষ্ম",
+           ["kShy", "kShj", "kkhy", "kkhj"] => "ক্ষ্য",
+           "ngkl" => "ঙ্ক্ল",
+           ["ngkSh", "ngkkh"] => "ঙ্ক্ষ",
+           ["nggy", "nggj", ["nggg"]] => "ঙ্গ্য",
+           ["chChv", "chChw", "chChb", ["chChCh"]] => "চ্ছ্ব",
+           ["jjv", "jjw", "jjb", ["jjj"]] => "জ্জ্ব",
+           "NNtr" => "ণ্ত্র",
+           ["NNthy", "NNthj", ["NNthth"]] => "ণ্থ্য",
+           ["ttv", "ttw", "ttb", ["ttt"]] => "ত্ত্ব",
+           "ttr" => "ত্ত্র",
+           ["try", "trj", ["trr"]] => "ত্র্য",
+           ["thry", "thrj", ["thrr"]] => "থ্র্য",
+           "dbhr" => "দ্ভ্র",
+           ["dgy", "dgj", ["dgg"]] => "দ্গ্য",
+           ["ddy", "ddj", ["ddd"]] => "দ্দ্য",
+           "ddr" => "দ্দ্র",
+           "ddhr" => "দ্ধ্র",
+           ["dvy", "dwy", "dby", "dvj", "dwj", "dbj", ["dbb"]] => "দ্ব্য",
+           ["dry", "drj", ["drr"]] => "দ্র্য",
+           ["dhry", "dhrj", ["dhrr"]] => "ধ্র্য",
+           ["ntv", "ntw", "ntb", ["ntt"]] => "ন্ত্ব",
+           "ntr" => "ন্ত্র",
+           ["ntry", "ntrj", ["ntrr"]] => "ন্ত্র্য",
+           ["ndv", "ndw", "ndb", ["ndd"]] => "ন্দ্ব",
+           ["ndy", "ndj", ["ndd"]] => "ন্দ্য",
+           "ndr" => "ন্দ্র",
+           ["ndry", "ndrj", ["ndrr"]] => "ন্দ্র্য",
+           ["ndhy", "ndhj", ["ndhdh"]] => "ন্ধ্য",
+           "ndhr" => "ন্ধ্র",
+           ["pry", "prj", ["prr"]] => "প্র্য",
+           "mpr" => "ম্প্র",
+           "mbhr" => "ম্ভ্র",
+           "rkk" => "র্ক্ক",
+           "rkT" => "র্ক্ট",
+           ["rdhv", "rdhw", "rdhb", ["rdhdh"]] => "র্ধ্ব",
+           "Shkr" => "ষ্ক্র",
+           "Shkl" => "ষ্ক্ল",
+           "Shtr" => "ষ্ত্র",
+           ["ShThy", "ShThj", ["ShThTh"]] => "ষ্ঠ্য",
+           "sTr" => "স্ট্র",
+           "str" => "স্ত্র",
+           ["sthy", "sthj", ["sthth"]] => "স্থ্য",
+           "spr" => "স্প্র",
+           "spl" => "স্প্ল",
+# smriti can be shriti 
+           ["smr", ["shr"]] => "স্ম্র"
+
+ignore_duplicates true
+can_make_cluster.each do |c1|
+   can_make_cluster.each do |c2|
+
+# Bengali, apparently, has a rule that if a half consonant comes
+#    before ya, va, or ma, then that consonant gets repeated and
+#    ya, va, ma will be eliminated e.g. anya > anna / onno
+#    mahatva > mohotto
+
+      if c1.pattern == c2.pattern
+         consonants [["#{c1.pattern}#{c2.pattern}"]] => ["#{c1.value1}#{$virama}য"]
+         consonants [["#{c1.pattern}#{c2.pattern}"]] => ["#{c1.value1}#{$virama}ব"]
+         consonants [["#{c1.pattern}#{c2.pattern}"]] => ["#{c1.value1}#{$virama}ম"]
+      else
+         if c1.match_type == 1
+            consonants ["#{c1.pattern}#{c2.pattern}"] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+         else
+            consonants [["#{c1.pattern}#{c2.pattern}"]] => ["#{c1.value1}#{$virama}#{c2.value1}"]
+         end
+      end 
+   end
+end
+
+# Half forms for ম
+consonants(combine can_make_cluster, ["m*"] => ["ম#{$virama}*1"])
+
+generate_cv
+
+# default sound associated with every consonant is "o"
+consonants(combine get_consonants, ["*a"] => ["*1"])
+consonants(combine get_consonants, [["*o"]] => ["*1"])
+
+ignore_duplicates true
+#ignore_duplicates false
+#consonants [["m"]] => "ম"
+
+# Need to replace this when we have a way to pass value2 and value3 in combine
+get_vowels.each do |vowel|
+  if vowel.match_type == 1
+     consonant_vowel_combinations ["m#{vowel.pattern}"] => ["ম#{vowel.value2}"]
+  else
+     consonant_vowel_combinations [["m#{vowel.pattern}"]] => ["ম#{vowel.value2}"]
+  end
+end
+symbols ["m", ["n"]] => $am,
+        [["n", "m"]] => $an,
+        ["|"] => "।"
+
+symbols({:priority => :low}, ["aan", "aam"] => $an)
+
+numbers "0" => "০",
+        "1" => "১",
+        "2" => "২",
+        "3" => "৩",
+        "4" => "৪",
+        "5" => "৫",
+        "6" => "৬",
+        "7" => "৭",
+        "8" => "৮",
+        "9" => "৯"
