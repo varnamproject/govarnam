@@ -28,7 +28,6 @@ Suggestion* makeSuggestion(char* word, int weight, int learned_on);
 
 TransliterationResult makeResult(varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized);
 
-void destroySuggestions(void* pointer);
 void destroySuggestionsArray(varray* pointer);
 void destroyTransliterationResult(TransliterationResult*);
 
@@ -68,5 +67,7 @@ typedef struct Symbol_t {
 } Symbol;
 
 Symbol* makeSymbol(int Identifier, int Type, int MatchType, char* Pattern, char* Value1, char* Value2, char* Value3, char* Tag, int Weight, int Priority, int AcceptCondition, int Flags);
+
+void destroySymbolArray(void* cSymbols);
 
 #endif /* __C_SHARED_H__ */

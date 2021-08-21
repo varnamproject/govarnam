@@ -299,7 +299,6 @@ func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, *Va
 		}
 	}
 
-	fmt.Println("ccc" + fmt.Sprint(int(C.varray_length(resultPointer))))
 	i := 0
 	for i < int(C.varray_length(resultPointer)) {
 		cSug := (*C.Suggestion)(C.varray_get(resultPointer, C.int(i)))
@@ -427,15 +426,19 @@ func (handle *VarnamHandle) SearchSymbolTable(ctx context.Context, searchCriteri
 
 		symbol := C.makeSymbol(Identifier, Type, MatchType, Pattern, Value1, Value2, Value3, Tag, Weight, Priority, AcceptCondition, Flags)
 
-		cResult := C.varnam_search_symbol_table(handle.connectionID, operationID, *symbol)
+		ptr := C.varray_init()
+		resultPointer := (*C.varray)(ptr)
+		defer C.destroySymbolArray(unsafe.Pointer(ptr))
 
-		if cResult == nil {
+		code := C.varnam_search_symbol_table(handle.connectionID, operationID, *symbol, resultPointer)
+
+		if code != C.VARNAM_SUCCESS {
 			return goResults
 		}
 
 		i := 0
-		for i < int(C.varray_length(cResult)) {
-			result := (*C.Symbol)(C.varray_get(cResult, C.int(i)))
+		for i < int(C.varray_length(resultPointer)) {
+			result := (*C.Symbol)(C.varray_get(resultPointer, C.int(i)))
 
 			var goResult Symbol
 			goResult.Identifier = int(result.Identifier)

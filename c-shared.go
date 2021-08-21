@@ -309,7 +309,7 @@ func varnam_get_vst_path(varnamHandleID C.int) *C.char {
 }
 
 //export varnam_search_symbol_table
-func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C.struct_Symbol_t) *C.varray {
+func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C.struct_Symbol_t, resultPointer *C.varray) C.int {
 	ctx, cancel := context.WithCancel(backgroundContext)
 	defer cancel()
 
@@ -337,11 +337,10 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 
 	select {
 	case <-ctx.Done():
-		return nil
+		return C.VARNAM_CANCELLED
 	default:
 		results, handle.err = handle.varnam.SearchSymbolTable(ctx, goSearchCriteria)
 
-		cSymbols := C.varray_init()
 		for _, symbol := range results {
 			cSymbol := unsafe.Pointer(C.makeSymbol(
 				C.int(symbol.Identifier),
@@ -357,10 +356,10 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 				C.int(symbol.AcceptCondition),
 				C.int(symbol.Flags),
 			))
-			C.varray_push(cSymbols, cSymbol)
+			C.varray_push(resultPointer, cSymbol)
 		}
 
-		return cSymbols
+		return C.VARNAM_SUCCESS
 	}
 }
 
