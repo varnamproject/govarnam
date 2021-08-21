@@ -20,7 +20,7 @@ import (
 	"sync"
 	"unsafe"
 
-	"gitlab.com/subins2000/govarnam/govarnam"
+	"github.com/varnamproject/govarnam/govarnam"
 )
 
 var generalError error

@@ -13,7 +13,7 @@ import (
 	"log"
 	"time"
 
-	"gitlab.com/subins2000/govarnam/govarnamgo"
+	"github.com/varnamproject/govarnam/govarnamgo"
 )
 
 var varnam *govarnamgo.VarnamHandle
