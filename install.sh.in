@@ -22,16 +22,16 @@ else
     sudo cp "$SCRIPT_DIR/"*.h "@INSTALL_PREFIX@/include/libgovarnam/"
     sudo ldconfig
 
-    sudo mkdir -p "@INSTALL_PREFIX@/share/varnam/vstDEV"
-    sudo cp "$SCRIPT_DIR/schemes/"*.vst "@INSTALL_PREFIX@/share/varnam/vstDEV/"
+    sudo mkdir -p "@INSTALL_PREFIX@/share/varnam/schemes"
+    sudo cp "$SCRIPT_DIR/schemes/"*.vst "@INSTALL_PREFIX@/share/varnam/schemes/"
     echo "Installation finished"
 
   elif [ "$1" = "uninstall" ]; then
     sudo rm "@INSTALL_PREFIX@/bin/govarnamc" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
     sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*
     sudo rmdir "@INSTALL_PREFIX@/include/libgovarnam"
-    sudo rm "@INSTALL_PREFIX@/share/varnam/vstDEV/"*
-    sudo rmdir "@INSTALL_PREFIX@/share/varnam/vstDEV/"
+    sudo rm "@INSTALL_PREFIX@/share/varnam/schemes/"*
+    sudo rmdir "@INSTALL_PREFIX@/share/varnam/schemes/"
 
     echo "Uninstallation finished"
   fi

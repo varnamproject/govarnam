@@ -49,11 +49,12 @@ const VARNAM_LEARNT_WORD_MIN_WEIGHT = 30
 const CHIL_TAG = "chill"
 
 // VARNAM_VST_DIR VST lookiup directories according to priority
-var VARNAM_VST_DIR = [2]string{
-	// "/usr/share/varnam/vst",
-	// "/usr/local/share/varnam/vst",
+var VARNAM_VST_DIR = [3]string{
+	// libvarnam used to use "vst" folder
 	"schemes",
-	"/usr/local/share/varnam/vstDEV"}
+	"/usr/local/share/varnam/schemes",
+	"/usr/share/varnam/schemes",
+}
 
 //FindVSTDir Get the VST storing directory
 func FindVSTDir() (string, error) {
@@ -81,12 +82,14 @@ func findLearningsFilePath(langCode string) string {
 		dir string
 	)
 
+	// libvarnam used to use "suggestions" folder
+
 	home := os.Getenv("XDG_DATA_HOME")
 	if home == "" {
 		home = os.Getenv("HOME")
-		dir = path.Join(home, ".local", "share", "varnam", "suggestionsDEV")
+		dir = path.Join(home, ".local", "share", "varnam", "learnings")
 	} else {
-		dir = path.Join(home, "varnam", "suggestionsDEV")
+		dir = path.Join(home, "varnam", "learnings")
 	}
 	loc = path.Join(dir, langCode+".vst.learnings")
 

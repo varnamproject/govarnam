@@ -164,7 +164,11 @@ type VarnamError struct {
 
 // Error mimicking error package's function
 func (err *VarnamError) Error() string {
-	return err.Err.Error()
+	if err.Err != nil {
+		return err.Err.Error()
+	} else {
+		return ""
+	}
 }
 
 func (handle *VarnamHandle) checkError(code C.int) *VarnamError {
