@@ -11,7 +11,7 @@ func TestTransliterate(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
 	rt, err := varnam.ReverseTransliterate("നിത്യം")
-	checkVarnamError(err)
+	checkError(err)
 
 	assertEqual(t, rt[0].Word, "nithyam")
 }
@@ -35,7 +35,7 @@ func TestLearn(t *testing.T) {
 	aadc 10`)
 
 	learnStatus, verr := varnam.LearnFromFile(filePath)
-	checkVarnamError(verr)
+	checkError(verr)
 
 	assertEqual(t, learnStatus.TotalWords, 6)
 	assertEqual(t, learnStatus.FailedWords, 1)
