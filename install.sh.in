@@ -11,7 +11,7 @@ if [ -z "$1" ]; then
   echo "Specify install or uninstall"
 else
   if [ "$1" = "install" ]; then
-    sudo cp "$SCRIPT_DIR/govarnamc" "@INSTALL_PREFIX@/bin/govarnamc"
+    sudo cp "$SCRIPT_DIR/varnamcli" "@INSTALL_PREFIX@/bin/varnamcli"
     
     sudo mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
     sudo cp "$SCRIPT_DIR/libgovarnam.so" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@"
@@ -27,7 +27,7 @@ else
     echo "Installation finished"
 
   elif [ "$1" = "uninstall" ]; then
-    sudo rm "@INSTALL_PREFIX@/bin/govarnamc" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
+    sudo rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
     sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*
     sudo rmdir "@INSTALL_PREFIX@/include/libgovarnam"
     sudo rm "@INSTALL_PREFIX@/share/varnam/schemes/"*

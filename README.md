@@ -25,14 +25,14 @@ It will ask for your password, enter it.
 
 To check if installation is successful, try this command :
 ```bash
-govarnamc -s ml enthaanu
+varnamcli -s ml enthaanu
 ```
 It should give malayalam output if installation is successful.
 
 * To make Varnam give better suggestions, you will need to import some words. Download a `.vlf` (Varnam Learnings File) file from here [TODO LINK].
 * Import it:
 ```bash
-govarnamc -s ml -import file.vlf
+varnamcli -s ml -import file.vlf
 ```
 
 Now, you may install the IBus engine to use Varnam system wide: https://github.com/varnamproject/govarnam-ibus
@@ -41,17 +41,17 @@ Now, you may install the IBus engine to use Varnam system wide: https://github.c
 
 Test it out:
 ```bash
-govarnamc -s ml namaskaaram
+varnamcli -s ml namaskaaram
 ```
 
 Learn a word:
 ```bash
-govarnamc -s ml -learn കുന്നംകുളം
+varnamcli -s ml -learn കുന്നംകുളം
 ```
 
 Train a word with a particular pattern:
 ```bash
-govarnamc -s ml -train college കോളേജ്
+varnamcli -s ml -train college കോളേജ്
 ```
 
 ### Learning Words From A File
@@ -59,7 +59,7 @@ govarnamc -s ml -train college കോളേജ്
 You can import all language words from any text file. Varnam will separate english words and non-english words and learn accordingly.
 
 ```bash
-govarnamc -s ml -learn-from-file file.html
+varnamcli -s ml -learn-from-file file.html
 ```
 
 You can download news articles or Wikipedia pages in HTML format to learn words from them.
@@ -107,7 +107,7 @@ cd cli
 # Show the path to libgovarnam.so
 export LD_LIBRARY_PATH=$(realpath ../):$LD_LIBRARY_PATH
 
-go build -o govarnamc .
+go build -o varnamcli .
 ```
 
 ### Hacking

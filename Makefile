@@ -3,7 +3,7 @@
 .PHONY:default
 default: build ;
 
-CLI_BIN := govarnamc
+CLI_BIN := varnamcli
 INSTALL_PREFIX := /usr/local
 VERSION := $(shell git describe --abbrev=0 --tags | sed s/v//)
 RELEASE_NAME := govarnam-${VERSION}
