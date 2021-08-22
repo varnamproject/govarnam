@@ -22,12 +22,6 @@ func checkError(err error) {
 	}
 }
 
-func checkVarnamError(err *VarnamError) {
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-}
-
 // AssertEqual checks if values are equal
 // Thanks https://gist.github.com/samalba/6059502#gistcomment-2710184
 func assertEqual(t *testing.T, a interface{}, b interface{}) {
