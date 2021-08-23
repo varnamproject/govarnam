@@ -38,6 +38,7 @@ install-script:
 install:
 	./install.sh install
 
+.PHONY: cli
 cli:
 	go build -o ${CLI_BIN} ./cli
 
