@@ -22,6 +22,7 @@ import (
 // Config  config values
 type Config struct {
 	IndicDigits                bool
+	DictionaryMatchExact       bool
 	DictionarySuggestionsLimit int
 	TokenizerSuggestionsLimit  int
 	TokenizerSuggestionsAlways bool
@@ -239,6 +240,12 @@ func (handle *VarnamHandle) SetConfig(config Config) {
 		C.varnam_set_indic_digits(handle.connectionID, C.int(1))
 	} else {
 		C.varnam_set_indic_digits(handle.connectionID, C.int(0))
+	}
+
+	if config.DictionaryMatchExact {
+		C.varnam_set_dictionary_match_exact(handle.connectionID, C.int(1))
+	} else {
+		C.varnam_set_dictionary_match_exact(handle.connectionID, C.int(0))
 	}
 }
 

@@ -211,6 +211,15 @@ func varnam_set_tokenizer_suggestions_limit(varnamHandleID C.int, val C.int) {
 	getVarnamHandle(varnamHandleID).varnam.TokenizerSuggestionsLimit = int(val)
 }
 
+//export varnam_set_dictionary_match_exact
+func varnam_set_dictionary_match_exact(varnamHandleID C.int, val C.int) {
+	if val == 0 {
+		getVarnamHandle(varnamHandleID).varnam.DictionaryMatchExact = false
+	} else {
+		getVarnamHandle(varnamHandleID).varnam.DictionaryMatchExact = true
+	}
+}
+
 //export varnam_learn
 func varnam_learn(varnamHandleID C.int, word *C.char, weight C.int) C.int {
 	handle := getVarnamHandle(varnamHandleID)
