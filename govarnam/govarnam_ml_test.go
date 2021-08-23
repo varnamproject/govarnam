@@ -218,7 +218,7 @@ func TestMLReverseTransliteration(t *testing.T) {
 
 	sugs, err = varnam.ReverseTransliterate("2019 ഏപ്രിൽ 17-ന് മലയാളം വിക്കിപീഡിയയിലെ ലേഖനങ്ങളുടെ എണ്ണം 63,000 പിന്നിട്ടു.")
 
-	assertEqual(t, sugs[0].Word, "2019 Epril 17-n~ malayaaLam vikkipeeDiyayile lEkhanaNGaLuTe eNNam 63,000 pinnittu.")
+	assertEqual(t, sugs[0].Word, "2019 Epril 17-n~ malayaaLam vikkipeeDiyayile lEkhanangaLuTe eNNam 63,000 pinnittu.")
 }
 
 func TestDictionaryLimit(t *testing.T) {

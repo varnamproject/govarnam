@@ -46,7 +46,6 @@ consonants ["ka"] => "ക",
            ["kha", ["gha"]] => "ഖ",
            "ga"  => "ഗ",
            ["gha", ["kha"]] => "ഘ",
-           ["NGa", ["nga"]] =>  "ങ്ങ",
            "cha" => "ച",
            ["CHa", ["cha", "jha"]] => "ഛ",
            [["cha"]] => "ച്ഛ",
@@ -75,10 +74,14 @@ consonants ["ka"] => "ക",
 
 consonants({:accept_if => :starts_with}, ["ca"] => "ക")
 
-tag "render_value2" do
-   consonants "nja" => ["ഞ", "ഞ്ഞ"],
-              "nga" => ["ങ", "ങ്ങ"]
-end
+# Scheme Change August 23, 2021: nga => ങ്ങ (double ങ)
+# By Subin Siby
+consonants "nja" => ["ഞ", "ഞ്ഞ"],
+           "NJa" => "ഞ്ഞ",
+
+           # Double ങ (ങ്ങ) has more usage than single
+           "nga" => ["ങ്ങ", "ങ"],
+           "NGa" => "ങ"
 
 consonants ["kra"] => "ക്ര",
            "gra"  => "ഗ്ര",
