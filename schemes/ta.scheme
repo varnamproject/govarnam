@@ -9,7 +9,7 @@
 language_code "ta"
 identifier "ta"
 display_name "Tamil"
-author "Navaneeth KN/Kumaran Venkataraman"
+author "Navaneeth KN/Kumaran Venkataraman/Kishore96in"
 
 $virama = "்"
 virama "~" => "்"
@@ -28,37 +28,39 @@ vowels "a" => "அ",
        "o" => ["ஒ", "ொ"],
        ["O", ["o"]] => ["ஓ", "ோ"],
        ["au", "ow", "ou"]  => ["ஔ", "ௌ"],
-	   ["q"] => "ஃ"
+     ["q"] => "ஃ"
 
 consonants ["ka", "qa", "ga", ["ha"]] => "க",
-           ["nga"] =>  "ங#{$virama}க",
+           ["nga"] =>  "ங",
            ["sa", "cha"] => "ச",
-           ["ja"]  => "ஜ",
-           ["NJa", ["nja", "ncha"]] => "ஞ",
+           ["ja", "za"]  => "ஜ",
+           ["NJa", ["nja","nya","nga"]] => "ஞ",
            ["ta","da", ["tha"]] => "ட",
-           ["Na"] => "ண",
+           ["Na",["na"]] => "ண",
            ["tha", "dha", ["ta","da"]] => "த",
-           ["nna",["Na"]] => "ன",
+           ["nna",["Na","na"]] => "ன",
+           ["na"] => "ந",
            ["pa", "ba", ["pha", "bha"]] => "ப",
            ["ma"] => "ம",
            ["ya"] => "ய",
            ["ra"] => "ர",
-		      ["va", "wa"] => "வ",
+          ["va", "wa"] => "வ",
            ["Ra", "RRa", ["ra", "tra", "dra"]] => "ற",
-		      "la" => "ல",
-		      ["La", ["lla", "la"]] => "ள",
-		      ["zha",["la"]] => "ழ",
-		      ["Sa"] => "ஶ",
-		      ["sha"] => "ஷ",
-		      ["sa"] => "ஸ",
-		      ["ha"] => "ஹ"
+          "la" => "ல",
+          ["La", ["lla", "la"]] => "ள",
+          ["zha",["la"]] => "ழ",
+          ["Sa"] => "ஶ",
+          ["sha"] => "ஷ",
+          ["ssa",["sa"]] => "ஸ",
+          ["ha"] => "ஹ",
+          ["fa"] => "ஃப"
 
-
-consonants ["kk*"] => ["க#{$virama}க#{$virama}*1"]
+consonants ["kk*"] => ["க#{$virama}க#{$virama}*1"],
+      [["nga", "nka"]] =>  ["ங#{$virama}க"],
+      [["tra"]] => ["ற#{$virama}ற"],
+      ["ncha", "nja"] => ["ஞ#{$virama}ச"]
 
 infer_dead_consonants false
-
-consonants   ["na"] => "ந"
 
 generate_cv
 
