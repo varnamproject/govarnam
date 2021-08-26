@@ -1,12 +1,12 @@
 # Scripts
 
-## Remove symbols from word frequenct report
+## Remove symbols from word frequency report
 
-This script removes VST symbol words from a word frequency report file.
-Sometimes frequency report will have items like "ലൂ", "ഓ" which
-is unnecessary because tokenizer have these and can make these.
+This script removes VST symbols from a word frequency report file.
 
-GoVarnam won't learn single conjuncts anyway, so why keep it in report ?
+Sometimes frequency report will have items like "ലൂ", "ഓ" which is unnecessary because tokenizer can make these on its own.
+
+GoVarnam won't learn single conjuncts anyway, so why keep it in report ? Remove them with :
 
 ```bash
 python3 frequency-report-remove-symbols.py scheme.vst wordFrequencyReport.txt outputFile.txt
@@ -29,7 +29,26 @@ Example:
 ഫലകം 254
 ```
 
-This file is made from analysing usage of words in internet.
+This file is made from analysing usage of words in internet. [This repo](https://github.com/AI4Bharat/indicnlp_corpus#text-corpora) has a premade vocab frequency file for some Indian languages. [Indic Keyboard](https://gitlab.com/indicproject/dictionaries) also has one.
+
+### Normalize Frequency
+
+A frequency report may have large difference between the first word and last word like this :
+
+```
+എന്ത് 14569000
+...
+...
+ഫലകം 254
+```
+
+This is bad because suggestions can come out wrong. We need to normalize these values between a min and max.
+
+To normalize frequency of words between a min value (15) and max value (255), we can use this :
+
+```
+perl frequency-normalizer.pl frequencyReport.txt 15 255
+```
 
 ## Populate weight column in VST
 
@@ -56,7 +75,13 @@ Now the output file will have a similar content:
 രു 478358
 ```
 
+* Normalize the frequency :
+
+```
+perl frequency-normalizer.pl symbol-frequency.txt 0 100 > symbol-frequency-normalized.txt
+```
+
 * Now, use this file to populate the weight column in VST :
 ```
-python3 symbol-weight-update-in-vst.py ml.vst 
+python3 symbol-weight-update-in-vst.py ml.vst symbol-frequency-normalized.txt
 ```

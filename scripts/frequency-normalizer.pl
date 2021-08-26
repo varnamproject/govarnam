@@ -1,5 +1,5 @@
 # Reweigh the words
-# Sample: word="",f=8671269 to word="",f=200
+# Sample: word 8671269 to word 200
 # Source: command line argument
 # Output to terminal
 
@@ -8,19 +8,26 @@
 # Divide all other values (lines left in the list) by that number and round down.
 # All values should now be between 15 and 254.
 
+if( $#ARGV != 2 ){
+    print "Need 3 arguments: <file> <min> <max>\n";
+    die;
+}
 
 # Open original file
 use utf8;
 open FILE, $ARGV[0] or die $!;
 my $count=0;
 
+my $min = $ARGV[1];
+my $max = $ARGV[2];
+
 # Count the # of lines
 while (<FILE>) {
     $count++;
 }
 
-# Calculate the divider to ensure results between 0 and 100
-my $divider = int( $count / 100) + 1 ;
+# Calculate the divider to ensure results between min and max
+my $divider = int( $count / ($max - $min)) + 1;
 
 sub is_integer { $_[0] =~ /^[+-]?\d+$/ }
 # Re-open the source file and update the weight
@@ -33,7 +40,7 @@ while (my $line = <FILE>) {
     # Replace the weight if its a word line,
     # otherwise print without actions
     if ($line =~ /\s/) {
-        my $weighed = int( $count / $divider) + 0;
+        my $weighed = int( $count / $divider) + $min;
         my ($name) = $line =~ m/(.*)\s/;
         if (length($name) > 1 && !is_integer($name)) {
             $line =~ s/(\d*[.])?\d+/$weighed/g;
