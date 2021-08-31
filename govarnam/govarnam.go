@@ -233,7 +233,7 @@ func (varnam *Varnam) setDefaultConfig() {
 	ctx := context.Background()
 
 	varnam.DictionarySuggestionsLimit = 5
-	varnam.PatternDictionarySuggestionsLimit = 10
+	varnam.PatternDictionarySuggestionsLimit = 5
 
 	varnam.TokenizerSuggestionsLimit = 10
 	varnam.TokenizerSuggestionsAlways = true
