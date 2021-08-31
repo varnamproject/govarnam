@@ -145,7 +145,43 @@ func varnam_close(varnamHandleID C.int) C.int {
 }
 
 //export varnam_transliterate
-func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPointer *C.struct_TransliterationResult_t) C.int {
+func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPointer *C.varray) C.int {
+	ctx, cancel := context.WithCancel(backgroundContext)
+	defer cancel()
+
+	cancelFuncsMapMutex.Lock()
+	cancelFuncs[id] = &cancel
+	cancelFuncsMapMutex.Unlock()
+
+	channel := make(chan govarnam.TransliterationResult)
+
+	go getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word), channel)
+
+	select {
+	case <-ctx.Done():
+		return C.VARNAM_CANCELLED
+	case result := <-channel:
+		// Note that C.CString uses malloc()
+		// They should be freed manually. GC won't pick it.
+		// The freeing should be done by programs using govarnam
+
+		combined := result.ExactMatches
+		combined = append(combined, result.PatternDictionarySuggestions...)
+		combined = append(combined, result.DictionarySuggestions...)
+		combined = append(combined, result.TokenizerSuggestions...)
+		combined = append(combined, result.GreedyTokenized...)
+
+		for _, sug := range combined {
+			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+			C.varray_push(resultPointer, cSug)
+		}
+
+		return C.VARNAM_SUCCESS
+	}
+}
+
+//export varnam_transliterate_advanced
+func varnam_transliterate_advanced(varnamHandleID C.int, id C.int, word *C.char, resultPointer *C.struct_TransliterationResult_t) C.int {
 	ctx, cancel := context.WithCancel(backgroundContext)
 	defer cancel()
 

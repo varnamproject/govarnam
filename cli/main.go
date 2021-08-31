@@ -18,6 +18,16 @@ import (
 
 var varnam *govarnamgo.VarnamHandle
 
+func printSugs(sugs []govarnamgo.Suggestion) {
+	for _, sug := range sugs {
+		if sug.LearnedOn == 0 {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
+		} else {
+			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight) + " " + time.Unix(int64(sug.LearnedOn), 0).String())
+		}
+	}
+}
+
 func main() {
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
 	schemeFlag := flag.String("s", "", "Scheme ID")
@@ -33,8 +43,8 @@ func main() {
 	importFlag := flag.Bool("import", false, "Import learnings from file")
 
 	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
-	greedy := flag.Bool("greedy", false, "Show only exactly matched suggestions")
 
+	advanced := flag.Bool("advanced", false, "Show transliteration result in advanced mode")
 	reverseTransliterate := flag.Bool("reverse", false, "Reverse transliterate. Find which pattern to use for a specific word")
 
 	flag.Parse()
@@ -132,24 +142,10 @@ func main() {
 			fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
 			lastWeight = sug.Weight
 		}
-	} else {
+	} else if *advanced {
 		var result govarnamgo.TransliterationResult
 
-		if *greedy {
-			// results = C.TransliterateGreedy(args[0])
-		} else {
-			result = varnam.Transliterate(context.Background(), args[0])
-		}
-
-		printSugs := func(sugs []govarnamgo.Suggestion) {
-			for _, sug := range sugs {
-				if sug.LearnedOn == 0 {
-					fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight))
-				} else {
-					fmt.Println(sug.Word + " " + fmt.Sprint(sug.Weight) + " " + time.Unix(int64(sug.LearnedOn), 0).String())
-				}
-			}
-		}
+		result, _ = varnam.TransliterateAdvanced(context.Background(), args[0])
 
 		fmt.Println("Greedy Tokenized")
 		printSugs(result.GreedyTokenized)
@@ -165,5 +161,8 @@ func main() {
 
 		fmt.Println("Tokenizer Suggestions")
 		printSugs(result.TokenizerSuggestions)
+	} else {
+		result, _ := varnam.Transliterate(context.Background(), args[0])
+		printSugs(result)
 	}
 }
