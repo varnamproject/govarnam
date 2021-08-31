@@ -10,6 +10,24 @@ import (
 func TestTransliterate(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
+	result, err := varnam.Transliterate(context.Background(), "nithyam")
+	checkError(err)
+
+	assertEqual(t, result[0].Word, "നിത്യം")
+}
+
+func TestTransliterateAdvanced(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	result, err := varnam.TransliterateAdvanced(context.Background(), "nithyam")
+	checkError(err)
+
+	assertEqual(t, result.TokenizerSuggestions[0].Word, "നിത്യം")
+}
+
+func TestReverseTransliterate(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
 	rt, err := varnam.ReverseTransliterate("നിത്യം")
 	checkError(err)
 
@@ -40,8 +58,10 @@ func TestLearn(t *testing.T) {
 	assertEqual(t, learnStatus.TotalWords, 6)
 	assertEqual(t, learnStatus.FailedWords, 1)
 
-	assertEqual(t, varnam.Transliterate(context.Background(), "nithyaharitha").ExactMatches[0].Weight, 120)
-	assertEqual(t, varnam.Transliterate(context.Background(), "melaappum").ExactMatches[0].Weight, 12)
+	result, err := varnam.TransliterateAdvanced(context.Background(), "nithyaharitha")
+	assertEqual(t, result.ExactMatches[0].Weight, 120)
+	result, err = varnam.TransliterateAdvanced(context.Background(), "melaappum")
+	assertEqual(t, result.ExactMatches[0].Weight, 12)
 }
 
 func TestSearchSymbolTable(t *testing.T) {

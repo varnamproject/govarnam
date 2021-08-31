@@ -249,16 +249,29 @@ func (handle *VarnamHandle) SetConfig(config Config) {
 	}
 }
 
-func (handle *VarnamHandle) cgoGetTransliterationResult(operationID C.int, resultChannel chan<- *C.struct_TransliterationResult_t, word string) {
+type cgoVarnamTransliterateResult struct {
+	result *C.varray
+	err    error
+}
+
+func (handle *VarnamHandle) cgoVarnamTransliterate(operationID C.int, resultChannel chan<- cgoVarnamTransliterateResult, word string) {
 	cWord := C.CString(word)
 	defer C.free(unsafe.Pointer(cWord))
 
-	ptr := C.malloc(C.sizeof_TransliterationResult)
+	resultPointer := C.varray_init()
 
-	resultPointer := (*C.TransliterationResult)(ptr)
+	code := C.varnam_transliterate(handle.connectionID, operationID, cWord, resultPointer)
 
-	if C.varnam_transliterate(handle.connectionID, operationID, cWord, resultPointer) == C.VARNAM_SUCCESS {
-		resultChannel <- resultPointer
+	if code == C.VARNAM_SUCCESS {
+		resultChannel <- cgoVarnamTransliterateResult{
+			resultPointer,
+			nil,
+		}
+	} else {
+		resultChannel <- cgoVarnamTransliterateResult{
+			resultPointer,
+			fmt.Errorf(handle.GetLastError()),
+		}
 	}
 
 	close(resultChannel)
@@ -267,21 +280,89 @@ func (handle *VarnamHandle) cgoGetTransliterationResult(operationID C.int, resul
 var contextOperationCount = C.int(0)
 
 // Transliterate transilterate
-func (handle *VarnamHandle) Transliterate(ctx context.Context, word string) TransliterationResult {
+func (handle *VarnamHandle) Transliterate(ctx context.Context, word string) ([]Suggestion, error) {
+	var result []Suggestion
+
 	operationID := contextOperationCount
 	contextOperationCount++
 
-	channel := make(chan *C.struct_TransliterationResult_t)
+	channel := make(chan cgoVarnamTransliterateResult)
 
-	go handle.cgoGetTransliterationResult(operationID, channel, word)
+	go handle.cgoVarnamTransliterate(operationID, channel, word)
 
 	select {
 	case <-ctx.Done():
 		C.varnam_cancel(operationID)
-		var result TransliterationResult
-		return result
-	case cResult := <-channel:
-		return makeGoTransliterationResult(ctx, cResult)
+		return result, nil
+	case channelResult := <-channel:
+		if channelResult.err != nil {
+			return result, channelResult.err
+		}
+
+		i := 0
+		for i < int(C.varray_length(channelResult.result)) {
+			cSug := (*C.Suggestion)(C.varray_get(channelResult.result, C.int(i)))
+			sug := makeSuggestion(cSug)
+			result = append(result, sug)
+			i++
+		}
+
+		go C.destroySuggestionsArray(channelResult.result)
+
+		return result, nil
+	}
+}
+
+type cgoVarnamTransliterateAdvancedResult struct {
+	result *C.struct_TransliterationResult_t
+	err    error
+}
+
+func (handle *VarnamHandle) cgoVarnamTransliterateAdvanced(operationID C.int, resultChannel chan<- cgoVarnamTransliterateAdvancedResult, word string) {
+	cWord := C.CString(word)
+	defer C.free(unsafe.Pointer(cWord))
+
+	ptr := C.malloc(C.sizeof_TransliterationResult)
+
+	resultPointer := (*C.TransliterationResult)(ptr)
+
+	code := C.varnam_transliterate_advanced(handle.connectionID, operationID, cWord, resultPointer)
+	if code == C.VARNAM_SUCCESS {
+		resultChannel <- cgoVarnamTransliterateAdvancedResult{
+			resultPointer,
+			nil,
+		}
+	} else {
+		resultChannel <- cgoVarnamTransliterateAdvancedResult{
+			resultPointer,
+			fmt.Errorf(handle.GetLastError()),
+		}
+	}
+
+	close(resultChannel)
+}
+
+// TransliterateAdvanced transilterate
+func (handle *VarnamHandle) TransliterateAdvanced(ctx context.Context, word string) (TransliterationResult, error) {
+	var result TransliterationResult
+
+	operationID := contextOperationCount
+	contextOperationCount++
+
+	channel := make(chan cgoVarnamTransliterateAdvancedResult)
+
+	go handle.cgoVarnamTransliterateAdvanced(operationID, channel, word)
+
+	select {
+	case <-ctx.Done():
+		C.varnam_cancel(operationID)
+		return result, nil
+	case channelResult := <-channel:
+		if channelResult.err != nil {
+			return result, channelResult.err
+		}
+		result = makeGoTransliterationResult(ctx, channelResult.result)
+		return result, nil
 	}
 }
 

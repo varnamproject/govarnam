@@ -3,11 +3,6 @@
 #include "stdlib.h"
 #include "c-shared-varray.h"
 
-void update_pointer(varray* a, varray* b)
-{
-  a = b;
-}
-
 Suggestion* makeSuggestion(char* word, int weight, int learned_on)
 {
   Suggestion *sug = (Suggestion*) malloc (sizeof(Suggestion));
