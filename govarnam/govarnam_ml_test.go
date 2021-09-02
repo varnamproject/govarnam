@@ -3,6 +3,7 @@ package govarnam
 import (
 	"context"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -381,4 +382,22 @@ func TestMLDictionaryMatchExact(t *testing.T) {
 	assertEqual(t, len(result.DictionarySuggestions), 1)
 
 	varnam.DictionaryMatchExact = false
+}
+
+func TestRecentlyLearnedWords(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	words := []string{"ആലപ്പുഴ", "എറണാകുളം", "തൃശ്ശൂർ", "പാലക്കാട്", "കോഴിക്കോട്"}
+	for _, word := range words {
+		varnam.Learn(word, 0)
+	}
+
+	result, err := varnam.GetRecentlyLearntWords(context.Background(), len(words))
+	checkError(err)
+
+	assertEqual(t, len(result), len(words))
+	log.Println(result, words)
+	for i, sug := range result {
+		assertEqual(t, sug.Word, words[len(words)-i-1])
+	}
 }

@@ -36,7 +36,17 @@ func checkError(err error) C.int {
 	return C.VARNAM_SUCCESS
 }
 
-func makeCTransliterationResult(ctx context.Context, goResult govarnam.TransliterationResult, resultPointer *C.struct_TransliterationResult_t) C.int {
+func makeContext(id C.int) (context.Context, func()) {
+	ctx, cancel := context.WithCancel(backgroundContext)
+
+	cancelFuncsMapMutex.Lock()
+	cancelFuncs[id] = &cancel
+	cancelFuncsMapMutex.Unlock()
+
+	return ctx, cancel
+}
+
+func makeCTransliterationResult(ctx context.Context, goResult govarnam.TransliterationResult, resultPointer **C.struct_TransliterationResult_t) C.int {
 	select {
 	case <-ctx.Done():
 		return C.VARNAM_CANCELLED
@@ -145,13 +155,9 @@ func varnam_close(varnamHandleID C.int) C.int {
 }
 
 //export varnam_transliterate
-func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPointer *C.varray) C.int {
-	ctx, cancel := context.WithCancel(backgroundContext)
+func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPointer **C.varray) C.int {
+	ctx, cancel := makeContext(id)
 	defer cancel()
-
-	cancelFuncsMapMutex.Lock()
-	cancelFuncs[id] = &cancel
-	cancelFuncsMapMutex.Unlock()
 
 	channel := make(chan govarnam.TransliterationResult)
 
@@ -171,23 +177,21 @@ func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPo
 		combined = append(combined, result.TokenizerSuggestions...)
 		combined = append(combined, result.GreedyTokenized...)
 
+		cResult := C.varray_init()
 		for _, sug := range combined {
 			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
-			C.varray_push(resultPointer, cSug)
+			C.varray_push(cResult, cSug)
 		}
+		*resultPointer = cResult
 
 		return C.VARNAM_SUCCESS
 	}
 }
 
 //export varnam_transliterate_advanced
-func varnam_transliterate_advanced(varnamHandleID C.int, id C.int, word *C.char, resultPointer *C.struct_TransliterationResult_t) C.int {
-	ctx, cancel := context.WithCancel(backgroundContext)
+func varnam_transliterate_advanced(varnamHandleID C.int, id C.int, word *C.char, resultPointer **C.struct_TransliterationResult_t) C.int {
+	ctx, cancel := makeContext(id)
 	defer cancel()
-
-	cancelFuncsMapMutex.Lock()
-	cancelFuncs[id] = &cancel
-	cancelFuncsMapMutex.Unlock()
 
 	channel := make(chan govarnam.TransliterationResult)
 
@@ -202,7 +206,7 @@ func varnam_transliterate_advanced(varnamHandleID C.int, id C.int, word *C.char,
 }
 
 //export varnam_reverse_transliterate
-func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char, resultPointer *C.varray) C.int {
+func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char, resultPointer **C.varray) C.int {
 	handle := getVarnamHandle(varnamHandleID)
 	sugs, err := handle.varnam.ReverseTransliterate(C.GoString(word))
 
@@ -211,10 +215,12 @@ func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char, resultPoin
 		return C.VARNAM_ERROR
 	}
 
+	cResult := C.varray_init()
 	for _, sug := range sugs {
 		cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
-		C.varray_push(resultPointer, cSug)
+		C.varray_push(cResult, cSug)
 	}
+	*resultPointer = cResult
 
 	return C.VARNAM_SUCCESS
 }
@@ -278,7 +284,7 @@ func varnam_unlearn(varnamHandleID C.int, word *C.char) C.int {
 }
 
 //export varnam_learn_from_file
-func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char, resultPointer *C.struct_LearnStatus_t) C.int {
+func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char, resultPointer **C.struct_LearnStatus_t) C.int {
 	handle := getVarnamHandle(varnamHandleID)
 	learnStatus, err := handle.varnam.LearnFromFile(C.GoString(filePath))
 
@@ -287,7 +293,8 @@ func varnam_learn_from_file(varnamHandleID C.int, filePath *C.char, resultPointe
 		return C.VARNAM_ERROR
 	}
 
-	*resultPointer = C.makeLearnStatus(C.int(learnStatus.TotalWords), C.int(learnStatus.FailedWords))
+	result := C.makeLearnStatus(C.int(learnStatus.TotalWords), C.int(learnStatus.FailedWords))
+	*resultPointer = &result
 
 	return C.VARNAM_SUCCESS
 }
@@ -354,13 +361,9 @@ func varnam_get_vst_path(varnamHandleID C.int) *C.char {
 }
 
 //export varnam_search_symbol_table
-func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C.struct_Symbol_t, resultPointer *C.varray) C.int {
-	ctx, cancel := context.WithCancel(backgroundContext)
+func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C.struct_Symbol_t, resultPointer **C.varray) C.int {
+	ctx, cancel := makeContext(id)
 	defer cancel()
-
-	cancelFuncsMapMutex.Lock()
-	cancelFuncs[id] = &cancel
-	cancelFuncsMapMutex.Unlock()
 
 	handle := getVarnamHandle(varnamHandleID)
 
@@ -386,6 +389,7 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 	default:
 		results, handle.err = handle.varnam.SearchSymbolTable(ctx, goSearchCriteria)
 
+		cResult := C.varray_init()
 		for _, symbol := range results {
 			cSymbol := unsafe.Pointer(C.makeSymbol(
 				C.int(symbol.Identifier),
@@ -401,11 +405,36 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 				C.int(symbol.AcceptCondition),
 				C.int(symbol.Flags),
 			))
-			C.varray_push(resultPointer, cSymbol)
+			C.varray_push(cResult, cSymbol)
 		}
+		*resultPointer = cResult
 
 		return C.VARNAM_SUCCESS
 	}
+}
+
+//export varnam_get_recently_learned_words
+func varnam_get_recently_learned_words(varnamHandleID C.int, id C.int, limit C.int, resultPointer **C.varray) C.int {
+	ctx, cancel := makeContext(id)
+	defer cancel()
+
+	handle := getVarnamHandle(varnamHandleID)
+
+	result, err := handle.varnam.GetRecentlyLearntWords(ctx, int(limit))
+
+	if err != nil {
+		handle.err = err
+		return C.VARNAM_ERROR
+	}
+
+	ptr := C.varray_init()
+	for _, sug := range result {
+		cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+		C.varray_push(ptr, cSug)
+	}
+	*resultPointer = ptr
+
+	return C.VARNAM_SUCCESS
 }
 
 //export varnam_get_vst_dir

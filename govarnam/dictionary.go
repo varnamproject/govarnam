@@ -9,6 +9,7 @@ package govarnam
 import (
 	"context"
 	sql "database/sql"
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -364,5 +365,36 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 		}
 
 		return results
+	}
+}
+
+// GetRecentlyLearntWords get recently learnt words
+func (varnam *Varnam) GetRecentlyLearntWords(ctx context.Context, limit int) ([]Suggestion, error) {
+	var result []Suggestion
+
+	select {
+	case <-ctx.Done():
+		return result, nil
+	default:
+		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT word, weight, learned_on FROM words ORDER BY learned_on DESC, id DESC LIMIT "+fmt.Sprint(limit))
+
+		if err != nil {
+			return result, err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var item Suggestion
+			rows.Scan(&item.Word, &item.Weight, &item.LearnedOn)
+			result = append(result, item)
+		}
+
+		err = rows.Err()
+		if err != nil {
+			log.Print(err)
+			return result, err
+		}
+
+		return result, nil
 	}
 }

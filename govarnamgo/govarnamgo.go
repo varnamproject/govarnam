@@ -81,6 +81,15 @@ type Symbol struct {
 	Flags           int
 }
 
+var contextOperationCount = C.int(0)
+
+func makeContextOperation() C.int {
+	operationID := contextOperationCount
+	contextOperationCount++
+
+	return operationID
+}
+
 // Convert a C Suggestion to Go
 func makeSuggestion(cSug *C.struct_Suggestion_t) Suggestion {
 	var sug Suggestion
@@ -258,9 +267,9 @@ func (handle *VarnamHandle) cgoVarnamTransliterate(operationID C.int, resultChan
 	cWord := C.CString(word)
 	defer C.free(unsafe.Pointer(cWord))
 
-	resultPointer := C.varray_init()
+	var resultPointer *C.varray
 
-	code := C.varnam_transliterate(handle.connectionID, operationID, cWord, resultPointer)
+	code := C.varnam_transliterate(handle.connectionID, operationID, cWord, &resultPointer)
 
 	if code == C.VARNAM_SUCCESS {
 		resultChannel <- cgoVarnamTransliterateResult{
@@ -277,15 +286,11 @@ func (handle *VarnamHandle) cgoVarnamTransliterate(operationID C.int, resultChan
 	close(resultChannel)
 }
 
-var contextOperationCount = C.int(0)
-
 // Transliterate transilterate
 func (handle *VarnamHandle) Transliterate(ctx context.Context, word string) ([]Suggestion, error) {
 	var result []Suggestion
 
-	operationID := contextOperationCount
-	contextOperationCount++
-
+	operationID := makeContextOperation()
 	channel := make(chan cgoVarnamTransliterateResult)
 
 	go handle.cgoVarnamTransliterate(operationID, channel, word)
@@ -322,11 +327,9 @@ func (handle *VarnamHandle) cgoVarnamTransliterateAdvanced(operationID C.int, re
 	cWord := C.CString(word)
 	defer C.free(unsafe.Pointer(cWord))
 
-	ptr := C.malloc(C.sizeof_TransliterationResult)
+	var resultPointer *C.struct_TransliterationResult_t
 
-	resultPointer := (*C.TransliterationResult)(ptr)
-
-	code := C.varnam_transliterate_advanced(handle.connectionID, operationID, cWord, resultPointer)
+	code := C.varnam_transliterate_advanced(handle.connectionID, operationID, cWord, &resultPointer)
 	if code == C.VARNAM_SUCCESS {
 		resultChannel <- cgoVarnamTransliterateAdvancedResult{
 			resultPointer,
@@ -346,9 +349,7 @@ func (handle *VarnamHandle) cgoVarnamTransliterateAdvanced(operationID C.int, re
 func (handle *VarnamHandle) TransliterateAdvanced(ctx context.Context, word string) (TransliterationResult, error) {
 	var result TransliterationResult
 
-	operationID := contextOperationCount
-	contextOperationCount++
-
+	operationID := makeContextOperation()
 	channel := make(chan cgoVarnamTransliterateAdvancedResult)
 
 	go handle.cgoVarnamTransliterateAdvanced(operationID, channel, word)
@@ -373,12 +374,10 @@ func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, err
 	cWord := C.CString(word)
 	defer C.free(unsafe.Pointer(cWord))
 
-	ptr := C.varray_init()
-	defer C.destroySuggestionsArray(ptr)
+	var resultPointer *C.varray
+	defer C.destroySuggestionsArray(resultPointer)
 
-	resultPointer := (*C.varray)(ptr)
-
-	code := C.varnam_reverse_transliterate(handle.connectionID, cWord, resultPointer)
+	code := C.varnam_reverse_transliterate(handle.connectionID, cWord, &resultPointer)
 	if code != C.VARNAM_SUCCESS {
 		return sugs, &VarnamError{
 			ErrorCode: int(code),
@@ -438,12 +437,10 @@ func (handle *VarnamHandle) LearnFromFile(filePath string) (LearnStatus, error) 
 	cFilePath := C.CString(filePath)
 	defer C.free(unsafe.Pointer(cFilePath))
 
-	ptr := C.malloc(C.sizeof_LearnStatus)
-	defer C.free(unsafe.Pointer(ptr))
+	var resultPointer *C.LearnStatus
+	defer C.free(unsafe.Pointer(resultPointer))
 
-	resultPointer := (*C.LearnStatus)(ptr)
-
-	code := C.varnam_learn_from_file(handle.connectionID, cFilePath, resultPointer)
+	code := C.varnam_learn_from_file(handle.connectionID, cFilePath, &resultPointer)
 	if code != C.VARNAM_SUCCESS {
 		return learnStatus, &VarnamError{
 			ErrorCode: int(code),
@@ -480,6 +477,39 @@ func (handle *VarnamHandle) Import(filePath string) error {
 	return handle.checkError(err)
 }
 
+// GetRecentlyLearntWords get recently learn words
+func (handle *VarnamHandle) GetRecentlyLearntWords(ctx context.Context, limit int) ([]Suggestion, error) {
+	var result []Suggestion
+
+	operationID := makeContextOperation()
+
+	select {
+	case <-ctx.Done():
+		C.varnam_cancel(operationID)
+		return result, nil
+	default:
+		var resultPointer *C.varray
+
+		code := C.varnam_get_recently_learned_words(handle.connectionID, operationID, C.int(limit), &resultPointer)
+		if code != C.VARNAM_SUCCESS {
+			return result, &VarnamError{
+				ErrorCode: int(code),
+				Message:   handle.GetLastError(),
+			}
+		}
+
+		i := 0
+		for i < int(C.varray_length(resultPointer)) {
+			cSug := (*C.Suggestion)(C.varray_get(resultPointer, C.int(i)))
+			sug := makeSuggestion(cSug)
+			result = append(result, sug)
+			i++
+		}
+
+		return result, nil
+	}
+}
+
 // GetVSTPath Get path to VST of current handle
 func (handle *VarnamHandle) GetVSTPath() string {
 	cStr := C.varnam_get_vst_path(handle.connectionID)
@@ -491,8 +521,7 @@ func (handle *VarnamHandle) GetVSTPath() string {
 func (handle *VarnamHandle) SearchSymbolTable(ctx context.Context, searchCriteria Symbol) []Symbol {
 	var goResults []Symbol
 
-	operationID := contextOperationCount
-	contextOperationCount++
+	operationID := makeContextOperation()
 
 	select {
 	case <-ctx.Done():
@@ -513,11 +542,10 @@ func (handle *VarnamHandle) SearchSymbolTable(ctx context.Context, searchCriteri
 
 		symbol := C.makeSymbol(Identifier, Type, MatchType, Pattern, Value1, Value2, Value3, Tag, Weight, Priority, AcceptCondition, Flags)
 
-		ptr := C.varray_init()
-		resultPointer := (*C.varray)(ptr)
-		defer C.destroySymbolArray(unsafe.Pointer(ptr))
+		var resultPointer *C.varray
+		defer C.destroySymbolArray(unsafe.Pointer(resultPointer))
 
-		code := C.varnam_search_symbol_table(handle.connectionID, operationID, *symbol, resultPointer)
+		code := C.varnam_search_symbol_table(handle.connectionID, operationID, *symbol, &resultPointer)
 
 		if code != C.VARNAM_SUCCESS {
 			return goResults
