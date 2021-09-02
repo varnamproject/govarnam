@@ -24,7 +24,7 @@ typedef struct TransliterationResult_t {
 
 Suggestion* makeSuggestion(char* word, int weight, int learned_on);
 
-TransliterationResult makeResult(varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized);
+TransliterationResult* makeResult(varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized);
 
 void destroySuggestionsArray(varray* pointer);
 void destroyTransliterationResult(TransliterationResult*);

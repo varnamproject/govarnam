@@ -267,9 +267,9 @@ func (handle *VarnamHandle) cgoVarnamTransliterate(operationID C.int, resultChan
 	cWord := C.CString(word)
 	defer C.free(unsafe.Pointer(cWord))
 
-	resultPointer := C.varray_init()
+	var resultPointer *C.varray
 
-	code := C.varnam_transliterate(handle.connectionID, operationID, cWord, resultPointer)
+	code := C.varnam_transliterate(handle.connectionID, operationID, cWord, &resultPointer)
 
 	if code == C.VARNAM_SUCCESS {
 		resultChannel <- cgoVarnamTransliterateResult{
@@ -327,11 +327,9 @@ func (handle *VarnamHandle) cgoVarnamTransliterateAdvanced(operationID C.int, re
 	cWord := C.CString(word)
 	defer C.free(unsafe.Pointer(cWord))
 
-	ptr := C.malloc(C.sizeof_TransliterationResult)
+	var resultPointer *C.struct_TransliterationResult_t
 
-	resultPointer := (*C.TransliterationResult)(ptr)
-
-	code := C.varnam_transliterate_advanced(handle.connectionID, operationID, cWord, resultPointer)
+	code := C.varnam_transliterate_advanced(handle.connectionID, operationID, cWord, &resultPointer)
 	if code == C.VARNAM_SUCCESS {
 		resultChannel <- cgoVarnamTransliterateAdvancedResult{
 			resultPointer,
@@ -376,12 +374,10 @@ func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, err
 	cWord := C.CString(word)
 	defer C.free(unsafe.Pointer(cWord))
 
-	ptr := C.varray_init()
-	defer C.destroySuggestionsArray(ptr)
+	var resultPointer *C.varray
+	defer C.destroySuggestionsArray(resultPointer)
 
-	resultPointer := (*C.varray)(ptr)
-
-	code := C.varnam_reverse_transliterate(handle.connectionID, cWord, resultPointer)
+	code := C.varnam_reverse_transliterate(handle.connectionID, cWord, &resultPointer)
 	if code != C.VARNAM_SUCCESS {
 		return sugs, &VarnamError{
 			ErrorCode: int(code),
@@ -441,12 +437,10 @@ func (handle *VarnamHandle) LearnFromFile(filePath string) (LearnStatus, error) 
 	cFilePath := C.CString(filePath)
 	defer C.free(unsafe.Pointer(cFilePath))
 
-	ptr := C.malloc(C.sizeof_LearnStatus)
-	defer C.free(unsafe.Pointer(ptr))
+	var resultPointer *C.LearnStatus
+	defer C.free(unsafe.Pointer(resultPointer))
 
-	resultPointer := (*C.LearnStatus)(ptr)
-
-	code := C.varnam_learn_from_file(handle.connectionID, cFilePath, resultPointer)
+	code := C.varnam_learn_from_file(handle.connectionID, cFilePath, &resultPointer)
 	if code != C.VARNAM_SUCCESS {
 		return learnStatus, &VarnamError{
 			ErrorCode: int(code),
@@ -548,11 +542,10 @@ func (handle *VarnamHandle) SearchSymbolTable(ctx context.Context, searchCriteri
 
 		symbol := C.makeSymbol(Identifier, Type, MatchType, Pattern, Value1, Value2, Value3, Tag, Weight, Priority, AcceptCondition, Flags)
 
-		ptr := C.varray_init()
-		resultPointer := (*C.varray)(ptr)
-		defer C.destroySymbolArray(unsafe.Pointer(ptr))
+		var resultPointer *C.varray
+		defer C.destroySymbolArray(unsafe.Pointer(resultPointer))
 
-		code := C.varnam_search_symbol_table(handle.connectionID, operationID, *symbol, resultPointer)
+		code := C.varnam_search_symbol_table(handle.connectionID, operationID, *symbol, &resultPointer)
 
 		if code != C.VARNAM_SUCCESS {
 			return goResults
