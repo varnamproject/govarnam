@@ -11,7 +11,6 @@ import (
 	sql "database/sql"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -476,22 +475,6 @@ func InitFromID(schemeID string) (*Varnam, error) {
 	varnam.setDefaultConfig()
 
 	return &varnam, nil
-}
-
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
-}
-
-func dirExists(loc string) bool {
-	info, err := os.Stat(loc)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return info.IsDir()
 }
 
 // Close close db connections
