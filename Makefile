@@ -75,9 +75,9 @@ release:
 	zip -r ${RELEASE_NAME}.zip ${RELEASE_NAME}/*
 
 test-govarnamgo:
-	go test -count=1 govarnamgo/*.go
+	go test -count=1 -cover govarnamgo/*.go
 
 test:
-	go test -tags fts5 -count=1 govarnam/*.go
+	go test -tags fts5 -count=1 -cover govarnam/*.go
 	$(MAKE) library
 	$(MAKE) test-govarnamgo

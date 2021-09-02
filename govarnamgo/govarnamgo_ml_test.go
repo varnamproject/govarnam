@@ -64,6 +64,23 @@ func TestLearn(t *testing.T) {
 	assertEqual(t, result.ExactMatches[0].Weight, 12)
 }
 
+func TestRecentlyLearnedWords(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	words := []string{"ആലപ്പുഴ", "എറണാകുളം", "തൃശ്ശൂർ", "മലപ്പുറം", "കോഴിക്കോട്"}
+	for _, word := range words {
+		varnam.Learn(word, 0)
+	}
+
+	result, err := varnam.GetRecentlyLearntWords(context.Background(), len(words))
+	checkError(err)
+
+	assertEqual(t, len(result), len(words))
+	for i, sug := range result {
+		assertEqual(t, sug.Word, words[len(words)-i-1])
+	}
+}
+
 func TestSearchSymbolTable(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
