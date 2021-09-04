@@ -464,9 +464,9 @@ func (handle *VarnamHandle) TrainFromFile(filePath string) error {
 }
 
 // Export learnigns to a file
-func (handle *VarnamHandle) Export(filePath string) error {
+func (handle *VarnamHandle) Export(filePath string, wordsPerFile int) error {
 	cFilePath := C.CString(filePath)
-	err := C.varnam_export(handle.connectionID, cFilePath)
+	err := C.varnam_export(handle.connectionID, cFilePath, C.int(wordsPerFile))
 	return handle.checkError(err)
 }
 
