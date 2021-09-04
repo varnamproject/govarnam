@@ -309,6 +309,10 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, sugs []Suggestion, limit int) []Suggestion {
 	var results []Suggestion
 
+	if varnam.Debug {
+		fmt.Printf("Tokenizing %s\n", word)
+	}
+
 	tokensPointerChan := make(chan *[]Token)
 	go varnam.channelTokenizeWord(ctx, word, VARNAM_MATCH_ALL, true, tokensPointerChan)
 
@@ -316,10 +320,6 @@ func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, sugs 
 	case <-ctx.Done():
 		return results
 	case restOfWordTokens := <-tokensPointerChan:
-		if varnam.Debug {
-			fmt.Printf("Tokenizing %s\n", word)
-		}
-
 		for _, sug := range sugs {
 			sugWord := varnam.removeLastVirama(sug.Word)
 			tokensWithWord := []Token{{VARNAM_TOKEN_CHAR, []Symbol{}, 0, sugWord}}
@@ -328,7 +328,7 @@ func (varnam *Varnam) tokenizeRestOfWord(ctx context.Context, word string, sugs 
 			restOfWordSugs := varnam.tokensToSuggestions(ctx, &tokensWithWord, true, limit)
 
 			if varnam.Debug {
-				fmt.Println("Tokenized:", restOfWordSugs)
+				fmt.Println("Tokenized & Added:", restOfWordSugs)
 			}
 
 			for _, restOfWordSug := range restOfWordSugs {
