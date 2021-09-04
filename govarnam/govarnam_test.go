@@ -71,6 +71,15 @@ func tearDown() {
 	os.RemoveAll(testTempDir)
 }
 
+func TestEnv(t *testing.T) {
+	os.Setenv("VARNAM_LEARNINGS_DIR", testTempDir)
+
+	_, err := InitFromID("ml")
+	checkError(err)
+
+	assertEqual(t, fileExists(path.Join(testTempDir, "ml.vst.learnings")), true)
+}
+
 func TestMain(m *testing.M) {
 	schemeDetails, err := GetAllSchemeDetails()
 

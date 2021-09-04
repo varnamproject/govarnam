@@ -84,13 +84,19 @@ func findLearningsFilePath(langCode string) string {
 
 	// libvarnam used to use "suggestions" folder
 
-	home := os.Getenv("XDG_DATA_HOME")
-	if home == "" {
-		home = os.Getenv("HOME")
-		dir = path.Join(home, ".local", "share", "varnam", "learnings")
+	learningsDir := os.Getenv("VARNAM_LEARNINGS_DIR")
+	if learningsDir != "" {
+		dir = learningsDir
 	} else {
-		dir = path.Join(home, "varnam", "learnings")
+		home := os.Getenv("XDG_DATA_HOME")
+		if home != "" {
+			dir = path.Join(home, "varnam", "learnings")
+		} else {
+			home = os.Getenv("HOME")
+			dir = path.Join(home, ".local", "share", "varnam", "learnings")
+		}
 	}
+
 	loc = path.Join(dir, langCode+".vst.learnings")
 
 	return loc
