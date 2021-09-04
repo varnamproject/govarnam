@@ -544,34 +544,66 @@ func rowsToJSON(rows *sql.Rows) ([]map[string]interface{}, error) {
 }
 
 // Export learnings as JSON to a file
-func (varnam *Varnam) Export(filePath string) error {
+func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 	if fileExists(filePath) {
 		return fmt.Errorf("output file already exists")
 	}
 
-	wordsRows, err := varnam.dictConn.Query("SELECT * FROM words")
+	patternsCount := -1
+	wordsCount := -1
+
+	countRows, err := varnam.dictConn.Query("SELECT COUNT(*) AS patternsCount FROM patterns UNION SELECT COUNT(*) AS wordsCount FROM words")
 	if err != nil {
 		return err
 	}
-	defer wordsRows.Close()
+	defer countRows.Close()
 
-	wordsData, err := rowsToJSON(wordsRows)
-
-	patternsRows, err := varnam.dictConn.Query("SELECT * FROM patterns")
-	if err != nil {
-		return err
+	for countRows.Next() {
+		if patternsCount == -1 {
+			countRows.Scan(&patternsCount)
+		} else {
+			countRows.Scan(&wordsCount)
+		}
 	}
-	defer wordsRows.Close()
 
-	patternsData, err := rowsToJSON(patternsRows)
+	totalPages := int(math.Ceil(float64(wordsCount) / float64(wordsPerFile)))
 
-	output := exportFormat{wordsData, patternsData}
+	if varnam.Debug {
+		log.Printf("Words: %d. Patterns: %d", wordsCount, patternsCount)
+		log.Printf("Pages: %d", totalPages)
+	}
 
-	jsonData, err := json.Marshal(output)
+	page := 1
+	for page <= totalPages {
+		wordsTableQuery := fmt.Sprintf("SELECT * FROM words ORDER BY weight DESC LIMIT %d OFFSET %d", wordsPerFile, (page-1)*wordsPerFile)
 
-	err = ioutil.WriteFile(filePath, jsonData, 0644)
-	if err != nil {
-		return err
+		wordsRows, err := varnam.dictConn.Query(wordsTableQuery)
+		if err != nil {
+			return err
+		}
+		defer wordsRows.Close()
+
+		wordsData, err := rowsToJSON(wordsRows)
+
+		patternsRows, err := varnam.dictConn.Query("SELECT * FROM patterns WHERE word_id IN (SELECT id FROM (" + wordsTableQuery + "))")
+		if err != nil {
+			return err
+		}
+		defer patternsRows.Close()
+
+		patternsData, err := rowsToJSON(patternsRows)
+
+		output := exportFormat{wordsData, patternsData}
+
+		jsonData, err := json.Marshal(output)
+
+		filePathWithPageNumber := filePath + "-" + fmt.Sprint(page)
+		err = ioutil.WriteFile(filePathWithPageNumber, jsonData, 0644)
+		if err != nil {
+			return err
+		}
+
+		page++
 	}
 
 	return nil

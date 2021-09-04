@@ -40,6 +40,7 @@ func main() {
 	trainFromFileFlag := flag.Bool("train-from-file", false, "Train pattern => word from a file.")
 
 	exportFlag := flag.Bool("export", false, "Export learnings to file")
+	exportWordsPerFile := flag.Int("export-words-per-file", 30000, "Words per export file")
 	importFlag := flag.Bool("import", false, "Import learnings from file")
 
 	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
@@ -110,7 +111,7 @@ func main() {
 			log.Fatal(err.Error())
 		}
 	} else if *exportFlag {
-		err := varnam.Export(args[0])
+		err := varnam.Export(args[0], *exportWordsPerFile)
 		if err == nil {
 			fmt.Println("Finished exporting to file")
 		} else {

@@ -338,9 +338,9 @@ func varnam_cancel(id C.int) C.int {
 }
 
 //export varnam_export
-func varnam_export(varnamHandleID C.int, filePath *C.char) C.int {
+func varnam_export(varnamHandleID C.int, filePath *C.char, wordsPerFile C.int) C.int {
 	handle := getVarnamHandle(varnamHandleID)
-	handle.err = handle.varnam.Export(C.GoString(filePath))
+	handle.err = handle.varnam.Export(C.GoString(filePath), int(wordsPerFile))
 
 	return checkError(handle.err)
 }
