@@ -10,6 +10,9 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    env:
+      VARNAM_UPSTREAM: https://varnam.subinsb.com
+
     steps:
     - uses: actions/checkout@v2
 
@@ -20,6 +23,9 @@ jobs:
 
     - name: Build
       run: make library
+    
+    - name: Download schemes
+      run: wget -O schemes/ml.vst "$VARNAM_UPSTREAM/languages/ml/download"
 
     - name: Test
       run: make test
