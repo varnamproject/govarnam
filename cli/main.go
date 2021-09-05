@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/varnamproject/govarnam/govarnamgo"
@@ -118,11 +119,19 @@ func main() {
 			log.Fatal(err.Error())
 		}
 	} else if *importFlag {
-		err := varnam.Import(args[0])
-		if err == nil {
-			fmt.Println("Finished importing from file")
-		} else {
+		matches, err := filepath.Glob(args[0])
+
+		if err != nil {
 			log.Fatal(err.Error())
+		}
+
+		for _, match := range matches {
+			err := varnam.Import(match)
+			if err == nil {
+				fmt.Printf("Finished importing from file %s\n", match)
+			} else {
+				log.Fatal(err.Error())
+			}
 		}
 	} else if *reverseTransliterate {
 		sugs, err := varnam.ReverseTransliterate(args[0])
