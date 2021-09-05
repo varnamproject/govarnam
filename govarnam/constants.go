@@ -58,6 +58,11 @@ var VARNAM_VST_DIR = [3]string{
 
 //FindVSTDir Get the VST storing directory
 func FindVSTDir() (string, error) {
+	envVSTDir := os.Getenv("VARNAM_VST_DIR")
+	if envVSTDir != "" {
+		return envVSTDir, nil
+	}
+
 	for _, loc := range VARNAM_VST_DIR {
 		if dirExists(loc) {
 			return loc, nil

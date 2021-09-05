@@ -24,6 +24,9 @@ jobs:
     - name: Build
       run: make library
     
+    - name: Set env
+      run: echo "VARNAM_VST_DIR=$(echo $(realpath schemes))" >> $GITHUB_ENV
+    
     - name: Download schemes
       run: wget -O schemes/ml.vst "$VARNAM_UPSTREAM/languages/ml/download"
 
