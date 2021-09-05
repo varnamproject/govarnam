@@ -437,6 +437,31 @@ func varnam_get_recently_learned_words(varnamHandleID C.int, id C.int, limit C.i
 	return C.VARNAM_SUCCESS
 }
 
+func makeCSchemeDetails(sd govarnam.SchemeDetails) *C.struct_SchemeDetails_t {
+	var cIsStable C.int
+
+	if sd.IsStable {
+		cIsStable = C.int(1)
+	} else {
+		cIsStable = C.int(0)
+	}
+
+	return C.makeSchemeDetails(
+		C.CString(sd.Identifier),
+		C.CString(sd.LangCode),
+		C.CString(sd.DisplayName),
+		C.CString(sd.Author),
+		C.CString(sd.CompiledDate),
+		cIsStable,
+	)
+}
+
+//export varnam_get_scheme_details
+func varnam_get_scheme_details(varnamHandleID C.int) *C.struct_SchemeDetails_t {
+	handle := getVarnamHandle(varnamHandleID)
+	return makeCSchemeDetails(handle.varnam.SchemeDetails)
+}
+
 //export varnam_get_vst_dir
 func varnam_get_vst_dir() *C.char {
 	var dir string
@@ -455,22 +480,7 @@ func varnam_get_all_scheme_details() *C.varray {
 
 	cSchemeDetails := C.varray_init()
 	for _, sd := range schemeDetails {
-		var cIsStable C.int
-
-		if sd.IsStable {
-			cIsStable = C.int(1)
-		} else {
-			cIsStable = C.int(0)
-		}
-
-		cSD := unsafe.Pointer(C.makeSchemeDetails(
-			C.CString(sd.Identifier),
-			C.CString(sd.LangCode),
-			C.CString(sd.DisplayName),
-			C.CString(sd.Author),
-			C.CString(sd.CompiledDate),
-			cIsStable,
-		))
+		cSD := unsafe.Pointer(makeCSchemeDetails(sd))
 		C.varray_push(cSchemeDetails, cSD)
 	}
 

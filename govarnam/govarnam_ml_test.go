@@ -322,9 +322,10 @@ func TestMLExportAndImport(t *testing.T) {
 
 	varnam.LearnMany(words)
 
-	exportFilePath := path.Join(testTempDir, "export")
+	exportFileIntendedPath := path.Join(testTempDir, "export")
+	exportFilePath := exportFileIntendedPath + "-1.vlf"
 
-	varnam.Export(exportFilePath)
+	varnam.Export(exportFileIntendedPath, 300)
 
 	// read the whole file at once
 	b, err := ioutil.ReadFile(exportFilePath)

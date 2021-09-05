@@ -510,6 +510,27 @@ func (handle *VarnamHandle) GetRecentlyLearntWords(ctx context.Context, limit in
 	}
 }
 
+func makeGoSchemeDetails(cSD *C.struct_SchemeDetails_t) SchemeDetails {
+	isStable := true
+	if cSD.IsStable == 0 {
+		isStable = false
+	}
+
+	return SchemeDetails{
+		C.GoString(cSD.Identifier),
+		C.GoString(cSD.LangCode),
+		C.GoString(cSD.DisplayName),
+		C.GoString(cSD.Author),
+		C.GoString(cSD.CompiledDate),
+		isStable,
+	}
+}
+
+// GetSchemeDetails get scheme details
+func (handle *VarnamHandle) GetSchemeDetails() SchemeDetails {
+	return makeGoSchemeDetails(C.varnam_get_scheme_details(handle.connectionID))
+}
+
 // GetVSTPath Get path to VST of current handle
 func (handle *VarnamHandle) GetVSTPath() string {
 	cStr := C.varnam_get_vst_path(handle.connectionID)
@@ -596,22 +617,7 @@ func GetAllSchemeDetails() ([]SchemeDetails, bool) {
 	i := 0
 	for i < int(C.varray_length(cSchemeDetails)) {
 		cSD := (*C.SchemeDetails)(C.varray_get(cSchemeDetails, C.int(i)))
-
-		isStable := true
-		if cSD.IsStable == 0 {
-			isStable = false
-		}
-
-		sd := SchemeDetails{
-			C.GoString(cSD.Identifier),
-			C.GoString(cSD.LangCode),
-			C.GoString(cSD.DisplayName),
-			C.GoString(cSD.Author),
-			C.GoString(cSD.CompiledDate),
-			isStable,
-		}
-
-		schemeDetails = append(schemeDetails, sd)
+		schemeDetails = append(schemeDetails, makeGoSchemeDetails(cSD))
 		i++
 	}
 

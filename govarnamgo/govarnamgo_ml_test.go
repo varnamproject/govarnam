@@ -7,6 +7,13 @@ import (
 	"testing"
 )
 
+func TestSchemeDetails(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	assertEqual(t, varnam.GetSchemeDetails().Identifier, "ml")
+	assertEqual(t, varnam.GetSchemeDetails().DisplayName, "Malayalam")
+}
+
 func TestTransliterate(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
