@@ -68,31 +68,37 @@ func (varnam *Varnam) InitVST(vstPath string) error {
 		return err
 	}
 
+	err = varnam.setPatternLongestLength()
+	if err != nil {
+		return err
+	}
+
 	varnam.vstConn.Exec("PRAGMA TEMP_STORE=2;")
 	varnam.vstConn.Exec("PRAGMA LOCKING_MODE=EXCLUSIVE;")
 
 	varnam.VSTPath = vstPath
 	varnam.setSchemeInfo()
-	varnam.setPatternLongestLength()
 
 	return nil
 }
 
 // Find the longest pattern length
-func (varnam *Varnam) setPatternLongestLength() {
+func (varnam *Varnam) setPatternLongestLength() error {
 	rows, err := varnam.vstConn.Query("SELECT MAX(LENGTH(pattern)) FROM symbols")
 	if err != nil {
-		log.Print(err)
+		return err
 	}
 
 	length := 0
 	for rows.Next() {
 		err := rows.Scan(&length)
 		if err != nil {
-			log.Print(err)
+			return err
 		}
 	}
 	varnam.LangRules.PatternLongestLength = length
+
+	return nil
 }
 
 func (varnam *Varnam) setSchemeInfo() {

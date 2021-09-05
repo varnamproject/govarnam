@@ -19,7 +19,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17
+        go-version: 1.16
 
     - name: Build
       run: make library
@@ -28,7 +28,7 @@ jobs:
       run: echo "VARNAM_VST_DIR=$(echo $(realpath schemes))" >> $GITHUB_ENV
     
     - name: Download schemes
-      run: wget -O schemes/ml.vst "$VARNAM_UPSTREAM/languages/ml/download"
+      run: wget -O $VARNAM_VST_DIR/ml.vst "$VARNAM_UPSTREAM/languages/ml/download"
 
     - name: Test
       run: make test

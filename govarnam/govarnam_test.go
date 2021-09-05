@@ -1,6 +1,7 @@
 package govarnam
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -38,10 +39,6 @@ func setUp(schemeID string, langCode string) {
 
 	vstLoc := path.Join(projectRoot, "schemes", schemeID+".vst")
 
-	var err error
-	testTempDir, err = ioutil.TempDir("", "govarnam_test")
-	checkError(err)
-
 	dictLoc := path.Join(testTempDir, langCode+".vst.learnings")
 
 	varnam, err := Init(vstLoc, dictLoc)
@@ -68,13 +65,28 @@ func tearDownVarnam(schemeID string) {
 }
 
 func tearDown() {
-	os.RemoveAll(testTempDir)
+	// os.RemoveAll(testTempDir)
 }
 
 func TestEnv(t *testing.T) {
+	// Making a dummy VST file
+	file, err := os.Create(path.Join(testTempDir, "ml.vst"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	file.WriteString("dummy")
+
+	os.Setenv("VARNAM_VST_DIR", testTempDir)
+	_, err = InitFromID("ml")
+	fmt.Println(err)
+	assertEqual(t, err != nil, true)
+
+	os.Unsetenv("VARNAM_VST_DIR")
+
 	os.Setenv("VARNAM_LEARNINGS_DIR", testTempDir)
 
-	_, err := InitFromID("ml")
+	_, err = InitFromID("ml")
 	checkError(err)
 
 	assertEqual(t, fileExists(path.Join(testTempDir, "ml.vst.learnings")), true)
@@ -86,6 +98,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	testTempDir, err = ioutil.TempDir("", "govarnam_test")
+	checkError(err)
 
 	for _, schemeDetail := range schemeDetails {
 		setUp(schemeDetail.Identifier, schemeDetail.LangCode)

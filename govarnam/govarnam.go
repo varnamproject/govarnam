@@ -434,6 +434,7 @@ func (varnam *Varnam) RegisterPatternWordPartializer(cb func(*Suggestion)) {
 // Init Initialize varnam. Dictionary will be created if it doesn't exist
 func Init(vstPath string, dictPath string) (*Varnam, error) {
 	varnam := Varnam{}
+	varnam.LangRules = LangRules{}
 
 	err := varnam.InitVST(vstPath)
 	if err != nil {
@@ -462,7 +463,13 @@ func InitFromID(schemeID string) (*Varnam, error) {
 	}
 
 	varnam := Varnam{}
-	varnam.InitVST(vstPath)
+	varnam.LangRules = LangRules{}
+
+	fmt.Println(vstPath)
+	err = varnam.InitVST(vstPath)
+	if err != nil {
+		return nil, err
+	}
 
 	// One dictionary for one language, not for different scheme
 	dictPath = findLearningsFilePath(varnam.SchemeDetails.LangCode)

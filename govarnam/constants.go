@@ -49,21 +49,19 @@ const VARNAM_LEARNT_WORD_MIN_WEIGHT = 30
 const CHIL_TAG = "chill"
 
 // VARNAM_VST_DIR VST lookiup directories according to priority
-var VARNAM_VST_DIR = [3]string{
-	// libvarnam used to use "vst" folder
-	"schemes",
-	"/usr/local/share/varnam/schemes",
-	"/usr/share/varnam/schemes",
+func getVSTLookupDirs() []string {
+	return []string{
+		// libvarnam used to use "vst" folder
+		os.Getenv("VARNAM_VST_DIR"),
+		"schemes",
+		"/usr/local/share/varnam/schemes",
+		"/usr/share/varnam/schemes",
+	}
 }
 
 //FindVSTDir Get the VST storing directory
 func FindVSTDir() (string, error) {
-	envVSTDir := os.Getenv("VARNAM_VST_DIR")
-	if envVSTDir != "" {
-		return envVSTDir, nil
-	}
-
-	for _, loc := range VARNAM_VST_DIR {
+	for _, loc := range getVSTLookupDirs() {
 		if dirExists(loc) {
 			return loc, nil
 		}
@@ -72,7 +70,7 @@ func FindVSTDir() (string, error) {
 }
 
 func findVSTPath(schemeID string) (string, error) {
-	for _, loc := range VARNAM_VST_DIR {
+	for _, loc := range getVSTLookupDirs() {
 		temp := path.Join(loc, schemeID+".vst")
 		if fileExists(temp) {
 			return temp, nil
