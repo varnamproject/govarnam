@@ -611,6 +611,10 @@ func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 
 // Import learnings from file
 func (varnam *Varnam) Import(filePath string) error {
+	if !fileExists(filePath) {
+		return fmt.Errorf("Import file not found")
+	}
+
 	// TODO better reading of JSON. This loads entire file into memory
 	fileContent, _ := ioutil.ReadFile(filePath)
 
