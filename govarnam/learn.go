@@ -597,7 +597,7 @@ func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 
 		jsonData, err := json.Marshal(output)
 
-		filePathWithPageNumber := filePath + "-" + fmt.Sprint(page)
+		filePathWithPageNumber := filePath + "-" + fmt.Sprint(page) + ".vlf"
 		err = ioutil.WriteFile(filePathWithPageNumber, jsonData, 0644)
 		if err != nil {
 			return err
