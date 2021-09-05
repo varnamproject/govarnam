@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/varnamproject/govarnam/govarnamgo"
@@ -32,16 +33,16 @@ func main() {
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
 	schemeFlag := flag.String("s", "", "Scheme ID")
 
-	learnFlag := flag.Bool("learn", false, "Learn a word")
-	unlearnFlag := flag.Bool("unlearn", false, "Unlearn a word")
-	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
+	learnFlag := flag.Bool("-learn", false, "Learn a word")
+	unlearnFlag := flag.Bool("-unlearn", false, "Unlearn a word")
+	trainFlag := flag.Bool("-train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
 
-	learnFromFileFlag := flag.Bool("learn-from-file", false, "Learn words in a file")
-	trainFromFileFlag := flag.Bool("train-from-file", false, "Train pattern => word from a file.")
+	learnFromFileFlag := flag.Bool("-learn-from-file", false, "Learn words in a file")
+	trainFromFileFlag := flag.Bool("-train-from-file", false, "Train pattern => word from a file.")
 
-	exportFlag := flag.Bool("export", false, "Export learnings to file")
-	exportWordsPerFile := flag.Int("export-words-per-file", 30000, "Words per export file")
-	importFlag := flag.Bool("import", false, "Import learnings from file")
+	exportFlag := flag.Bool("-export", false, "Export learnings to file")
+	exportWordsPerFile := flag.Int("-export-words-per-file", 30000, "Words per export file")
+	importFlag := flag.Bool("-import", false, "Import learnings from file")
 
 	indicDigitsFlag := flag.Bool("digits", false, "Use indic digits")
 
@@ -51,7 +52,8 @@ func main() {
 	flag.Parse()
 
 	if *schemeFlag == "" {
-		log.Fatal("Specifiy a scheme ID with -s")
+		fmt.Println("Specifiy a scheme ID with -s.\n\nUse --help for all available commands.")
+		return
 	}
 
 	var err error
@@ -118,11 +120,19 @@ func main() {
 			log.Fatal(err.Error())
 		}
 	} else if *importFlag {
-		err := varnam.Import(args[0])
-		if err == nil {
-			fmt.Println("Finished importing from file")
-		} else {
+		matches, err := filepath.Glob(args[0])
+
+		if err != nil {
 			log.Fatal(err.Error())
+		}
+
+		for _, match := range matches {
+			err := varnam.Import(match)
+			if err == nil {
+				fmt.Printf("Finished importing from file %s\n", match)
+			} else {
+				log.Fatal(err.Error())
+			}
 		}
 	} else if *reverseTransliterate {
 		sugs, err := varnam.ReverseTransliterate(args[0])
