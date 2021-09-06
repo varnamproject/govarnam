@@ -1,7 +1,6 @@
 package govarnam
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -65,7 +64,7 @@ func tearDownVarnam(schemeID string) {
 }
 
 func tearDown() {
-	// os.RemoveAll(testTempDir)
+	os.RemoveAll(testTempDir)
 }
 
 func TestEnv(t *testing.T) {
@@ -79,7 +78,6 @@ func TestEnv(t *testing.T) {
 
 	os.Setenv("VARNAM_VST_DIR", testTempDir)
 	_, err = InitFromID("ml")
-	fmt.Println(err)
 	assertEqual(t, err != nil, true)
 
 	os.Unsetenv("VARNAM_VST_DIR")
