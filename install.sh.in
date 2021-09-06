@@ -23,9 +23,7 @@ else
     sudo ldconfig
 
     sudo mkdir -p "@INSTALL_PREFIX@/share/varnam/schemes"
-    sudo cp "$SCRIPT_DIR/schemes/"*.vst "@INSTALL_PREFIX@/share/varnam/schemes/"
     echo "Installation finished"
-
   elif [ "$1" = "uninstall" ]; then
     sudo rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
     sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*

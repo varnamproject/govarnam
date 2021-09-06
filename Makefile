@@ -63,7 +63,7 @@ build:
 	$(MAKE) nix
 
 release:
-	mkdir -p ${RELEASE_NAME} ${RELEASE_NAME}/schemes
+	mkdir -p ${RELEASE_NAME}
 	cp ${CLI_BIN} ${RELEASE_NAME}/
 	cp libgovarnam.so ${RELEASE_NAME}/
 	cp *.h ${RELEASE_NAME}/
