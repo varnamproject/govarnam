@@ -5,8 +5,8 @@ default: build ;
 
 CLI_BIN := varnamcli
 INSTALL_PREFIX := /usr/local
-VERSION := $(shell git describe --abbrev=0 --tags | sed s/v//)
-RELEASE_NAME := govarnam-${VERSION}
+VERSION := $(shell echo $$(git describe --abbrev=0 --tags || echo "latest") | sed s/v//)
+RELEASE_NAME := govarnam-${VERSION}-${shell arch}
 UNAME := $(shell uname)
 
 SED := sed -i
@@ -69,8 +69,6 @@ release:
 	cp *.h ${RELEASE_NAME}/
 	cp *.pc ${RELEASE_NAME}/
 	cp install.sh ${RELEASE_NAME}/
-
-	cp schemes/*.vst ${RELEASE_NAME}/schemes/
 
 	zip -r ${RELEASE_NAME}.zip ${RELEASE_NAME}/*
 

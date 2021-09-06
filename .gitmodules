@@ -1,0 +1,3 @@
+[submodule "schemes"]
+	path = schemes
+	url = https://github.com/varnamproject/schemes.git
