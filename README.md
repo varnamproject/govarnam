@@ -2,9 +2,11 @@
 
 Varnam is an Indian language transliteration library. GoVarnam is a Go port of [libvarnam](https://github.com/varnamproject/libvarnam) with some core architectural changes. Not every part of libvarnam is ported.
 
-It is stable to use daily as an input method. See it in action here: https://varnam.subinsb.com/
+It is stable to use daily as an input method. See it in action here: https://varnamproject.github.io/editor/
 
 An [Input Method Engine](https://en.wikipedia.org/wiki/Input_method) for Linux operating systems via IBus is available here: https://github.com/varnamproject/govarnam-ibus
+
+![](https://varnamproject.github.io/_index/free-to-write-anything.png)
 
 ## Installation
 
@@ -21,21 +23,11 @@ cd Downloads/govarnam
 sudo ./install.sh install
 ```
 It will ask for your password, enter it.
-* Installation is finished
+* Basic Installation is finished
 
-To check if installation is successful, try this command :
-```bash
-varnamcli -s ml enthaanu
-```
-It should give malayalam output if installation is successful.
+* Install your language from [here](https://github.com/varnamproject/schemes)
 
-* To make Varnam give better suggestions, you will need to import some words. Download a `.vlf` (Varnam Learnings File) file from here [TODO LINK].
-* Import it:
-```bash
-varnamcli -s ml -import file.vlf
-```
-
-Now, you may install the IBus engine to use Varnam system wide: https://github.com/varnamproject/govarnam-ibus
+You may also install the IBus engine to use Varnam system wide: https://github.com/varnamproject/govarnam-ibus
 
 ## Usage
 
@@ -63,6 +55,21 @@ varnamcli -s ml -learn-from-file file.html
 ```
 
 You can download news articles or Wikipedia pages in HTML format to learn words from them.
+
+### Export Learnings
+
+You can export your local learnings with:
+```bash
+varnamcli -s ml -export my-words
+```
+The file extension will be `.vlf` [Varnam Learnings File]
+
+### Import Learnings
+
+You can import learnings from a `.vlf` :
+```bash
+varnamcli -s ml -import my-words-1.vlf
+```
 
 ## Development
 
