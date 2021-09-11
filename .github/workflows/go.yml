@@ -32,6 +32,7 @@ jobs:
 
       - name: Download schemes
         run: |
+          mkdir schemes
           wget -O $VARNAM_VST_DIR/ml.vst "$VARNAM_UPSTREAM/languages/ml/download"
           wget -O $VARNAM_VST_DIR/ml-inscript.vst "$VARNAM_UPSTREAM/languages/ml-inscript/download"
 
