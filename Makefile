@@ -77,5 +77,7 @@ test-govarnamgo:
 
 test:
 	go test -tags fts5 -count=1 -cover govarnam/*.go
+	
 	$(MAKE) library
-	$(MAKE) test-govarnamgo
+	$(MAKE) temp-pc
+	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH $(MAKE) test-govarnamgo
