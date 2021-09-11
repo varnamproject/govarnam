@@ -4,7 +4,6 @@ import (
 	"context"
 	"io/ioutil"
 	"log"
-	"os"
 	"path"
 	"strings"
 	"testing"
@@ -268,17 +267,9 @@ func TestDictionaryLimit(t *testing.T) {
 func TestMLLearnFromFile(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
-	filePath := path.Join(testTempDir, "text.txt")
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
 	// CC BY-SA 3.0 licensed
 	// https://ml.wikipedia.org/wiki/National_parks_of_Taiwan
-	file.WriteString("തായ്‌വാനിലെ ദേശീയോദ്യാനങ്ങൾ സംരക്ഷിതപ്രദേശങ്ങളാണ്. 7,489.49 ചതുരശ്ര കിലോമീറ്റർ (2,891.71 sq mi) വിസ്തീർണ്ണത്തിൽ വ്യാപിച്ചുകിടക്കുന്ന ഒൻപത് ദേശീയോദ്യാനങ്ങളാണ് ഇവിടെയുള്ളത്. എല്ലാ ദേശീയോദ്യാനങ്ങളും മിനിസ്ട്രി ഓഫ് ദ ഇന്റീരിയർ ഭരണത്തിൻകീഴിലാണ് നിലനിൽക്കുന്നത്. 1937-ൽ തായ്‌വാനിലെ ജാപ്പനീസ് ഭരണത്തിൻ കീഴിലായിരുന്നു ആദ്യത്തെ ദേശീയോദ്യാനം നിലവിൽവന്നത്.")
+	filePath := makeFile("text.txt", "തായ്‌വാനിലെ ദേശീയോദ്യാനങ്ങൾ സംരക്ഷിതപ്രദേശങ്ങളാണ്. 7,489.49 ചതുരശ്ര കിലോമീറ്റർ (2,891.71 sq mi) വിസ്തീർണ്ണത്തിൽ വ്യാപിച്ചുകിടക്കുന്ന ഒൻപത് ദേശീയോദ്യാനങ്ങളാണ് ഇവിടെയുള്ളത്. എല്ലാ ദേശീയോദ്യാനങ്ങളും മിനിസ്ട്രി ഓഫ് ദ ഇന്റീരിയർ ഭരണത്തിൻകീഴിലാണ് നിലനിൽക്കുന്നത്. 1937-ൽ തായ്‌വാനിലെ ജാപ്പനീസ് ഭരണത്തിൻ കീഴിലായിരുന്നു ആദ്യത്തെ ദേശീയോദ്യാനം നിലവിൽവന്നത്.")
 
 	varnam.LearnFromFile(filePath)
 
@@ -286,20 +277,16 @@ func TestMLLearnFromFile(t *testing.T) {
 
 	// Try learning from a frequency report
 
-	filePath = path.Join(testTempDir, "report.txt")
-
-	file, err = os.Create(filePath)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	file.WriteString(`നിത്യഹരിത 120
-	വൃക്ഷമാണ് 89
-	ഒരേയൊരു 45
-	ഏഷ്യയുടെ 100
-	മേലാപ്പും 12
-	aadc 10`)
+	filePath = makeFile("report.txt",
+		`
+		നിത്യഹരിത 120
+		വൃക്ഷമാണ് 89
+		ഒരേയൊരു 45
+		ഏഷ്യയുടെ 100
+		മേലാപ്പും 12
+		aadc 10
+		`,
+	)
 
 	learnStatus, err := varnam.LearnFromFile(filePath)
 	checkError(err)
@@ -348,6 +335,32 @@ func TestMLExportAndImport(t *testing.T) {
 
 		assertEqual(t, len(results) > 0, true)
 	}
+
+	// Test if importing file with a JSON work
+	filePath := makeFile("custom.json", `
+		{
+			"words": [
+				{
+					"word": "അൾജീരിയ",
+					"weight": 25,
+					"learned_on": 1531131220
+				}
+			],
+			"patterns": [
+				{
+					"pattern": "algeria",
+					"word": "അൾജീരിയ"
+				}
+			]
+		}
+	`)
+	varnam.Import(filePath)
+
+	assertEqual(t, varnam.Transliterate("algeria").ExactMatches[0], Suggestion{
+		Word:      "അൾജീരിയ",
+		Weight:    VARNAM_LEARNT_WORD_MIN_WEIGHT + 25,
+		LearnedOn: 1531131220,
+	})
 }
 
 func TestMLSearchSymbolTable(t *testing.T) {

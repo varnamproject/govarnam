@@ -96,6 +96,11 @@ func (varnam *Varnam) setPatternLongestLength() error {
 			return err
 		}
 	}
+
+	if length == 0 {
+		return fmt.Errorf("Couldn't find longest pattern length")
+	}
+
 	varnam.LangRules.PatternLongestLength = length
 
 	return nil

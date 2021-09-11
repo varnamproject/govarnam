@@ -4,9 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"reflect"
-	"runtime"
 	"runtime/debug"
 	"sync"
 	"testing"
@@ -32,19 +30,12 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 	t.Errorf("Received %v (type %v), expected %v (type %v)", a, reflect.TypeOf(a), b, reflect.TypeOf(b))
 }
 
-func setUp(schemeID string, langCode string) {
-	_, filename, _, _ := runtime.Caller(0)
-	projectRoot := path.Join(path.Dir(filename), "..")
-
-	vstLoc := path.Join(projectRoot, "schemes", schemeID+".vst")
-
+func setUp(schemeID string) {
 	var err error
 	testTempDir, err = ioutil.TempDir("", "govarnam_test")
 	checkError(err)
 
-	dictLoc := path.Join(testTempDir, langCode+".vst.learnings")
-
-	varnam, err := Init(vstLoc, dictLoc)
+	varnam, err := InitFromID(schemeID)
 	checkError(err)
 
 	mutex.Lock()
@@ -68,7 +59,7 @@ func tearDown() {
 }
 
 func TestMain(m *testing.M) {
-	setUp("ml", "ml")
+	setUp("ml")
 	m.Run()
 	tearDown()
 }
