@@ -76,7 +76,7 @@ func findVSTPath(schemeID string) (string, error) {
 			return temp, nil
 		}
 	}
-	return "", fmt.Errorf("Couldn't find VST for %s", schemeID)
+	return "", fmt.Errorf("Couldn't find VST for %q", schemeID)
 }
 
 func findLearningsFilePath(langCode string) string {

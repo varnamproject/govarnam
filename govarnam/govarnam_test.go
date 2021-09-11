@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"runtime"
 	"runtime/debug"
 	"sync"
 	"testing"
@@ -32,15 +31,25 @@ func checkError(err error) {
 	}
 }
 
-func setUp(schemeID string, langCode string) {
-	_, filename, _, _ := runtime.Caller(0)
-	projectRoot := path.Join(path.Dir(filename), "..")
+func makeFile(name string, contents string) string {
+	filePath := path.Join(testTempDir, name)
 
-	vstLoc := path.Join(projectRoot, "schemes", schemeID+".vst")
+	file, err := os.Create(filePath)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+	defer file.Close()
 
-	dictLoc := path.Join(testTempDir, langCode+".vst.learnings")
+	file.WriteString(contents)
 
-	varnam, err := Init(vstLoc, dictLoc)
+	return filePath
+}
+
+func setUp(schemeID string) {
+	os.Setenv("VARNAM_LEARNINGS_DIR", testTempDir)
+
+	varnam, err := InitFromID(schemeID)
 	checkError(err)
 
 	mutex.Lock()
@@ -101,7 +110,7 @@ func TestMain(m *testing.M) {
 	checkError(err)
 
 	for _, schemeDetail := range schemeDetails {
-		setUp(schemeDetail.Identifier, schemeDetail.LangCode)
+		setUp(schemeDetail.Identifier)
 	}
 
 	m.Run()

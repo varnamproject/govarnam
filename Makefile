@@ -73,7 +73,7 @@ release:
 	zip -r ${RELEASE_NAME}.zip ${RELEASE_NAME}/*
 
 test-govarnamgo:
-	go test -count=1 -cover govarnamgo/*.go
+	govarnamgo/run_tests.sh
 
 test:
 	go test -tags fts5 -count=1 -cover govarnam/*.go

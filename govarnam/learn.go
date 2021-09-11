@@ -575,7 +575,7 @@ func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 
 	page := 1
 	for page <= totalPages {
-		wordsTableQuery := fmt.Sprintf("SELECT * FROM words ORDER BY weight DESC LIMIT %d OFFSET %d", wordsPerFile, (page-1)*wordsPerFile)
+		wordsTableQuery := fmt.Sprintf("SELECT word, weight, learned_on FROM words ORDER BY weight DESC LIMIT %d OFFSET %d", wordsPerFile, (page-1)*wordsPerFile)
 
 		wordsRows, err := varnam.dictConn.Query(wordsTableQuery)
 		if err != nil {
@@ -585,7 +585,21 @@ func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 
 		wordsData, err := rowsToJSON(wordsRows)
 
-		patternsRows, err := varnam.dictConn.Query("SELECT * FROM patterns WHERE word_id IN (SELECT id FROM (" + wordsTableQuery + "))")
+		patternsRows, err := varnam.dictConn.Query(
+			`
+			SELECT pattern, (
+				SELECT word FROM words WHERE words.id = patterns.word_id
+			) AS word
+			FROM patterns
+			WHERE patterns.word_id IN (
+				SELECT id FROM words WHERE word IN (
+					SELECT word FROM (
+						` + wordsTableQuery + `
+					)
+				)
+			)
+			`,
+		)
 		if err != nil {
 			return err
 		}
@@ -640,13 +654,13 @@ func (varnam *Varnam) Import(filePath string) error {
 	insertions := 0
 	count := 0
 	for i, item := range dbData.WordsDict {
-		values = append(values, "(?, trim(?), ?, ?)")
-		args = append(args, item["id"], item["word"], item["weight"], item["learned_on"])
+		values = append(values, "(trim(?), ?, ?)")
+		args = append(args, item["word"], item["weight"], item["learned_on"])
 
 		count++
 		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {
 			query := fmt.Sprintf(
-				"INSERT OR IGNORE INTO words(id, word, weight, learned_on) VALUES %s",
+				"INSERT OR IGNORE INTO words(word, weight, learned_on) VALUES %s",
 				strings.Join(values, ", "),
 			)
 
@@ -681,8 +695,8 @@ func (varnam *Varnam) Import(filePath string) error {
 	insertions = 0
 	count = 0
 	for i, item := range dbData.PatternsDict {
-		values = append(values, "(?, ?)")
-		args = append(args, item["pattern"], item["word_id"])
+		values = append(values, "(?, (SELECT id FROM words WHERE word = ?))")
+		args = append(args, item["pattern"], item["word"])
 
 		count++
 		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {

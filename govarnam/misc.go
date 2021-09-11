@@ -7,8 +7,8 @@ package govarnam
  */
 
 import (
-	"fmt"
 	"io/fs"
+	"log"
 	"path/filepath"
 )
 
@@ -46,14 +46,15 @@ func GetAllSchemeDetails() ([]SchemeDetails, error) {
 	var schemeDetails []SchemeDetails
 
 	for _, vstPath := range schemePaths {
-		fmt.Println(vstPath)
-
 		varnam := Varnam{}
-		varnam.InitVST(vstPath)
+		err := varnam.InitVST(vstPath)
 
-		schemeDetails = append(schemeDetails, varnam.SchemeDetails)
-
-		varnam.Close()
+		if err == nil {
+			schemeDetails = append(schemeDetails, varnam.SchemeDetails)
+			varnam.Close()
+		} else {
+			log.Println(err)
+		}
 	}
 
 	return schemeDetails, nil
