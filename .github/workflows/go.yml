@@ -25,7 +25,7 @@ jobs:
           go-version: 1.16
 
       - name: Build
-        run: make library
+        run: make
 
       - name: Set env
         run: echo "VARNAM_VST_DIR=$(echo $(realpath schemes))" >> $GITHUB_ENV
@@ -37,3 +37,14 @@ jobs:
 
       - name: Test
         run: make test
+
+      - name: Make Zip
+        run: |
+          make
+          make release
+
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: govarnam
+          path: "*.zip"

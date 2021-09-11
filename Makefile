@@ -73,11 +73,11 @@ release:
 	zip -r ${RELEASE_NAME}.zip ${RELEASE_NAME}/*
 
 test-govarnamgo:
-	govarnamgo/run_tests.sh
+	$(MAKE) temp-pc
+	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH LD_LIBRARY_PATH=$(realpath .):$$LD_LIBRARY_PATH govarnamgo/run_tests.sh
 
 test:
 	go test -tags fts5 -count=1 -cover govarnam/*.go
 	
 	$(MAKE) library
-	$(MAKE) temp-pc
-	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH $(MAKE) test-govarnamgo
+	$(MAKE) test-govarnamgo
