@@ -341,15 +341,15 @@ func TestMLExportAndImport(t *testing.T) {
 		{
 			"words": [
 				{
-					"word": "അൾജീരിയ",
-					"weight": 25,
-					"learned_on": 1531131220
+					"w": "അൾജീരിയ",
+					"c": 25,
+					"l": 1531131220
 				}
 			],
 			"patterns": [
 				{
-					"pattern": "algeria",
-					"word": "അൾജീരിയ"
+					"p": "algeria",
+					"w": "അൾജീരിയ"
 				}
 			]
 		}

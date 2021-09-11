@@ -27,7 +27,7 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 
 func checkError(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 }
 
@@ -78,19 +78,15 @@ func tearDown() {
 
 func TestEnv(t *testing.T) {
 	// Making a dummy VST file
-	file, err := os.Create(path.Join(testTempDir, "ml.vst"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	file.WriteString("dummy")
+	makeFile("ml.vst", "dummy")
+
+	prevEnvValue := os.Getenv("VARNAM_VST_DIR")
 
 	os.Setenv("VARNAM_VST_DIR", testTempDir)
-	_, err = InitFromID("ml")
+	_, err := InitFromID("ml")
 	assertEqual(t, err != nil, true)
 
-	os.Unsetenv("VARNAM_VST_DIR")
-
+	os.Setenv("VARNAM_VST_DIR", prevEnvValue)
 	os.Setenv("VARNAM_LEARNINGS_DIR", testTempDir)
 
 	_, err = InitFromID("ml")

@@ -70,8 +70,8 @@ func FindVSTDir() (string, error) {
 }
 
 func findVSTPath(schemeID string) (string, error) {
-	for _, loc := range getVSTLookupDirs() {
-		temp := path.Join(loc, schemeID+".vst")
+	for _, dir := range getVSTLookupDirs() {
+		temp := path.Join(dir, schemeID+".vst")
 		if fileExists(temp) {
 			return temp, nil
 		}

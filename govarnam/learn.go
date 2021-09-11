@@ -546,7 +546,7 @@ func rowsToJSON(rows *sql.Rows) ([]map[string]interface{}, error) {
 // Export learnings as JSON to a file
 func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 	if fileExists(filePath) {
-		return fmt.Errorf("output file already exists")
+		return fmt.Errorf("Output file already exists")
 	}
 
 	patternsCount := -1
@@ -575,7 +575,7 @@ func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 
 	page := 1
 	for page <= totalPages {
-		wordsTableQuery := fmt.Sprintf("SELECT word, weight, learned_on FROM words ORDER BY weight DESC LIMIT %d OFFSET %d", wordsPerFile, (page-1)*wordsPerFile)
+		wordsTableQuery := fmt.Sprintf("SELECT word AS w, weight AS c, learned_on AS l FROM words ORDER BY c DESC LIMIT %d OFFSET %d", wordsPerFile, (page-1)*wordsPerFile)
 
 		wordsRows, err := varnam.dictConn.Query(wordsTableQuery)
 		if err != nil {
@@ -587,13 +587,13 @@ func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 
 		patternsRows, err := varnam.dictConn.Query(
 			`
-			SELECT pattern, (
+			SELECT pattern AS p, (
 				SELECT word FROM words WHERE words.id = patterns.word_id
-			) AS word
+			) AS w
 			FROM patterns
 			WHERE patterns.word_id IN (
 				SELECT id FROM words WHERE word IN (
-					SELECT word FROM (
+					SELECT w FROM (
 						` + wordsTableQuery + `
 					)
 				)
@@ -655,7 +655,7 @@ func (varnam *Varnam) Import(filePath string) error {
 	count := 0
 	for i, item := range dbData.WordsDict {
 		values = append(values, "(trim(?), ?, ?)")
-		args = append(args, item["word"], item["weight"], item["learned_on"])
+		args = append(args, item["w"], item["c"], item["l"])
 
 		count++
 		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {
@@ -696,7 +696,7 @@ func (varnam *Varnam) Import(filePath string) error {
 	count = 0
 	for i, item := range dbData.PatternsDict {
 		values = append(values, "(?, (SELECT id FROM words WHERE word = ?))")
-		args = append(args, item["pattern"], item["word"])
+		args = append(args, item["p"], item["w"])
 
 		count++
 		if count == insertsPerTransaction || i == len(dbData.WordsDict)-1 {
