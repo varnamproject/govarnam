@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-18.04
             file: "*.zip"
 
     steps:
