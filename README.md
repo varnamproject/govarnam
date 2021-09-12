@@ -14,20 +14,25 @@ You will need to install GoVarnam library in your system for any app to use Varn
 
 * Download a [recent GoVarnam version](https://github.com/varnamproject/govarnam/releases).
 * Extract the zip file
-* Open a terminal and go to the extracted folder by using this command :
-```bash
-cd Downloads/govarnam
-```
-* Now run this command to install GoVarnam :
-```bash
-sudo ./install.sh install
-```
-It will ask for your password, enter it.
+* Go to the extracted folder
+* Now we need to run the install script
+  * Double click `install.sh`, and choose "Run In Terminal"
+  * Or for KDE, Right click, choose "Run In Konsole"
+  * Or right click on folder, choose "Open In Terminal", type this and press enter:
+  ```bash
+  ./install.sh
+  ```
+* Type your password and press enter
 * Basic Installation is finished
 
 * Install your language from [here](https://github.com/varnamproject/schemes)
 
 You may also install the IBus engine to use Varnam system wide: https://github.com/varnamproject/govarnam-ibus
+
+To uninstall, open a terminal in the extracted folder and run:
+```bash
+./install.sh uninstall
+```
 
 ## Usage
 

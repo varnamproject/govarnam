@@ -2,35 +2,34 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-if [[ "$EUID" != 0 ]]; then
-  echo "Run this script as root or with sudo"
-  exit
-fi
+ARG1=${1:-install}
 
-if [ -z "$1" ]; then
-  echo "Specify install or uninstall"
+if [ "$ARG1" == "install" ]; then
+  sudo cp "$SCRIPT_DIR/varnamcli" "@INSTALL_PREFIX@/bin/varnamcli"
+  
+  sudo mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
+  sudo cp "$SCRIPT_DIR/libgovarnam.so" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@"
+  sudo ln -s "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so"
+  sudo cp "$SCRIPT_DIR/govarnam.pc" "@INSTALL_PREFIX@/lib/pkgconfig/"
+
+  sudo mkdir -p "@INSTALL_PREFIX@/include/libgovarnam"
+  sudo cp "$SCRIPT_DIR/"*.h "@INSTALL_PREFIX@/include/libgovarnam/"
+  sudo ldconfig
+
+  sudo mkdir -p "@INSTALL_PREFIX@/share/varnam/schemes"
+
+  msg="Installation finished"
+  echo "$msg"
+  notify-send "$msg" || true
+elif [ "$ARG1" == "uninstall" ]; then
+  sudo rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
+  sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*
+  sudo rmdir "@INSTALL_PREFIX@/include/libgovarnam"
+  sudo rm "@INSTALL_PREFIX@/share/varnam/schemes/"*
+  sudo rmdir "@INSTALL_PREFIX@/share/varnam/schemes/"
+
+  msg="Uninstallation finished"
+  echo $msg
 else
-  if [ "$1" = "install" ]; then
-    sudo cp "$SCRIPT_DIR/varnamcli" "@INSTALL_PREFIX@/bin/varnamcli"
-    
-    sudo mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
-    sudo cp "$SCRIPT_DIR/libgovarnam.so" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@"
-    sudo ln -s "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so"
-    sudo cp "$SCRIPT_DIR/govarnam.pc" "@INSTALL_PREFIX@/lib/pkgconfig/"
-
-    sudo mkdir -p "@INSTALL_PREFIX@/include/libgovarnam"
-    sudo cp "$SCRIPT_DIR/"*.h "@INSTALL_PREFIX@/include/libgovarnam/"
-    sudo ldconfig
-
-    sudo mkdir -p "@INSTALL_PREFIX@/share/varnam/schemes"
-    echo "Installation finished"
-  elif [ "$1" = "uninstall" ]; then
-    sudo rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
-    sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*
-    sudo rmdir "@INSTALL_PREFIX@/include/libgovarnam"
-    sudo rm "@INSTALL_PREFIX@/share/varnam/schemes/"*
-    sudo rmdir "@INSTALL_PREFIX@/share/varnam/schemes/"
-
-    echo "Uninstallation finished"
-  fi
+  echo "Unknown argument"
 fi
