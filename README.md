@@ -6,33 +6,13 @@ It is stable to use daily as an input method. See it in action here: https://var
 
 An [Input Method Engine](https://en.wikipedia.org/wiki/Input_method) for Linux operating systems via IBus is available here: https://github.com/varnamproject/govarnam-ibus
 
-![](https://varnamproject.github.io/_index/free-to-write-anything.png)
-
 ## Installation
 
-You will need to install GoVarnam library in your system for any app to use Varnam.
+See instructions in website: https://varnamproject.github.io/download/
 
-* Download a [recent GoVarnam version](https://github.com/varnamproject/govarnam/releases).
-* Extract the zip file
-* Go to the extracted folder
-* Now we need to run the install script
-  * Double click `install.sh`, and choose "Run In Terminal"
-  * Or for KDE, Right click, choose "Run In Konsole"
-  * Or right click on folder, choose "Open In Terminal", type this and press enter:
-  ```bash
-  ./install.sh
-  ```
-* Type your password and press enter
-* Basic Installation is finished
+<br/>
 
-* Install your language from [here](https://github.com/varnamproject/schemes)
-
-You may also install the IBus engine to use Varnam system wide: https://github.com/varnamproject/govarnam-ibus
-
-To uninstall, open a terminal in the extracted folder and run:
-```bash
-./install.sh uninstall
-```
+![](https://varnamproject.github.io/_index/free-to-write-anything.png)
 
 ## Usage
 
