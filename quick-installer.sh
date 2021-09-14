@@ -48,7 +48,9 @@ step1="Step 1: Install GoVarnam"
 step2="Step 2: Install your language"
 step3="Step 3: Install Varnam IBus Engine"
 
-echo "Welcome to Varnam Installer. This installation is a 3-step process."
+echo "Welcome to Varnam Installer. https://varnamproject.github.io/"
+echo ""
+echo "This installation is a 3-step process."
 echo ""
 echo $step1
 echo $step2
