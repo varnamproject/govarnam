@@ -18,6 +18,10 @@ version=0
 versionNumber=0
 arch=$(arch)
 
+confirm() {
+  [[ "$1" == [yY] || "$1" == [yY][eE][sS] ]]
+}
+
 init_version() {
   version=$(get_latest_release "govarnam")
   if [[ -z $version ]]; then
@@ -50,11 +54,10 @@ echo $step1
 echo $step2
 echo $step3
 echo ""
-echo "Start Step 1 ? (yes/NO):"
-read ans
+read -p "Start Step 1 ? (yes/NO): " answer
 
 init_version
-if [[ "$ans" == "yes" || "$ans" == "y" ]]; then
+if confirm "$answer"; then
   install_govarnam
 fi
 
@@ -83,23 +86,13 @@ install_scheme() {
   cd $releaseName
   ./install.sh
 
-  # Check ls file count
-  if [ `ls -1 */*.vlf 2>/dev/null | wc -l ` -gt 0 ]; then
-    # At least 1 files
-    echo "Found Varnam Learnings File (.vlf) to import words from. Import for \"$schemeID\" ? (yes/no):"
-    read ans
-    if [[ "$ans" == "yes" || "$ans" == "y" ]]; then
+  if ls */*.vlf >/dev/null 2>&1; then
+    # At least 1 file
+    read -p "Found Varnam Learnings File (.vlf) to import words from. Import for '$schemeID' ? (yes/no): " answer2
+    if confirm "$answer2"; then
       ./import.sh
     fi
   fi
-}
-
-split_on_commas() {
-  local IFS=,
-  local WORD_LIST=($1)
-  for word in "${WORD_LIST[@]}"; do
-    echo "$word"
-  done
 }
 
 echo ""
@@ -107,19 +100,19 @@ echo $step2
 echo ""
 list_schemes
 echo ""
-echo "Which language would you like to install ? (Separate by comma if there are multiple):"
-read ans
+read -p "Which language would you like to install ? (Separate by comma if there are multiple): " answer
 
-split_on_commas "$ans" | while read lang; do
+for lang in ${answer//,/ }; do
   # Trim whitespaces
   lang=`echo $lang | sed 's/ *$//g'`
 
+  echo "Setup $lang"
   install_scheme "$lang"
 done
 
 install_govarnam_ibus_engine() {
   cd $workDir
-  releaseName="govarnam-$versionNumber-$arch"
+  releaseName="varnam-ibus-engine-$versionNumber-$arch"
   url="https://github.com/varnamproject/govarnam-ibus/releases/download/$version/$releaseName.zip"
   echo "Downloading $releaseName from $url"
   curl -L -o govarnam.zip "$url"
@@ -133,16 +126,18 @@ install_govarnam_ibus_engine() {
 echo ""
 echo $step3
 echo ""
-echo "Start Step 3 ? (yes/NO):"
-read ans
+read -p "Start Step 3 ? (yes/NO): " answer
 
-if [[ "$ans" == "yes" || "$ans" == "y" ]]; then
+if confirm "$answer"; then
   install_govarnam_ibus_engine
 fi
 
+echo ""
+echo "-----------------------------"
 echo "Varnam Installation Finished!"
 echo ""
 echo "Telegram Group: https://t.me/varnamproject"
 echo "Matrix Group: https://matrix.to/#/#varnamproject:poddery.com"
 echo ""
 echo "https://varnamproject.github.io"
+echo "-----------------------------"
