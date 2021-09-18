@@ -172,18 +172,6 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]
 							symbolValue = getSymbolValue(symbol, 0)
 							symbolWeight = getSymbolWeight(symbol)
 						}
-					} else if symbol.Type == VARNAM_SYMBOL_VIRAMA {
-						/*
-							we are resolving a virama. If the output ends with a virama already,
-							add a ZWNJ to it, so that following character will not be combined.
-							If output does not end with virama, add a virama and ZWNJ
-						*/
-						previousCharacter := word[i-1]
-						if previousCharacter == varnam.LangRules.Virama {
-							symbolValue = ZWNJ
-						} else {
-							symbolValue = getSymbolValue(symbol, i) + ZWNJ
-						}
 					} else {
 						symbolValue = getSymbolValue(symbol, i)
 						symbolWeight = getSymbolWeight(symbol)
