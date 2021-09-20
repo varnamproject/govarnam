@@ -58,6 +58,10 @@ varnamcli -s ml -import my-words-1.vlf
 
 ## Development
 
+### Requirements
+
+* Minimum Go 1.16
+
 ### Build
 
 This repository have 3 things :
