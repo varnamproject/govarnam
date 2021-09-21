@@ -16,7 +16,7 @@ get_latest_release() {
 
 version=0
 versionNumber=0
-arch=$(arch)
+arch=$(uname -m)
 
 confirm() {
   [[ "$1" == [yY] || "$1" == [yY][eE][sS] ]]
