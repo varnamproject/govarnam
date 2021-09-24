@@ -24,6 +24,7 @@ type Config struct {
 	IndicDigits                bool
 	DictionaryMatchExact       bool
 	DictionarySuggestionsLimit int
+	PatternDictionarySuggestionsLimit int
 	TokenizerSuggestionsLimit  int
 	TokenizerSuggestionsAlways bool
 }
@@ -242,6 +243,8 @@ func (handle *VarnamHandle) Debug(val bool) {
 // SetConfig set config
 func (handle *VarnamHandle) SetConfig(config Config) {
 	C.varnam_set_dictionary_suggestions_limit(handle.connectionID, C.int(config.DictionarySuggestionsLimit))
+
+	C.varnam_set_pattern_dictionary_suggestions_limit(handle.connectionID, C.int(config.PatternDictionarySuggestionsLimit))
 
 	C.varnam_set_tokenizer_suggestions_limit(handle.connectionID, C.int(config.TokenizerSuggestionsLimit))
 
