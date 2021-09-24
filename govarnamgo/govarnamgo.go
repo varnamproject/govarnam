@@ -513,6 +513,42 @@ func (handle *VarnamHandle) GetRecentlyLearntWords(ctx context.Context, offset i
 	}
 }
 
+// GetSuggestions get suggestions for a word
+func (handle *VarnamHandle) GetSuggestions(ctx context.Context, word string) []Suggestion {
+	var result []Suggestion
+
+	operationID := makeContextOperation()
+
+	select {
+	case <-ctx.Done():
+		C.varnam_cancel(operationID)
+		return result, nil
+	default:
+		var resultPointer *C.varray
+
+		cWord := C.CString(word)
+		defer C.free(unsafe.Pointer(cWord))
+
+		code := C.varnam_get_suggestions(handle.connectionID, operationID, cWord, &resultPointer)
+		if code != C.VARNAM_SUCCESS {
+			return result, &VarnamError{
+				ErrorCode: int(code),
+				Message:   handle.GetLastError(),
+			}
+		}
+
+		i := 0
+		for i < int(C.varray_length(resultPointer)) {
+			cSug := (*C.Suggestion)(C.varray_get(resultPointer, C.int(i)))
+			sug := makeSuggestion(cSug)
+			result = append(result, sug)
+			i++
+		}
+
+		return result, nil
+	}
+}
+
 func makeGoSchemeDetails(cSD *C.struct_SchemeDetails_t) SchemeDetails {
 	isStable := true
 	if cSD.IsStable == 0 {

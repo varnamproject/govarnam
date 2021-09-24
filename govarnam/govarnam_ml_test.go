@@ -398,7 +398,7 @@ func TestMLDictionaryMatchExact(t *testing.T) {
 	varnam.DictionaryMatchExact = false
 }
 
-func TestRecentlyLearnedWords(t *testing.T) {
+func TestMLRecentlyLearnedWords(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
 	words := []string{"ആലപ്പുഴ", "എറണാകുളം", "തൃശ്ശൂർ", "പാലക്കാട്", "കോഴിക്കോട്"}
@@ -416,5 +416,20 @@ func TestRecentlyLearnedWords(t *testing.T) {
 	}
 
 	result, err = varnam.GetRecentlyLearntWords(context.Background(), 4, len(words))
+	assertEqual(t, result[0].Word, "ആലപ്പുഴ")
+}
+
+func TestMLGetSuggestions(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	words := []string{"ആലപ്പുഴ", "ആലം", "ആലാപനം"}
+	for _, word := range words {
+		varnam.Learn(word, 0)
+	}
+
+	varnam.DictionarySuggestionsLimit = 5
+	result := varnam.GetSuggestions(context.Background(), "ആല")
+	assertEqual(t, len(result), 3)
+
 	assertEqual(t, result[0].Word, "ആലപ്പുഴ")
 }

@@ -442,6 +442,25 @@ func varnam_get_recently_learned_words(varnamHandleID C.int, id C.int, offset C.
 	return C.VARNAM_SUCCESS
 }
 
+//export varnam_get_suggestions
+func varnam_get_suggestions(varnamHandleID C.int, id C.int, word *C.char, resultPointer **C.varray) C.int {
+	ctx, cancel := makeContext(id)
+	defer cancel()
+
+	handle := getVarnamHandle(varnamHandleID)
+
+	result := handle.varnam.GetSuggestions(ctx, C.GoString(word))
+
+	ptr := C.varray_init()
+	for _, sug := range result {
+		cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+		C.varray_push(ptr, cSug)
+	}
+	*resultPointer = ptr
+
+	return C.VARNAM_SUCCESS
+}
+
 func makeCSchemeDetails(sd govarnam.SchemeDetails) *C.struct_SchemeDetails_t {
 	var cIsStable C.int
 
