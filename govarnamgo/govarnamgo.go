@@ -21,12 +21,12 @@ import (
 
 // Config  config values
 type Config struct {
-	IndicDigits                bool
-	DictionaryMatchExact       bool
-	DictionarySuggestionsLimit int
+	IndicDigits                       bool
+	DictionaryMatchExact              bool
+	DictionarySuggestionsLimit        int
 	PatternDictionarySuggestionsLimit int
-	TokenizerSuggestionsLimit  int
-	TokenizerSuggestionsAlways bool
+	TokenizerSuggestionsLimit         int
+	TokenizerSuggestionsAlways        bool
 }
 
 // VarnamHandle for making things easier
@@ -481,7 +481,7 @@ func (handle *VarnamHandle) Import(filePath string) error {
 }
 
 // GetRecentlyLearntWords get recently learn words
-func (handle *VarnamHandle) GetRecentlyLearntWords(ctx context.Context, limit int) ([]Suggestion, error) {
+func (handle *VarnamHandle) GetRecentlyLearntWords(ctx context.Context, offset int, limit int) ([]Suggestion, error) {
 	var result []Suggestion
 
 	operationID := makeContextOperation()
@@ -493,7 +493,7 @@ func (handle *VarnamHandle) GetRecentlyLearntWords(ctx context.Context, limit in
 	default:
 		var resultPointer *C.varray
 
-		code := C.varnam_get_recently_learned_words(handle.connectionID, operationID, C.int(limit), &resultPointer)
+		code := C.varnam_get_recently_learned_words(handle.connectionID, operationID, C.int(offset), C.int(limit), &resultPointer)
 		if code != C.VARNAM_SUCCESS {
 			return result, &VarnamError{
 				ErrorCode: int(code),

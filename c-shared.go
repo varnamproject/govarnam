@@ -419,13 +419,13 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 }
 
 //export varnam_get_recently_learned_words
-func varnam_get_recently_learned_words(varnamHandleID C.int, id C.int, limit C.int, resultPointer **C.varray) C.int {
+func varnam_get_recently_learned_words(varnamHandleID C.int, id C.int, offset C.int, limit C.int, resultPointer **C.varray) C.int {
 	ctx, cancel := makeContext(id)
 	defer cancel()
 
 	handle := getVarnamHandle(varnamHandleID)
 
-	result, err := handle.varnam.GetRecentlyLearntWords(ctx, int(limit))
+	result, err := handle.varnam.GetRecentlyLearntWords(ctx, int(offset), int(limit))
 
 	if err != nil {
 		handle.err = err

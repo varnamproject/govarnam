@@ -79,7 +79,7 @@ func TestRecentlyLearnedWords(t *testing.T) {
 		varnam.Learn(word, 0)
 	}
 
-	result, err := varnam.GetRecentlyLearntWords(context.Background(), len(words))
+	result, err := varnam.GetRecentlyLearntWords(context.Background(), 0, len(words))
 	checkError(err)
 
 	assertEqual(t, len(result), len(words))
