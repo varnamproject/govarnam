@@ -16,6 +16,7 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"log"
 	"unsafe"
 )
 
@@ -370,6 +371,32 @@ func (handle *VarnamHandle) TransliterateAdvanced(ctx context.Context, word stri
 	}
 }
 
+// TransliterateGreedyTokenized transliterate but only tokenizer output
+func (handle *VarnamHandle) TransliterateGreedyTokenized(word string) []Suggestion {
+	var result []Suggestion
+
+	var resultPointer *C.varray
+
+	cWord := C.CString(word)
+	defer C.free(unsafe.Pointer(cWord))
+
+	code := C.varnam_transliterate_greedy_tokenized(handle.connectionID, cWord, &resultPointer)
+	if code != C.VARNAM_SUCCESS {
+		log.Print(handle.GetLastError())
+		return result
+	}
+
+	i := 0
+	for i < int(C.varray_length(resultPointer)) {
+		cSug := (*C.Suggestion)(C.varray_get(resultPointer, C.int(i)))
+		sug := makeSuggestion(cSug)
+		result = append(result, sug)
+		i++
+	}
+
+	return result
+}
+
 // ReverseTransliterate reverse transilterate
 func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, error) {
 	var sugs []Suggestion
@@ -514,7 +541,7 @@ func (handle *VarnamHandle) GetRecentlyLearntWords(ctx context.Context, offset i
 }
 
 // GetSuggestions get suggestions for a word
-func (handle *VarnamHandle) GetSuggestions(ctx context.Context, word string) []Suggestion {
+func (handle *VarnamHandle) GetSuggestions(ctx context.Context, word string) ([]Suggestion, error) {
 	var result []Suggestion
 
 	operationID := makeContextOperation()

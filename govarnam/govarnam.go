@@ -385,12 +385,12 @@ func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string,
 	}
 }
 
-// TransliterateGreedy transliterate word without all possible suggestions in result
-func (varnam *Varnam) TransliterateGreedy(word string) TransliterationResult {
+// TransliterateGreedyTokenized transliterate word, only tokenizer results
+func (varnam *Varnam) TransliterateGreedyTokenized(word string) []Suggestion {
 	ctx := context.Background()
-	_, result := varnam.transliterate(ctx, word)
 
-	return result
+	tokens := varnam.tokenizeWord(ctx, word, VARNAM_MATCH_EXACT, false)
+	return varnam.tokensToSuggestions(ctx, tokens, false, varnam.TokenizerSuggestionsLimit)
 }
 
 // ReverseTransliterate do a reverse transliteration
