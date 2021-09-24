@@ -406,7 +406,7 @@ func TestRecentlyLearnedWords(t *testing.T) {
 		varnam.Learn(word, 0)
 	}
 
-	result, err := varnam.GetRecentlyLearntWords(context.Background(), len(words))
+	result, err := varnam.GetRecentlyLearntWords(context.Background(), 0, len(words))
 	checkError(err)
 
 	assertEqual(t, len(result), len(words))
@@ -414,4 +414,7 @@ func TestRecentlyLearnedWords(t *testing.T) {
 	for i, sug := range result {
 		assertEqual(t, sug.Word, words[len(words)-i-1])
 	}
+
+	result, err = varnam.GetRecentlyLearntWords(context.Background(), 4, len(words))
+	assertEqual(t, result[0].Word, "ആലപ്പുഴ")
 }
