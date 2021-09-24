@@ -58,11 +58,9 @@ varnamcli -s ml -import my-words-1.vlf
 
 ## Development
 
-### Requirements
-
-* Minimum Go 1.16
-
 ### Build
+
+Requires minimum Go version 1.16.
 
 This repository have 3 things :
 
@@ -80,7 +78,7 @@ go build -buildmode "c-shared" -o libgovarnam.so
 The output `libgovarnam.so` is a shared library that can be dynamically linked in any other programming languages. Some examples :
 
 * Go bindings for GoVarnam: See govarnam**go** folder in this repo
-* Java bindings for GoVarnam: IN PROGRESS
+* Java bindings for GoVarnam: https://github.com/varnamproject/govarnam-java/
 
 Wait, it means we need to write another Go file to interface with GoVarnam library ! This is because we're interfacing with a shared library and not the Go library.
 
@@ -112,7 +110,10 @@ This section is straight on getting your hands in. Explanation of how GoVarnam w
 
 * Clone of course
 * Do `go get`
-* You will need a `.vst` file. Get it from `schemes` folder in [a release](https://github.com/varnamproject/govarnam-ibus/releases). Paste it in `schemes` folder
+* You will need a `.vst` file. Get it from `schemes` folder in [a release](https://github.com/varnamproject/govarnam-ibus/releases). You need to put VST files in one of these locations (order according to lookup priority):
+  * `$PWD/schemes`
+  * `/usr/local/share/varnam/schemes`
+  * `/usr/share/varnam/schemes`
 * Do `make library` to compile
 
 When you make changes to govarnam source code, you will need to do `make library` for the changes to build on and then test with CLI.
