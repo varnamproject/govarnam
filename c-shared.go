@@ -248,6 +248,11 @@ func varnam_set_dictionary_suggestions_limit(varnamHandleID C.int, val C.int) {
 	getVarnamHandle(varnamHandleID).varnam.DictionarySuggestionsLimit = int(val)
 }
 
+//export varnam_set_pattern_dictionary_suggestions_limit
+func varnam_set_pattern_dictionary_suggestions_limit(varnamHandleID C.int, val C.int) {
+	getVarnamHandle(varnamHandleID).varnam.PatternDictionarySuggestionsLimit = int(val)
+}
+
 //export varnam_set_tokenizer_suggestions_limit
 func varnam_set_tokenizer_suggestions_limit(varnamHandleID C.int, val C.int) {
 	getVarnamHandle(varnamHandleID).varnam.TokenizerSuggestionsLimit = int(val)
