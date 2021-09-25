@@ -16,6 +16,7 @@ get_latest_release() {
 
 version=0
 versionNumber=0
+schemesVersion=0
 arch=$(uname -m)
 
 confirm() {
@@ -24,7 +25,8 @@ confirm() {
 
 init_version() {
   version=$(get_latest_release "govarnam")
-  if [[ -z $version ]]; then
+  schemesVersion=$(get_latest_release "schemes")
+  if [ -z $version ] || [ -z $schemesVersion ]; then
     echo "Couldn't find latest version. Possible reason: GitHub API Rate Limit"
     exit 1
   fi
@@ -78,7 +80,7 @@ install_scheme() {
   cd $workDir
   schemeID="$1"
   releaseName="$schemeID"
-  url="https://github.com/varnamproject/schemes/releases/download/$version/$releaseName.zip"
+  url="https://github.com/varnamproject/schemes/releases/download/$schemesVersion/$releaseName.zip"
   echo "Downloading $releaseName from $url"
   curl -L -o "$releaseName.zip" "$url"
 
