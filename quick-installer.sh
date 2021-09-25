@@ -43,6 +43,16 @@ install_govarnam() {
   unzip govarnam.zip
   echo "Installing $releaseName"
   cd $releaseName
+
+  if [ -f /usr/local/lib/libgovarnam.so ]; then
+    read -p "Found an existing GoVarnam installation. Replace it ? (yes/NO): " answer2
+    if confirm "$answer2"; then
+      sudo rm /usr/local/lib/libgovarnam.so*
+    else
+      echo "Not installing $releaseName"
+    fi
+  fi
+
   ./install.sh
 }
 
@@ -140,6 +150,7 @@ echo ""
 echo "-----------------------------"
 echo "Varnam Installation Finished!"
 echo ""
+echo "For help contact:"
 echo "Telegram Group: https://t.me/varnamproject"
 echo "Matrix Group: https://matrix.to/#/#varnamproject:poddery.com"
 echo ""
