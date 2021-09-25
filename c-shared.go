@@ -205,6 +205,22 @@ func varnam_transliterate_advanced(varnamHandleID C.int, id C.int, word *C.char,
 	}
 }
 
+//export varnam_transliterate_greedy_tokenized
+func varnam_transliterate_greedy_tokenized(varnamHandleID C.int, word *C.char, resultPointer **C.varray) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+
+	result := handle.varnam.TransliterateGreedyTokenized(C.GoString(word))
+
+	ptr := C.varray_init()
+	for _, sug := range result {
+		cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+		C.varray_push(ptr, cSug)
+	}
+	*resultPointer = ptr
+
+	return C.VARNAM_SUCCESS
+}
+
 //export varnam_reverse_transliterate
 func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char, resultPointer **C.varray) C.int {
 	handle := getVarnamHandle(varnamHandleID)
@@ -431,6 +447,25 @@ func varnam_get_recently_learned_words(varnamHandleID C.int, id C.int, offset C.
 		handle.err = err
 		return C.VARNAM_ERROR
 	}
+
+	ptr := C.varray_init()
+	for _, sug := range result {
+		cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+		C.varray_push(ptr, cSug)
+	}
+	*resultPointer = ptr
+
+	return C.VARNAM_SUCCESS
+}
+
+//export varnam_get_suggestions
+func varnam_get_suggestions(varnamHandleID C.int, id C.int, word *C.char, resultPointer **C.varray) C.int {
+	ctx, cancel := makeContext(id)
+	defer cancel()
+
+	handle := getVarnamHandle(varnamHandleID)
+
+	result := handle.varnam.GetSuggestions(ctx, C.GoString(word))
 
 	ptr := C.varray_init()
 	for _, sug := range result {

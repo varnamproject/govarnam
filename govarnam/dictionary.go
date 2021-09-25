@@ -398,3 +398,15 @@ func (varnam *Varnam) GetRecentlyLearntWords(ctx context.Context, offset int, li
 		return result, nil
 	}
 }
+
+// GetSuggestions get word suggestions from dictionary
+func (varnam *Varnam) GetSuggestions(ctx context.Context, word string) []Suggestion {
+	var sugs []Suggestion
+
+	select {
+	case <-ctx.Done():
+		return sugs
+	default:
+		return varnam.searchDictionary(ctx, []string{word}, true)
+	}
+}

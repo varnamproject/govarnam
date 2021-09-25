@@ -60,6 +60,7 @@ func tearDown() {
 
 func TestMain(m *testing.M) {
 	setUp("ml")
+	setUp("ml-inscript")
 	m.Run()
 	tearDown()
 }
