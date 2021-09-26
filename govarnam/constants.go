@@ -6,6 +6,9 @@ import (
 	"path"
 )
 
+// GoVarnam version. This should be updated manually
+var VERSION = "1.7.0"
+
 /* General */
 const ZWNJ = "\u200c"
 const ZWJ = "\u200d"

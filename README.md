@@ -125,7 +125,9 @@ make test
 
 ## GoVarnam BTS
 
-Read GoVarnam Spec: https://docs.google.com/document/d/1l5cZAkly_-kl7UkfeGmObSam-niWCJo4wq-OvAEaDvQ/edit?usp=sharing
+See this video to understand more about Varnam: https://www.youtube.com/watch?v=pJpOWlD_7OI
+
+Read GoVarnam Spec (Not updated): https://docs.google.com/document/d/1l5cZAkly_-kl7UkfeGmObSam-niWCJo4wq-OvAEaDvQ/edit?usp=sharing
 
 ### Changes from libvarnam
 
@@ -146,8 +148,6 @@ go build -tags libsqlite3 -buildmode=c-shared -o libgovarnam.so
 
 ### Release Process
 
+* Update version in `constants.go`
 * git tag
 * make build release
-
-Pack ibus engine:
-* make build-ubuntu18 release
