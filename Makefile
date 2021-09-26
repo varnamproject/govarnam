@@ -63,6 +63,7 @@ build:
 	$(MAKE) nix
 
 release:
+	echo "Hope you have updated version in constants.go"
 	mkdir -p ${RELEASE_NAME}
 	cp ${CLI_BIN} ${RELEASE_NAME}/
 	cp libgovarnam.so ${RELEASE_NAME}/

@@ -30,6 +30,8 @@ func printSugs(sugs []govarnamgo.Suggestion) {
 }
 
 func main() {
+	versionFlag := flag.Bool("version", false, "Show version information")
+
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
 	schemeFlag := flag.String("s", "", "Scheme ID")
 
@@ -50,6 +52,11 @@ func main() {
 	reverseTransliterate := flag.Bool("reverse", false, "Reverse transliterate. Find which pattern to use for a specific word")
 
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Println(govarnamgo.GetVersion())
+		return
+	}
 
 	if *schemeFlag == "" {
 		fmt.Println("Specifiy a scheme ID with -s.\n\nUse --help for all available commands.")

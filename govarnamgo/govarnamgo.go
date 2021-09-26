@@ -188,6 +188,11 @@ func (handle *VarnamHandle) checkError(code C.int) error {
 	}
 }
 
+// GetVersion get library version
+func GetVersion() string {
+	return C.GoString(C.varnam_get_version())
+}
+
 // Init Initialize
 func Init(vstLoc string, dictLoc string) (*VarnamHandle, error) {
 	handleID := C.int(0)

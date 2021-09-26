@@ -91,6 +91,11 @@ func makeCTransliterationResult(ctx context.Context, goResult govarnam.Translite
 	}
 }
 
+//export varnam_get_version
+func varnam_get_version() *C.char {
+	return C.CString(govarnam.VERSION)
+}
+
 type varnamHandle struct {
 	varnam *govarnam.Varnam
 	err    error
