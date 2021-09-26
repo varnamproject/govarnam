@@ -298,6 +298,29 @@ func TestMLLearnFromFile(t *testing.T) {
 	assertEqual(t, varnam.Transliterate("melaappum").ExactMatches[0].Weight, 12)
 }
 
+func TestMLTrainFromFile(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	// Try learning from a frequency report
+
+	filePath := makeFile("patterns.txt",
+		`
+		kunnamkulam കുന്നംകുളം
+		mandalamkunnu മന്ദലാംകുന്ന്
+		something aadc
+		`,
+	)
+
+	learnStatus, err := varnam.TrainFromFile(filePath)
+	checkError(err)
+
+	assertEqual(t, learnStatus.TotalWords, 3)
+	assertEqual(t, learnStatus.FailedWords, 1)
+
+	assertEqual(t, varnam.Transliterate("mandalamkunnu").ExactMatches[0].Word, "മന്ദലാംകുന്ന്")
+	assertEqual(t, len(varnam.Transliterate("something").ExactMatches), 0)
+}
+
 func TestMLExportAndImport(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 

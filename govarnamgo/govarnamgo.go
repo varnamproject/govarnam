@@ -492,10 +492,29 @@ func (handle *VarnamHandle) LearnFromFile(filePath string) (LearnStatus, error) 
 }
 
 // TrainFromFile train pattern => word from a file
-func (handle *VarnamHandle) TrainFromFile(filePath string) error {
+func (handle *VarnamHandle) TrainFromFile(filePath string) (LearnStatus, error) {
+	var learnStatus LearnStatus
+
 	cFilePath := C.CString(filePath)
-	err := C.varnam_train_from_file(handle.connectionID, cFilePath)
-	return handle.checkError(err)
+	defer C.free(unsafe.Pointer(cFilePath))
+
+	var resultPointer *C.LearnStatus
+	defer C.free(unsafe.Pointer(resultPointer))
+
+	code := C.varnam_train_from_file(handle.connectionID, cFilePath, &resultPointer)
+	if code != C.VARNAM_SUCCESS {
+		return learnStatus, &VarnamError{
+			ErrorCode: int(code),
+			Message:   handle.GetLastError(),
+		}
+	}
+
+	learnStatus = LearnStatus{
+		int((*resultPointer).TotalWords),
+		int((*resultPointer).FailedWords),
+	}
+
+	return learnStatus, nil
 }
 
 // Export learnigns to a file

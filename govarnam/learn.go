@@ -379,22 +379,26 @@ func (varnam *Varnam) LearnFromFile(filePath string) (LearnStatus, error) {
 		if !fileFormatDetermined {
 			// Check the first 2 words. If it's of format <word frequency>
 			// Then treat rest of words as frequency report
+
+			// Set the first word
 			if count == 0 {
 				word = curWord
 				count++
 				continue
 			}
 
+			// Then check the next word to see if it's a number
 			weight, err := strconv.Atoi(curWord)
 			if err == nil {
-				// It's a number
+				// It's a number. It is a frequency report
 				frequencyReport = true
 				words = append(words, WordInfo{0, word, weight, 0})
 				word = ""
 
 				// count is now 1
 			} else {
-				// Not a frequency report, so attempt to leatn those 2 words
+				// Second word is not a number but a string.
+				// Not a frequency report, so attempt to learn those 2 words
 				words = append(words, WordInfo{0, word, 0, 0})
 				words = append(words, WordInfo{0, curWord, 0, 0})
 
@@ -464,43 +468,48 @@ func (varnam *Varnam) LearnFromFile(filePath string) (LearnStatus, error) {
 }
 
 // TrainFromFile Train words with a particular pattern in bulk
-func (varnam *Varnam) TrainFromFile(filePath string) error {
+func (varnam *Varnam) TrainFromFile(filePath string) (LearnStatus, error) {
 	// The file should have the format :
 	//    pattern word
 	// The separation between pattern and word should just be a single whitespace
 
+	learnStatus := LearnStatus{0, 0}
+
 	file, err := os.Open(filePath)
 	if err != nil {
-		return err
+		return learnStatus, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 
-	count := 0
+	lineCount := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		wordsInLine := strings.Fields(line)
 
 		if len(wordsInLine) == 2 {
+			learnStatus.TotalWords++
+
 			err := varnam.Train(wordsInLine[0], wordsInLine[1])
 			if err != nil {
+				learnStatus.FailedWords++
 				fmt.Printf("Couldn't train %s => %s (%s) \n", wordsInLine[0], wordsInLine[1], err.Error())
 			}
-		} else if count > 2 {
-			return fmt.Errorf("File format not correct")
+		} else if lineCount > 2 {
+			fmt.Printf("Line %d is not in correct format \n", lineCount+1)
 		}
 
-		count++
-		if count%500 == 0 {
-			fmt.Printf("Trained %d words\n", count)
+		lineCount++
+		if lineCount%500 == 0 {
+			fmt.Printf("Trained %d words\n", lineCount)
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		return err
+		return learnStatus, err
 	}
-	return nil
+	return learnStatus, nil
 }
 
 // Get full data from DB
