@@ -20,7 +20,8 @@ if [ "$ARG1" == "install" ]; then
 
   msg="Installation finished"
   echo "$msg"
-  notify-send "$msg" || true
+
+  notify-send "$msg" &> /dev/null || true
 elif [ "$ARG1" == "uninstall" ]; then
   sudo rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
   sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*
