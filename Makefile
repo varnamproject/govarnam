@@ -4,7 +4,7 @@
 default: build ;
 
 CLI_BIN := varnamcli
-INSTALL_PREFIX := /usr/local
+INSTALL_PREFIX := $(or ${PREFIX},${PREFIX},/usr/local)
 VERSION := $(shell echo $$(git describe --abbrev=0 --tags || echo "latest") | sed s/v//)
 RELEASE_NAME := govarnam-${VERSION}-${shell uname -m}
 UNAME := $(shell uname)
