@@ -183,4 +183,6 @@ func main() {
 		result, _ := varnam.Transliterate(context.Background(), args[0])
 		printSugs(result)
 	}
+
+	varnam.Close()
 }
