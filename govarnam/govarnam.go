@@ -365,15 +365,15 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 	}
 }
 
-// Transliterate a word with all possibilities as results
-func (varnam *Varnam) Transliterate(word string) TransliterationResult {
+// TransliterateAdvanced transliterate with a detailed structure as result
+func (varnam *Varnam) TransliterateAdvanced(word string) TransliterationResult {
 	ctx := context.Background()
 	_, result := varnam.transliterate(ctx, word)
 	return result
 }
 
-// TransliterateWithContext Use Go context
-func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string, resultChannel chan<- TransliterationResult) {
+// TransliterateAdvancedWithContext transliterate with a detailed structure as result Go context
+func (varnam *Varnam) TransliterateAdvancedWithContext(ctx context.Context, word string, resultChannel chan<- TransliterationResult) {
 	select {
 	case <-ctx.Done():
 		return
@@ -381,6 +381,33 @@ func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string,
 	default:
 		_, result := varnam.transliterate(ctx, word)
 		resultChannel <- result
+		close(resultChannel)
+	}
+}
+
+// Flatten TransliterationResult struct to a suggestion array
+func flattenTR(result TransliterationResult) []Suggestion {
+	combined := result.ExactMatches
+	combined = append(combined, result.PatternDictionarySuggestions...)
+	combined = append(combined, result.DictionarySuggestions...)
+	combined = append(combined, result.TokenizerSuggestions...)
+	combined = append(combined, result.GreedyTokenized...)
+	return combined
+}
+
+// Transliterate transliterate with output array
+func (varnam *Varnam) Transliterate(word string) []Suggestion {
+	return flattenTR(varnam.TransliterateAdvanced(word))
+}
+
+// TransliterateWithContext Transliterate but with Go context
+func (varnam *Varnam) TransliterateWithContext(ctx context.Context, word string, resultChannel chan<- []Suggestion) {
+	select {
+	case <-ctx.Done():
+		return
+	default:
+		_, result := varnam.transliterate(ctx, word)
+		resultChannel <- flattenTR(result)
 		close(resultChannel)
 	}
 }

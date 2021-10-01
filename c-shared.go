@@ -164,7 +164,7 @@ func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPo
 	ctx, cancel := makeContext(id)
 	defer cancel()
 
-	channel := make(chan govarnam.TransliterationResult)
+	channel := make(chan []govarnam.Suggestion)
 
 	go getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word), channel)
 
@@ -176,14 +176,8 @@ func varnam_transliterate(varnamHandleID C.int, id C.int, word *C.char, resultPo
 		// They should be freed manually. GC won't pick it.
 		// The freeing should be done by programs using govarnam
 
-		combined := result.ExactMatches
-		combined = append(combined, result.PatternDictionarySuggestions...)
-		combined = append(combined, result.DictionarySuggestions...)
-		combined = append(combined, result.TokenizerSuggestions...)
-		combined = append(combined, result.GreedyTokenized...)
-
 		cResult := C.varray_init()
-		for _, sug := range combined {
+		for _, sug := range result {
 			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
 			C.varray_push(cResult, cSug)
 		}
@@ -200,7 +194,7 @@ func varnam_transliterate_advanced(varnamHandleID C.int, id C.int, word *C.char,
 
 	channel := make(chan govarnam.TransliterationResult)
 
-	go getVarnamHandle(varnamHandleID).varnam.TransliterateWithContext(ctx, C.GoString(word), channel)
+	go getVarnamHandle(varnamHandleID).varnam.TransliterateAdvancedWithContext(ctx, C.GoString(word), channel)
 
 	select {
 	case <-ctx.Done():

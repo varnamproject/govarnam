@@ -13,8 +13,8 @@ import (
 func TestMLGreedyTokenizer(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
-	assertEqual(t, varnam.Transliterate("namaskaaram").GreedyTokenized[0].Word, "നമസ്കാരം")
-	assertEqual(t, varnam.Transliterate("malayalam").GreedyTokenized[0].Word, "മലയലം")
+	assertEqual(t, varnam.TransliterateAdvanced("namaskaaram").GreedyTokenized[0].Word, "നമസ്കാരം")
+	assertEqual(t, varnam.TransliterateAdvanced("malayalam").GreedyTokenized[0].Word, "മലയലം")
 }
 
 func TestMLTokenizer(t *testing.T) {
@@ -22,12 +22,12 @@ func TestMLTokenizer(t *testing.T) {
 
 	// The order of this will fail if VST weights change
 	expected := []string{"മല", "മള", "മലാ", "മളാ", "മാല", "മാള", "മാലാ", "മാളാ"}
-	for i, sug := range varnam.Transliterate("mala").TokenizerSuggestions {
+	for i, sug := range varnam.TransliterateAdvanced("mala").TokenizerSuggestions {
 		assertEqual(t, sug.Word, expected[i])
 	}
 
 	// TestML non lang word
-	nonLangWord := varnam.Transliterate("Шаблон")
+	nonLangWord := varnam.TransliterateAdvanced("Шаблон")
 	assertEqual(t, len(nonLangWord.ExactMatches), 0)
 	assertEqual(t, len(nonLangWord.DictionarySuggestions), 0)
 	assertEqual(t, len(nonLangWord.PatternDictionarySuggestions), 0)
@@ -35,20 +35,20 @@ func TestMLTokenizer(t *testing.T) {
 	assertEqual(t, len(nonLangWord.GreedyTokenized), 1)
 
 	// TestML mixed words
-	assertEqual(t, varnam.Transliterate("naമസ്കാരmenthuNt").GreedyTokenized[0].Word, "നമസ്കാരമെന്തുണ്ട്")
-	assertEqual(t, varnam.Transliterate("*namaskaaram").GreedyTokenized[0].Word, "*നമസ്കാരം")
-	assertEqual(t, varnam.Transliterate("*nama@skaaram").GreedyTokenized[0].Word, "*നമ@സ്കാരം")
-	assertEqual(t, varnam.Transliterate("*nama@skaaram%^&").GreedyTokenized[0].Word, "*നമ@സ്കാരം%^&")
+	assertEqual(t, varnam.TransliterateAdvanced("naമസ്കാരmenthuNt").GreedyTokenized[0].Word, "നമസ്കാരമെന്തുണ്ട്")
+	assertEqual(t, varnam.TransliterateAdvanced("*namaskaaram").GreedyTokenized[0].Word, "*നമസ്കാരം")
+	assertEqual(t, varnam.TransliterateAdvanced("*nama@skaaram").GreedyTokenized[0].Word, "*നമ@സ്കാരം")
+	assertEqual(t, varnam.TransliterateAdvanced("*nama@skaaram%^&").GreedyTokenized[0].Word, "*നമ@സ്കാരം%^&")
 
 	// TestML some complex words
-	assertEqual(t, varnam.Transliterate("kambyoottar").GreedyTokenized[0].Word, "കമ്പ്യൂട്ടർ")
-	assertEqual(t, varnam.Transliterate("kambyoottar").GreedyTokenized[0].Word, "കമ്പ്യൂട്ടർ")
+	assertEqual(t, varnam.TransliterateAdvanced("kambyoottar").GreedyTokenized[0].Word, "കമ്പ്യൂട്ടർ")
+	assertEqual(t, varnam.TransliterateAdvanced("kambyoottar").GreedyTokenized[0].Word, "കമ്പ്യൂട്ടർ")
 
 	// TestML fancy words
-	assertEqual(t, varnam.Transliterate("thaaaaaaaankyoo").GreedyTokenized[0].Word, "താാാാങ്ക്യൂ")
+	assertEqual(t, varnam.TransliterateAdvanced("thaaaaaaaankyoo").GreedyTokenized[0].Word, "താാാാങ്ക്യൂ")
 
 	// Test weight value
-	sugs := varnam.Transliterate("thuthuru").TokenizerSuggestions
+	sugs := varnam.TransliterateAdvanced("thuthuru").TokenizerSuggestions
 	assertEqual(t, sugs[0].Weight, 6) // തുതുരു. Greedy. Should have highest weight
 	assertEqual(t, sugs[1].Weight, 4) // തുതുറു. Last conjunct is VARNAM_MATCH_POSSIBILITY symbol
 	assertEqual(t, sugs[7].Weight, 4) // തുത്തുറു. Last 2 conjuncts are VARNAM_MATCH_POSSIBILITY symbols
@@ -69,16 +69,16 @@ func TestMLLearn(t *testing.T) {
 	assertEqual(t, varnam.Learn("വ...", 0) != nil, true)
 
 	// Before learning
-	assertEqual(t, varnam.Transliterate("malayalam").TokenizerSuggestions[0].Word, "മലയലം")
+	assertEqual(t, varnam.TransliterateAdvanced("malayalam").TokenizerSuggestions[0].Word, "മലയലം")
 
 	err := varnam.Learn("മലയാളം", 0)
 	checkError(err)
 
 	// After learning
-	assertEqual(t, varnam.Transliterate("malayalam").ExactMatches[0].Word, "മലയാളം")
-	assertEqual(t, varnam.Transliterate("malayalaththil").DictionarySuggestions[0].Word, "മലയാളത്തിൽ")
-	assertEqual(t, varnam.Transliterate("malayaalar").DictionarySuggestions[0].Word, "മലയാളർ")
-	assertEqual(t, varnam.Transliterate("malaykk").DictionarySuggestions[0].Word, "മലയ്ക്ക്")
+	assertEqual(t, varnam.TransliterateAdvanced("malayalam").ExactMatches[0].Word, "മലയാളം")
+	assertEqual(t, varnam.TransliterateAdvanced("malayalaththil").DictionarySuggestions[0].Word, "മലയാളത്തിൽ")
+	assertEqual(t, varnam.TransliterateAdvanced("malayaalar").DictionarySuggestions[0].Word, "മലയാളർ")
+	assertEqual(t, varnam.TransliterateAdvanced("malaykk").DictionarySuggestions[0].Word, "മലയ്ക്ക്")
 
 	start := time.Now().UTC()
 	err = varnam.Learn("മലയാളത്തിൽ", 0)
@@ -89,7 +89,7 @@ func TestMLLearn(t *testing.T) {
 	end1SecondAfter := time.Date(end.Year(), end.Month(), end.Day(), end.Hour(), end.Minute(), end.Second()+1, 0, end.Location())
 
 	// varnam.Debug(true)
-	sugs := varnam.Transliterate("malayala").DictionarySuggestions
+	sugs := varnam.TransliterateAdvanced("malayala").DictionarySuggestions
 
 	assertEqual(t, sugs[0], Suggestion{"മലയാളം", VARNAM_LEARNT_WORD_MIN_WEIGHT, sugs[0].LearnedOn})
 
@@ -108,51 +108,51 @@ func TestMLLearn(t *testing.T) {
 	err = varnam.Learn("മലയാളത്തിൽ", 0)
 	checkError(err)
 
-	sug := varnam.Transliterate("malayala").DictionarySuggestions[0]
+	sug := varnam.TransliterateAdvanced("malayala").DictionarySuggestions[0]
 	assertEqual(t, sug, Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_WEIGHT + 1, sug.LearnedOn})
 
 	// Subsequent pattern can be smaller now (no need of "thth")
-	assertEqual(t, varnam.Transliterate("malayalathil").ExactMatches[0].Word, "മലയാളത്തിൽ")
+	assertEqual(t, varnam.TransliterateAdvanced("malayalathil").ExactMatches[0].Word, "മലയാളത്തിൽ")
 
 	// Try words with symbols that have many possibilities
 	// thu has 12 possibilties
 	err = varnam.Learn("തുടങ്ങി", 0)
 	checkError(err)
 
-	assertEqual(t, varnam.Transliterate("thudangiyittE").DictionarySuggestions[0].Word, "തുടങ്ങിയിട്ടേ")
+	assertEqual(t, varnam.TransliterateAdvanced("thudangiyittE").DictionarySuggestions[0].Word, "തുടങ്ങിയിട്ടേ")
 
 	// Shouldn't learn single conjucnts as a word. Should give error
 	assertEqual(t, varnam.Learn("കാ", 0) != nil, true)
 
 	// Test unlearn
 	varnam.Unlearn("തുടങ്ങി")
-	assertEqual(t, len(varnam.Transliterate("thudangiyittE").DictionarySuggestions), 0)
+	assertEqual(t, len(varnam.TransliterateAdvanced("thudangiyittE").DictionarySuggestions), 0)
 }
 
 func TestMLTrain(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
-	assertEqual(t, varnam.Transliterate("india").TokenizerSuggestions[0].Word, "ഇന്ദി")
-	assertEqual(t, len(varnam.Transliterate("india").PatternDictionarySuggestions), 0)
+	assertEqual(t, varnam.TransliterateAdvanced("india").TokenizerSuggestions[0].Word, "ഇന്ദി")
+	assertEqual(t, len(varnam.TransliterateAdvanced("india").PatternDictionarySuggestions), 0)
 
 	err := varnam.Train("india", "ഇന്ത്യ")
 	checkError(err)
 
-	assertEqual(t, varnam.Transliterate("india").ExactMatches[0].Word, "ഇന്ത്യ")
-	assertEqual(t, varnam.Transliterate("indiayil").PatternDictionarySuggestions[0].Word, "ഇന്ത്യയിൽ")
+	assertEqual(t, varnam.TransliterateAdvanced("india").ExactMatches[0].Word, "ഇന്ത്യ")
+	assertEqual(t, varnam.TransliterateAdvanced("indiayil").PatternDictionarySuggestions[0].Word, "ഇന്ത്യയിൽ")
 
 	// Word with virama at end
-	assertEqual(t, varnam.Transliterate("college").TokenizerSuggestions[0].Word, "കൊല്ലെഗെ")
-	assertEqual(t, len(varnam.Transliterate("college").PatternDictionarySuggestions), 0)
+	assertEqual(t, varnam.TransliterateAdvanced("college").TokenizerSuggestions[0].Word, "കൊല്ലെഗെ")
+	assertEqual(t, len(varnam.TransliterateAdvanced("college").PatternDictionarySuggestions), 0)
 
 	err = varnam.Train("college", "കോളേജ്")
 	checkError(err)
 
-	assertEqual(t, varnam.Transliterate("college").ExactMatches[0].Word, "കോളേജ്")
-	assertEqual(t, varnam.Transliterate("collegeil").PatternDictionarySuggestions[0].Word, "കോളേജിൽ")
+	assertEqual(t, varnam.TransliterateAdvanced("college").ExactMatches[0].Word, "കോളേജ്")
+	assertEqual(t, varnam.TransliterateAdvanced("collegeil").PatternDictionarySuggestions[0].Word, "കോളേജിൽ")
 
 	// TODO without e at the end
-	// assertEqual(t, varnam.Transliterate("collegil").TokenizerSuggestions[0].Word, "കോളേജിൽ")
+	// assertEqual(t, varnam.TransliterateAdvanced("collegil").TokenizerSuggestions[0].Word, "കോളേജിൽ")
 
 	// Word with chil at end
 	err = varnam.Train("computer", "കമ്പ്യൂട്ടർ")
@@ -163,20 +163,20 @@ func TestMLTrain(t *testing.T) {
 	err = varnam.Train("kilivaathil", "കിളിവാതിൽ")
 	checkError(err)
 
-	assertEqual(t, varnam.Transliterate("computeril").PatternDictionarySuggestions[0].Word, "കമ്പ്യൂട്ടറിൽ")
-	assertEqual(t, varnam.Transliterate("kilivaathilil").PatternDictionarySuggestions[0].Word, "കിളിവാതിലിൽ")
+	assertEqual(t, varnam.TransliterateAdvanced("computeril").PatternDictionarySuggestions[0].Word, "കമ്പ്യൂട്ടറിൽ")
+	assertEqual(t, varnam.TransliterateAdvanced("kilivaathilil").PatternDictionarySuggestions[0].Word, "കിളിവാതിലിൽ")
 
 	err = varnam.Train("chrome", "ക്രോം")
 	checkError(err)
-	assertEqual(t, varnam.Transliterate("chromeil").PatternDictionarySuggestions[0].Word, "ക്രോമിൽ")
+	assertEqual(t, varnam.TransliterateAdvanced("chromeil").PatternDictionarySuggestions[0].Word, "ക്രോമിൽ")
 
 	// Unlearning should remove pattern from DB too
 	varnam.Unlearn("കോളേജ്")
-	assertEqual(t, len(varnam.Transliterate("collegeil").PatternDictionarySuggestions), 0)
+	assertEqual(t, len(varnam.TransliterateAdvanced("collegeil").PatternDictionarySuggestions), 0)
 
 	// Unlearn by pattern english
 	varnam.Unlearn("computer")
-	assertEqual(t, len(varnam.Transliterate("computeril").PatternDictionarySuggestions), 0)
+	assertEqual(t, len(varnam.TransliterateAdvanced("computeril").PatternDictionarySuggestions), 0)
 
 	err = varnam.Unlearn("computer")
 	assertEqual(t, err.Error(), "nothing to unlearn")
@@ -186,13 +186,13 @@ func TestMLTrain(t *testing.T) {
 func TestMLZW(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
-	assertEqual(t, varnam.Transliterate("thaazhvara").TokenizerSuggestions[0].Word, "താഴ്വര")
+	assertEqual(t, varnam.TransliterateAdvanced("thaazhvara").TokenizerSuggestions[0].Word, "താഴ്വര")
 	// _ is ZWNJ
-	assertEqual(t, varnam.Transliterate("thaazh_vara").TokenizerSuggestions[0].Word, "താഴ്‌വര")
+	assertEqual(t, varnam.TransliterateAdvanced("thaazh_vara").TokenizerSuggestions[0].Word, "താഴ്‌വര")
 
 	// When _ comes after a chil in between a word, varnam explicitly generates chil. This chil won't have a ZWNJ at end
-	assertEqual(t, varnam.Transliterate("nan_ma").TokenizerSuggestions[0].Word, "നൻമ")
-	assertEqual(t, varnam.Transliterate("sam_bhavam").TokenizerSuggestions[0].Word, "സംഭവം")
+	assertEqual(t, varnam.TransliterateAdvanced("nan_ma").TokenizerSuggestions[0].Word, "നൻമ")
+	assertEqual(t, varnam.TransliterateAdvanced("sam_bhavam").TokenizerSuggestions[0].Word, "സംഭവം")
 }
 
 // TestML if zwj-chils are replaced with atomic chil
@@ -201,7 +201,7 @@ func TestMLAtomicChil(t *testing.T) {
 
 	err := varnam.Train("professor", "പ്രൊഫസര്‍")
 	checkError(err)
-	assertEqual(t, varnam.Transliterate("professor").ExactMatches[0].Word, "പ്രൊഫസർ")
+	assertEqual(t, varnam.TransliterateAdvanced("professor").ExactMatches[0].Word, "പ്രൊഫസർ")
 }
 
 func TestMLReverseTransliteration(t *testing.T) {
@@ -230,7 +230,7 @@ func TestDictionaryLimit(t *testing.T) {
 	}
 
 	varnam.DictionarySuggestionsLimit = 2
-	assertEqual(t, len(varnam.Transliterate("mala").DictionarySuggestions), 2)
+	assertEqual(t, len(varnam.TransliterateAdvanced("mala").DictionarySuggestions), 2)
 
 	patternsAndWords := map[string]string{
 		"collateral": "കോലാറ്ററൽ",
@@ -245,7 +245,7 @@ func TestDictionaryLimit(t *testing.T) {
 	}
 
 	varnam.PatternDictionarySuggestionsLimit = 4
-	assertEqual(t, len(varnam.Transliterate("co").PatternDictionarySuggestions), 4)
+	assertEqual(t, len(varnam.TransliterateAdvanced("co").PatternDictionarySuggestions), 4)
 
 	// Test multiple matching words while partializing
 	patternsAndWords = map[string]string{
@@ -261,7 +261,7 @@ func TestDictionaryLimit(t *testing.T) {
 
 	// Tokenizer will work on 2 words: എഡിറ്റ് & എഡിറ്റിംഗ്
 	// Total results = 4+
-	assertEqual(t, len(varnam.Transliterate("editingil").PatternDictionarySuggestions), 2)
+	assertEqual(t, len(varnam.TransliterateAdvanced("editingil").PatternDictionarySuggestions), 2)
 }
 
 func TestMLLearnFromFile(t *testing.T) {
@@ -273,7 +273,7 @@ func TestMLLearnFromFile(t *testing.T) {
 
 	varnam.LearnFromFile(filePath)
 
-	assertEqual(t, len(varnam.Transliterate("thaay_vaanile").ExactMatches) != 0, true)
+	assertEqual(t, len(varnam.TransliterateAdvanced("thaay_vaanile").ExactMatches) != 0, true)
 
 	// Try learning from a frequency report
 
@@ -294,8 +294,8 @@ func TestMLLearnFromFile(t *testing.T) {
 	assertEqual(t, learnStatus.TotalWords, 6)
 	assertEqual(t, learnStatus.FailedWords, 1)
 
-	assertEqual(t, varnam.Transliterate("nithyaharitha").ExactMatches[0].Weight, 120)
-	assertEqual(t, varnam.Transliterate("melaappum").ExactMatches[0].Weight, 12)
+	assertEqual(t, varnam.TransliterateAdvanced("nithyaharitha").ExactMatches[0].Weight, 120)
+	assertEqual(t, varnam.TransliterateAdvanced("melaappum").ExactMatches[0].Weight, 12)
 }
 
 func TestMLTrainFromFile(t *testing.T) {
@@ -317,8 +317,8 @@ func TestMLTrainFromFile(t *testing.T) {
 	assertEqual(t, learnStatus.TotalWords, 3)
 	assertEqual(t, learnStatus.FailedWords, 1)
 
-	assertEqual(t, varnam.Transliterate("mandalamkunnu").ExactMatches[0].Word, "മന്ദലാംകുന്ന്")
-	assertEqual(t, len(varnam.Transliterate("something").ExactMatches), 0)
+	assertEqual(t, varnam.TransliterateAdvanced("mandalamkunnu").ExactMatches[0].Word, "മന്ദലാംകുന്ന്")
+	assertEqual(t, len(varnam.TransliterateAdvanced("something").ExactMatches), 0)
 }
 
 func TestMLExportAndImport(t *testing.T) {
@@ -379,7 +379,7 @@ func TestMLExportAndImport(t *testing.T) {
 	`)
 	varnam.Import(filePath)
 
-	assertEqual(t, varnam.Transliterate("algeria").ExactMatches[0], Suggestion{
+	assertEqual(t, varnam.TransliterateAdvanced("algeria").ExactMatches[0], Suggestion{
 		Word:      "അൾജീരിയ",
 		Weight:    VARNAM_LEARNT_WORD_MIN_WEIGHT + 25,
 		LearnedOn: 1531131220,
@@ -415,7 +415,7 @@ func TestMLDictionaryMatchExact(t *testing.T) {
 	varnam.Learn("പനിയിൽ", 0)
 	varnam.Learn("പണിയിൽ", 0)
 
-	result := varnam.Transliterate("pani")
+	result := varnam.TransliterateAdvanced("pani")
 	assertEqual(t, len(result.DictionarySuggestions), 1)
 
 	varnam.DictionaryMatchExact = false
