@@ -40,13 +40,13 @@ install:
 
 .PHONY: cli
 cli:
-	go build -o ${CLI_BIN} ./cli
+	go build -o ${CLI_BIN} -ldflags "-s -w" ./cli
 
 library-nosqlite:
-	go build -tags libsqlite3 -buildmode=c-shared -o libgovarnam.so
+	go build -tags libsqlite3 -buildmode=c-shared -ldflags "-s -w" -o libgovarnam.so
 
 library:
-	go build -tags "fts5" -buildmode=c-shared -o libgovarnam.so
+	go build -tags "fts5" -buildmode=c-shared -ldflags "-s -w" -o libgovarnam.so
 
 .PHONY: nix
 nix:
@@ -79,6 +79,6 @@ test-govarnamgo:
 
 test:
 	go test -tags fts5 -count=1 -cover govarnam/*.go
-	
+
 	$(MAKE) library
 	$(MAKE) test-govarnamgo
