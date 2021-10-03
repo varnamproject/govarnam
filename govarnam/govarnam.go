@@ -388,8 +388,29 @@ func (varnam *Varnam) TransliterateAdvancedWithContext(ctx context.Context, word
 // Flatten TransliterationResult struct to a suggestion array
 func flattenTR(result TransliterationResult) []Suggestion {
 	combined := result.ExactMatches
-	combined = append(combined, result.PatternDictionarySuggestions...)
-	combined = append(combined, result.DictionarySuggestions...)
+
+	if len(result.ExactMatches) == 0 {
+		if len(result.PatternDictionarySuggestions) > 0 {
+			combined = append(combined, result.PatternDictionarySuggestions[0])
+		}
+		if len(result.DictionarySuggestions) > 0 {
+			combined = append(combined, result.DictionarySuggestions[0])
+		}
+		combined = append(combined, result.GreedyTokenized...)
+	}
+
+	if len(result.ExactMatches) == 0 {
+		if len(result.PatternDictionarySuggestions) > 1 {
+			combined = append(combined, result.PatternDictionarySuggestions[1:]...)
+		}
+		if len(result.DictionarySuggestions) > 1 {
+			combined = append(combined, result.DictionarySuggestions[1:]...)
+		}
+	} else {
+		combined = append(combined, result.PatternDictionarySuggestions...)
+		combined = append(combined, result.DictionarySuggestions...)
+	}
+
 	combined = append(combined, result.TokenizerSuggestions...)
 	combined = append(combined, result.GreedyTokenized...)
 	return combined
