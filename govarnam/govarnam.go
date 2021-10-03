@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	// sqlite3
 	_ "github.com/mattn/go-sqlite3"
@@ -389,7 +390,19 @@ func (varnam *Varnam) TransliterateAdvancedWithContext(ctx context.Context, word
 func flattenTR(result TransliterationResult) []Suggestion {
 	combined := result.ExactMatches
 
-	if len(result.ExactMatches) == 0 {
+	/**
+	 * Show greedy tokenized first if length less than 3
+	 */
+	if len(result.GreedyTokenized) > 0 && utf8.RuneCountInString(result.GreedyTokenized[0].Word) < 3 {
+		combined = append(combined, result.GreedyTokenized...)
+	} else if len(result.ExactMatches) == 0 {
+		/**
+		 * If no exact matches, show first result of dictionary & pattern dictionary
+		 * Then show greedy tokenized
+		 * And then rest of the results from the 2 dictionary
+		 * https://github.com/varnamproject/govarnam/issues/12
+		 */
+
 		if len(result.PatternDictionarySuggestions) > 0 {
 			combined = append(combined, result.PatternDictionarySuggestions[0])
 		}
@@ -397,9 +410,7 @@ func flattenTR(result TransliterationResult) []Suggestion {
 			combined = append(combined, result.DictionarySuggestions[0])
 		}
 		combined = append(combined, result.GreedyTokenized...)
-	}
 
-	if len(result.ExactMatches) == 0 {
 		if len(result.PatternDictionarySuggestions) > 1 {
 			combined = append(combined, result.PatternDictionarySuggestions[1:]...)
 		}
