@@ -96,6 +96,11 @@ func varnam_get_version() *C.char {
 	return C.CString(govarnam.VERSION)
 }
 
+//export varnam_set_vst_lookup_dir
+func varnam_set_vst_lookup_dir(path *C.char) {
+	govarnam.SetVSTLookupDir(C.GoString(path))
+}
+
 type varnamHandle struct {
 	varnam *govarnam.Varnam
 	err    error

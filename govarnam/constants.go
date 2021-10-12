@@ -51,11 +51,18 @@ const VARNAM_LEARNT_WORD_MIN_WEIGHT = 30
 
 const CHIL_TAG = "chill"
 
-// VARNAM_VST_DIR VST lookiup directories according to priority
+var VARNAM_VST_DIR = os.Getenv("VARNAM_VST_DIR")
+
+// SetVSTLookupDir This overrides the environment variable
+func SetVSTLookupDir(path string) {
+	VARNAM_VST_DIR = path
+}
+
+// VARNAM_VST_DIR VST lookup directories according to priority
 func getVSTLookupDirs() []string {
 	return []string{
 		// libvarnam used to use "vst" folder
-		os.Getenv("VARNAM_VST_DIR"),
+		VARNAM_VST_DIR,
 		"schemes",
 		"/usr/local/share/varnam/schemes",
 		"/usr/share/varnam/schemes",
