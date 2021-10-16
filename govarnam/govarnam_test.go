@@ -47,7 +47,7 @@ func makeFile(name string, contents string) string {
 }
 
 func setUp(schemeID string) {
-	os.Setenv("VARNAM_LEARNINGS_DIR", testTempDir)
+	SetLearningsDir(testTempDir)
 
 	varnam, err := InitFromID(schemeID)
 	checkError(err)
@@ -82,12 +82,11 @@ func TestEnv(t *testing.T) {
 
 	prevEnvValue := os.Getenv("VARNAM_VST_DIR")
 
-	os.Setenv("VARNAM_VST_DIR", testTempDir)
+	SetVSTLookupDir(testTempDir)
 	_, err := InitFromID("ml")
 	assertEqual(t, err != nil, true)
 
-	os.Setenv("VARNAM_VST_DIR", prevEnvValue)
-	os.Setenv("VARNAM_LEARNINGS_DIR", testTempDir)
+	SetVSTLookupDir(prevEnvValue)
 
 	_, err = InitFromID("ml")
 	checkError(err)

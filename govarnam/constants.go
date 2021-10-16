@@ -52,10 +52,16 @@ const VARNAM_LEARNT_WORD_MIN_WEIGHT = 30
 const CHIL_TAG = "chill"
 
 var VARNAM_VST_DIR = os.Getenv("VARNAM_VST_DIR")
+var VARNAM_LEARNINGS_DIR = os.Getenv("VARNAM_LEARNINGS_DIR")
 
 // SetVSTLookupDir This overrides the environment variable
 func SetVSTLookupDir(path string) {
 	VARNAM_VST_DIR = path
+}
+
+// SetVSTLookupDir This overrides the environment variable
+func SetLearningsDir(path string) {
+	VARNAM_LEARNINGS_DIR = path
 }
 
 // VARNAM_VST_DIR VST lookup directories according to priority
@@ -95,12 +101,10 @@ func findLearningsFilePath(langCode string) string {
 		dir string
 	)
 
-	// libvarnam used to use "suggestions" folder
-
-	learningsDir := os.Getenv("VARNAM_LEARNINGS_DIR")
-	if learningsDir != "" {
-		dir = learningsDir
+	if VARNAM_LEARNINGS_DIR != "" {
+		dir = VARNAM_LEARNINGS_DIR
 	} else {
+		// libvarnam used to use "suggestions" folder
 		home := os.Getenv("XDG_DATA_HOME")
 		if home != "" {
 			dir = path.Join(home, "varnam", "learnings")
