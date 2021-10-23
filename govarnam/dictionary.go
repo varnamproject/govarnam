@@ -42,6 +42,11 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 		varnam.dictConn, err = openDB(dictPath)
 	}
 
+	// Since SQLite v3.12.0, default page size is 4096
+	varnam.dictConn.Exec("PRAGMA page_size=4096;")
+	// WAL makes writes & reads happen concurrently => significantly fast
+	varnam.dictConn.Exec("PRAGMA journal_mode=wal;")
+
 	varnam.DictPath = dictPath
 
 	return err
@@ -52,9 +57,6 @@ func makeDictionary(dictPath string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	conn.Exec("PRAGMA page_size=4096;")
-	conn.Exec("PRAGMA journal_mode=wal;")
 
 	queries := [5]string{
 		`
