@@ -79,6 +79,7 @@ if confirm "$answer"; then
   install_govarnam
 fi
 
+langs=""
 list_schemes() {
   assetsURL=$(curl --silent 'https://api.github.com/repos/varnamproject/schemes/releases/latest' |
     grep '"assets_url":' |
@@ -88,6 +89,8 @@ list_schemes() {
     sed -E 's/.*"([^"]+)".*/\1/' |
     sed s/.zip//)
   echo $"$langs"
+  echo "---"
+  echo "all"
 }
 
 install_scheme() {
@@ -120,13 +123,23 @@ list_schemes
 echo ""
 read -p "Which language would you like to install ? (Separate by comma if there are multiple): " answer
 
-for lang in ${answer//,/ }; do
-  # Trim whitespaces
-  lang=`echo $lang | sed 's/ *$//g'`
+if [[ "$answer" == "all" ]]; then
+  for lang in $langs; do
+    # Trim whitespaces
+    lang=`echo $lang | sed 's/ *$//g'`
 
-  echo "Setup $lang"
-  install_scheme "$lang"
-done
+    echo "Setup $lang"
+    install_scheme "$lang"
+  done
+else
+  for lang in ${answer//,/ }; do
+    # Trim whitespaces
+    lang=`echo $lang | sed 's/ *$//g'`
+
+    echo "Setup $lang"
+    install_scheme "$lang"
+  done
+fi
 
 install_govarnam_ibus_engine() {
   cd $workDir
