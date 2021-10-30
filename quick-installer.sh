@@ -17,6 +17,8 @@ get_latest_release() {
 version=0
 versionNumber=0
 schemesVersion=0
+imeVersion=0
+imeVersionNumber=0
 arch=$(uname -m)
 
 confirm() {
@@ -26,11 +28,13 @@ confirm() {
 init_version() {
   version=$(get_latest_release "govarnam")
   schemesVersion=$(get_latest_release "schemes")
-  if [ -z $version ] || [ -z $schemesVersion ]; then
+  imeVersion=$(get_latest_release "govarnam-ibus")
+  if [ -z $version ] || [ -z $schemesVersion ] || [ -z $imeVersion ]; then
     echo "Couldn't find latest version. Possible reason: GitHub API Rate Limit"
     exit 1
   fi
   versionNumber=${version/v/}
+  imeVersionNumber=${imeVersion/v/}
 }
 
 install_govarnam() {
@@ -126,12 +130,12 @@ done
 
 install_govarnam_ibus_engine() {
   cd $workDir
-  releaseName="varnam-ibus-engine-$versionNumber-$arch"
-  url="https://github.com/varnamproject/govarnam-ibus/releases/download/$version/$releaseName.zip"
+  releaseName="varnam-ibus-engine-$imeVersionNumber-$arch"
+  url="https://github.com/varnamproject/govarnam-ibus/releases/download/$imeVersion/$releaseName.zip"
   echo "Downloading $releaseName from $url"
-  curl -L -o govarnam.zip "$url"
+  curl -L -o "$releaseName.zip" "$url"
 
-  unzip govarnam.zip
+  unzip "$releaseName.zip"
   echo "Installing $releaseName"
   cd $releaseName
   ./install.sh
@@ -150,9 +154,11 @@ echo ""
 echo "-----------------------------"
 echo "Varnam Installation Finished!"
 echo ""
+echo "Getting Started: https://varnamproject.github.io/docs/getting-started/"
+echo ""
 echo "For help contact:"
 echo "Telegram Group: https://t.me/varnamproject"
 echo "Matrix Group: https://matrix.to/#/#varnamproject:poddery.com"
 echo ""
-echo "https://varnamproject.github.io"
+echo "Website: https://varnamproject.github.io"
 echo "-----------------------------"
