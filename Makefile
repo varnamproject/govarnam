@@ -10,9 +10,11 @@ RELEASE_NAME := govarnam-${VERSION}-${shell uname -m}
 UNAME := $(shell uname)
 
 SED := sed -i
+LIB_NAME := libgovarnam.so
 
 ifeq ($(UNAME), Darwin)
   SED := sed -i ""
+	LIB_NAME = libgovarnam.dylib
 endif
 
 pc:
@@ -43,10 +45,17 @@ cli:
 	go build -o ${CLI_BIN} -ldflags "-s -w" ./cli
 
 library-nosqlite:
-	go build -tags libsqlite3 -buildmode=c-shared -ldflags "-s -w" -o libgovarnam.so
+	CGO_ENABLED=1 go build -tags "fts5,libsqlite3" -buildmode=c-shared -ldflags "-s -w" -o ${LIB_NAME}
 
 library:
-	go build -tags "fts5" -buildmode=c-shared -ldflags "-s -w" -o libgovarnam.so
+	CGO_ENABLED=1 go build -tags "fts5" -buildmode=c-shared -ldflags "-s -w" -o ${LIB_NAME}
+
+library-mac-universal:
+	GOOS=darwin GOARCH=arm64 $(MAKE) library
+	mv ${LIB_NAME} ${LIB_NAME}.arm64
+	GOOS=darwin GOARCH=amd64 $(MAKE) library
+	mv ${LIB_NAME} ${LIB_NAME}.amd64
+	lipo -create -output ${LIB_NAME} ${LIB_NAME}.arm64 ${LIB_NAME}.amd64
 
 .PHONY: nix
 nix:
