@@ -7,7 +7,74 @@ import (
 	"time"
 )
 
-// vm = Vst Maker
+// VM, vm = Vst Maker
+
+// VMInit init
+func VMInit(vstPath string) (*Varnam, error) {
+	varnam := Varnam{}
+
+	var err error
+	varnam.vstConn, err = openDB(vstPath + "?_case_sensitive_like=on")
+	if err != nil {
+		return nil, err
+	}
+
+	err = varnam.vmEnsureSchemaExists()
+	if err != nil {
+		return nil, err
+	}
+
+	return &varnam, nil
+}
+
+func (varnam *Varnam) vmEnsureSchemaExists() error {
+	queries := []string{
+		`
+		create table if not exists metadata (key TEXT UNIQUE, value TEXT);
+		`,
+		`
+		create table if not exists symbols (id INTEGER PRIMARY KEY AUTOINCREMENT, type INTEGER, pattern TEXT, value1 TEXT, value2 TEXT, value3 TEXT, tag TEXT, match_type INTEGER, priority INTEGER DEFAULT 0, accept_condition INTEGER, flags INTEGER DEFAULT 0, weight INTEGER);
+		`,
+		`
+		create table if not exists stemrules (id INTEGER PRIMARY KEY AUTOINCREMENT, old_ending TEXT, new_ending TEXT);
+		`,
+		`
+		create table if not exists stem_exceptions (id INTEGER PRIMARY KEY AUTOINCREMENT, stem TEXT, exception TEXT)
+		`,
+		`
+		create index if not exists index_metadata on metadata (key);
+		`,
+		`
+		create index if not exists index_pattern on symbols (pattern);
+		`,
+		`
+		create index if not exists index_value1 on symbols (value1);
+		`,
+		`
+		create index if not exists index_value2 on symbols (value2);
+		`,
+		`
+		create index if not exists index_value3 on symbols (value3);
+		`}
+
+	for _, query := range queries {
+		ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelFunc()
+
+		stmt, err := varnam.vstConn.PrepareContext(ctx, query)
+		if err != nil {
+			return err
+		}
+		defer stmt.Close()
+
+		_, err = stmt.ExecContext(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func (varnam *Varnam) vmStartBuffering() error {
 	if varnam.VSTMakerConfig.Buffering {
@@ -159,14 +226,14 @@ func (varnam *Varnam) vmPersistToken(pattern string, value1 string, value2 strin
 		return fmt.Errorf("there is already a match available for '%s => %s'. Duplicate entries are not allowed", pattern, value1)
 	}
 
-	query := "INSERT OR IGNORE INTO symbols (type, pattern, value1, value2, value3, tag, matchType, priority, acceptCondition) VALUES (?, trim(?), trim(?), trim(?), trim(?), trim(?), ?, ?, ?)"
+	query := "INSERT OR IGNORE INTO symbols (type, pattern, value1, value2, value3, tag, match_type, priority, accept_condition) VALUES (?, trim(?), trim(?), trim(?), trim(?), trim(?), ?, ?, ?)"
 
 	bgContext := context.Background()
 
 	ctx, cancelFunc := context.WithTimeout(bgContext, 5*time.Second)
 	defer cancelFunc()
 
-	stmt, err := varnam.dictConn.PrepareContext(ctx, query)
+	stmt, err := varnam.vstConn.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}

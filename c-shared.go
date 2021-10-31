@@ -29,11 +29,21 @@ var backgroundContext = context.Background()
 var cancelFuncs = map[C.int]interface{}{}
 var cancelFuncsMapMutex = sync.RWMutex{}
 
+// Returns a C integer status code
+// In the C world, errors are indicated by return int status codes
 func checkError(err error) C.int {
 	if err != nil {
 		return C.VARNAM_ERROR
 	}
 	return C.VARNAM_SUCCESS
+}
+
+// In C, booleans are implemented with int 0 & int 1
+func cintToBool(val C.int) bool {
+	if val == C.int(1) {
+		return true
+	}
+	return false
 }
 
 func makeContext(id C.int) (context.Context, func()) {
@@ -247,22 +257,16 @@ func varnam_reverse_transliterate(varnamHandleID C.int, word *C.char, resultPoin
 
 //export varnam_debug
 func varnam_debug(varnamHandleID C.int, val C.int) {
-	if val == 0 {
-		getVarnamHandle(varnamHandleID).varnam.Debug = false
-	} else {
-		getVarnamHandle(varnamHandleID).varnam.Debug = true
-	}
+	getVarnamHandle(varnamHandleID).varnam.Debug = cintToBool(val)
 }
 
+// Deprecated. Use varnam_config()
 //export varnam_set_indic_digits
 func varnam_set_indic_digits(varnamHandleID C.int, val C.int) {
-	if val == 0 {
-		getVarnamHandle(varnamHandleID).varnam.LangRules.IndicDigits = false
-	} else {
-		getVarnamHandle(varnamHandleID).varnam.LangRules.IndicDigits = true
-	}
+	varnam_config(varnamHandleID, C.VARNAM_CONFIG_USE_INDIC_DIGITS, val)
 }
 
+// TODO move all config to varnam_config()
 //export varnam_set_dictionary_suggestions_limit
 func varnam_set_dictionary_suggestions_limit(varnamHandleID C.int, val C.int) {
 	getVarnamHandle(varnamHandleID).varnam.DictionarySuggestionsLimit = int(val)
@@ -491,6 +495,17 @@ func varnam_get_suggestions(varnamHandleID C.int, id C.int, word *C.char, result
 	return C.VARNAM_SUCCESS
 }
 
+func makeGoSchemeDetails(sd *C.struct_SchemeDetails_t) govarnam.SchemeDetails {
+	return govarnam.SchemeDetails{
+		Identifier:   C.GoString(sd.Identifier),
+		LangCode:     C.GoString(sd.LangCode),
+		DisplayName:  C.GoString(sd.DisplayName),
+		Author:       C.GoString(sd.Author),
+		CompiledDate: C.GoString(sd.CompiledDate),
+		IsStable:     cintToBool(sd.IsStable),
+	}
+}
+
 func makeCSchemeDetails(sd govarnam.SchemeDetails) *C.struct_SchemeDetails_t {
 	var cIsStable C.int
 
@@ -539,6 +554,91 @@ func varnam_get_all_scheme_details() *C.varray {
 	}
 
 	return cSchemeDetails
+}
+
+//export vm_init
+func vm_init(vstPath *C.char, id unsafe.Pointer) C.int {
+	handleID := C.int(len(varnamHandles))
+	*(*C.int)(id) = handleID
+
+	varnamGo, err := govarnam.VMInit(C.GoString(vstPath))
+
+	varnamHandlesMapMutex.Lock()
+	varnamHandles[handleID] = &varnamHandle{varnamGo, err}
+	varnamHandlesMapMutex.Unlock()
+
+	return checkError(err)
+}
+
+//export vm_create_token
+func vm_create_token(varnamHandleID C.int, pattern *C.char, value1 *C.char, value2 *C.char, value3 *C.char, tag *C.char, symbolType C.int, matchType C.int, priority C.int, acceptCondition C.int, buffered C.int) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+
+	// if pattern == nil {
+	// 	pattern = C.CString("")
+	// }
+	// if value1 == nil {
+	// 	value1 = C.CString("")
+	// }
+	// if value2 == nil {
+	// 	value2 = C.CString("")
+	// }
+	// if value3 == nil {
+	// 	value3 = C.CString("")
+	// }
+	// if tag == nil {
+	// 	tag = C.CString("")
+	// }
+
+	handle.err = handle.varnam.VMCreateToken(
+		C.GoString(pattern),
+		C.GoString(value1),
+		C.GoString(value2),
+		C.GoString(value3),
+		C.GoString(tag),
+		int(symbolType),
+		int(matchType),
+		int(priority),
+		int(acceptCondition),
+		cintToBool(buffered),
+	)
+
+	return checkError(handle.err)
+}
+
+//export vm_flush_buffer
+func vm_flush_buffer(varnamHandleID C.int) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+
+	handle.err = handle.varnam.VMFlushBuffer()
+	return checkError(handle.err)
+}
+
+//export varnam_config
+func varnam_config(varnamHandleID C.int, key C.int, value C.int) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+
+	switch key {
+	case C.VARNAM_CONFIG_USE_INDIC_DIGITS:
+		handle.varnam.LangRules.IndicDigits = cintToBool(value)
+		break
+	case C.VARNAM_CONFIG_USE_DEAD_CONSONANTS:
+		handle.varnam.VSTMakerConfig.UseDeadConsonants = cintToBool(value)
+		break
+	case C.VARNAM_CONFIG_IGNORE_DUPLICATE_TOKEN:
+		handle.varnam.VSTMakerConfig.IgnoreDuplicateTokens = cintToBool(value)
+		break
+	}
+
+	return C.VARNAM_SUCCESS
+}
+
+//export vm_set_scheme_details
+func vm_set_scheme_details(varnamHandleID C.int, sd *C.struct_SchemeDetails_t) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+
+	handle.err = handle.varnam.VMSetSchemeDetails(makeGoSchemeDetails(sd))
+	return checkError(handle.err)
 }
 
 func main() {}
