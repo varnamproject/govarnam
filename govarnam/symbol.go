@@ -585,3 +585,15 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 		return results, nil
 	}
 }
+
+func (varnam *Varnam) getVirama() (string, error) {
+	var viramaSymbol Symbol
+	viramaSymbol.Pattern = "~"
+	results, _ := varnam.SearchSymbolTable(context.Background(), viramaSymbol)
+
+	if len(results) == 0 {
+		return "", fmt.Errorf("virama not found")
+	}
+
+	return results[0].Value1, nil
+}

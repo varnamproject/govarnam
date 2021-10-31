@@ -37,6 +37,14 @@ type SchemeDetails struct {
 	IsStable     bool
 }
 
+type VSTMakerConfig struct {
+	// Not a config. State variable
+	Buffering bool
+
+	IgnoreDuplicateTokens bool
+	UseDeadConsonants     bool
+}
+
 // Varnam config
 type Varnam struct {
 	VSTPath  string
@@ -67,6 +75,8 @@ type Varnam struct {
 	// Whether only exact scheme match should be considered
 	// for dictionary search and discard possibility matches
 	DictionaryMatchExact bool
+
+	VSTMakerConfig VSTMakerConfig
 
 	// See setDefaultConfig() for the default values
 }
@@ -99,6 +109,12 @@ type TransliterationResult struct {
 	// VARNAM_MATCH_EXACT results from tokenizer.
 	// No limit, mostly gives 1 or less than 3 outputs
 	GreedyTokenized []Suggestion
+}
+
+func (varnam *Varnam) log(msg string) {
+	if varnam.Debug {
+		fmt.Println(msg)
+	}
 }
 
 /**
@@ -218,8 +234,6 @@ func (varnam *Varnam) tokensToSuggestions(ctx context.Context, tokensPointer *[]
 }
 
 func (varnam *Varnam) setDefaultConfig() {
-	ctx := context.Background()
-
 	varnam.DictionarySuggestionsLimit = 5
 	varnam.PatternDictionarySuggestionsLimit = 5
 
@@ -230,10 +244,7 @@ func (varnam *Varnam) setDefaultConfig() {
 
 	varnam.LangRules.IndicDigits = false
 
-	var viramaSymbol Symbol
-	viramaSymbol.Pattern = "~"
-	results, _ := varnam.SearchSymbolTable(ctx, viramaSymbol)
-	varnam.LangRules.Virama = results[0].Value1
+	varnam.LangRules.Virama, _ = varnam.getVirama()
 
 	if varnam.SchemeDetails.LangCode == "ml" {
 		varnam.RegisterPatternWordPartializer(varnam.mlPatternWordPartializer)
