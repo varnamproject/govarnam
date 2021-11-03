@@ -217,11 +217,10 @@ func (varnam *Varnam) vmPersistToken(pattern string, value1 string, value2 strin
 	}
 
 	if varnam.vmAlreadyPersisted(pattern, value1, matchType) {
-		// TODO the equivalent libvarnam is unclear what it was trying to do
-		// if varnam.VSTMakerConfig.IgnoreDuplicateTokens {
-		// 	varnam.log(fmt.Sprintf("%s => %s is already available. Ignoring duplicate tokens", pattern, value1))
-		// 	return nil
-		// }
+		if varnam.VSTMakerConfig.IgnoreDuplicateTokens {
+			varnam.log(fmt.Sprintf("%s => %s is already available. Ignoring duplicate tokens", pattern, value1))
+			return nil
+		}
 
 		return fmt.Errorf("there is already a match available for '%s => %s'. Duplicate entries are not allowed", pattern, value1)
 	}
