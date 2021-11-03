@@ -319,12 +319,18 @@ func (varnam *Varnam) VMSetSchemeDetails(sd SchemeDetails) error {
 		value string
 	}
 
+	isStable := "1"
+	if !sd.IsStable {
+		isStable = "0"
+	}
+
 	items := []item{
 		{"language code", VARNAM_METADATA_SCHEME_LANGUAGE_CODE, sd.LangCode},
 		{"language identifier", VARNAM_METADATA_SCHEME_IDENTIFIER, sd.Identifier},
 		{"language display name", VARNAM_METADATA_SCHEME_DISPLAY_NAME, sd.DisplayName},
 		{"author", VARNAM_METADATA_SCHEME_AUTHOR, sd.Author},
 		{"compiled date", VARNAM_METADATA_SCHEME_COMPILED_DATE, sd.CompiledDate},
+		{"stable", VARNAM_METADATA_SCHEME_STABLE, isStable},
 	}
 
 	for _, o := range items {
