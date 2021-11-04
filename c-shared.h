@@ -8,6 +8,11 @@
 #define VARNAM_ERROR   2
 #define VARNAM_CANCELLED  3
 
+#define VARNAM_CONFIG_USE_DEAD_CONSONANTS			 100
+#define VARNAM_CONFIG_IGNORE_DUPLICATE_TOKEN	 101
+#define VARNAM_CONFIG_ENABLE_SUGGESTIONS			 102
+#define VARNAM_CONFIG_USE_INDIC_DIGITS				 103
+
 typedef struct Suggestion_t {
   char* Word;
   int Weight;

@@ -58,7 +58,7 @@ func makeDictionary(dictPath string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	queries := [5]string{
+	queries := []string{
 		`
 		CREATE TABLE IF NOT EXISTS metadata (
 			key TEXT UNIQUE,
