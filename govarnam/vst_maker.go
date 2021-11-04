@@ -216,7 +216,12 @@ func (varnam *Varnam) vmPersistToken(pattern string, value1 string, value2 strin
 		return fmt.Errorf("arguments invalid")
 	}
 
-	if varnam.vmAlreadyPersisted(pattern, value1, matchType) {
+	persisted, err := varnam.vmAlreadyPersisted(pattern, value1, matchType)
+	if err != nil {
+		return err
+	}
+
+	if persisted {
 		if varnam.VSTMakerConfig.IgnoreDuplicateTokens {
 			varnam.log(fmt.Sprintf("%s => %s is already available. Ignoring duplicate tokens", pattern, value1))
 			return nil
@@ -246,15 +251,22 @@ func (varnam *Varnam) vmPersistToken(pattern string, value1 string, value2 strin
 	return nil
 }
 
-func (varnam *Varnam) vmAlreadyPersisted(pattern string, value1 string, matchType int) bool {
+func (varnam *Varnam) vmAlreadyPersisted(pattern string, value1 string, matchType int) (bool, error) {
 	var searchCriteria Symbol
 	searchCriteria.Pattern = pattern
-	searchCriteria.Value1 = value1
-	searchCriteria.MatchType = matchType
 
-	result, _ := varnam.SearchSymbolTable(context.Background(), searchCriteria)
+	if matchType == VARNAM_MATCH_EXACT {
+		searchCriteria.MatchType = matchType
+	} else {
+		searchCriteria.Value1 = value1
+	}
 
-	return len(result) > 0
+	result, err := varnam.SearchSymbolTable(context.Background(), searchCriteria)
+	if err != nil {
+		return false, err
+	}
+
+	return len(result) > 0, nil
 }
 
 // Makes a prefix tree. This fills up the flags column
@@ -312,15 +324,15 @@ func (varnam *Varnam) VMSetSchemeDetails(sd SchemeDetails) error {
 		return fmt.Errorf("language code should be one of ISO 639-1 two letter codes")
 	}
 
+	isStable := "1"
+	if !sd.IsStable {
+		isStable = "0"
+	}
+
 	type item struct {
 		name  string
 		key   string
 		value string
-	}
-
-	isStable := "1"
-	if !sd.IsStable {
-		isStable = "0"
 	}
 
 	items := []item{

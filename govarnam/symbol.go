@@ -562,7 +562,7 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 	}
 
 	if varnam.Debug {
-		fmt.Println(query)
+		fmt.Println(query, values)
 	}
 
 	var results []Symbol
