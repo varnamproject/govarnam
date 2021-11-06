@@ -4,8 +4,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -52,6 +54,16 @@ func getVarnamInstance(schemeID string) *VarnamHandle {
 		return instance
 	}
 	return nil
+}
+
+func TestVersion(t *testing.T) {
+	cmd := "echo $(git describe --abbrev=0 --tags || echo 'latest') | sed s/v//"
+	cmdRun, buff := exec.Command("bash", "-c", cmd), new(strings.Builder)
+	cmdRun.Stdout = buff
+	cmdRun.Run()
+	tagVersion := strings.TrimRight(buff.String(), "\n")
+
+	assertEqual(t, GetVersion(), tagVersion)
 }
 
 func tearDown() {
