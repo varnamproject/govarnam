@@ -399,38 +399,37 @@ func (varnam *Varnam) TransliterateAdvancedWithContext(ctx context.Context, word
 
 // Flatten TransliterationResult struct to a suggestion array
 func flattenTR(result TransliterationResult) []Suggestion {
-	combined := result.ExactMatches
+	var combined []Suggestion
+
+	dictCombined := result.ExactMatches
+	dictCombined = append(dictCombined, result.PatternDictionarySuggestions...)
+	dictCombined = append(dictCombined, result.DictionarySuggestions...)
 
 	/**
 	 * Show greedy tokenized first if length less than 3
 	 */
 	if len(result.GreedyTokenized) > 0 && utf8.RuneCountInString(result.GreedyTokenized[0].Word) < 3 {
 		combined = append(combined, result.GreedyTokenized...)
-	} else if len(result.ExactMatches) == 0 {
+		combined = append(combined, result.ExactMatches...)
+		combined = append(combined, result.PatternDictionarySuggestions...)
+		combined = append(combined, result.DictionarySuggestions...)
+	} else {
 		/**
-		 * If no exact matches, show first result of dictionary & pattern dictionary
-		 * Then show greedy tokenized
-		 * And then rest of the results from the 2 dictionary
+		 * Show greedy tokenized always at 2nd
+		 * And then rest of the results from exact matches or the 2 dictionary
 		 * https://github.com/varnamproject/govarnam/issues/12
 		 */
 
-		if len(result.PatternDictionarySuggestions) > 0 {
-			combined = append(combined, result.PatternDictionarySuggestions[0])
+		if len(dictCombined) > 0 {
+			combined = append(combined, dictCombined[0])
 		}
-		if len(result.DictionarySuggestions) > 0 {
-			combined = append(combined, result.DictionarySuggestions[0])
-		}
+
 		combined = append(combined, result.GreedyTokenized...)
 
-		if len(result.PatternDictionarySuggestions) > 1 {
-			combined = append(combined, result.PatternDictionarySuggestions[1:]...)
+		// Insert rest of them
+		if len(dictCombined) > 1 {
+			combined = append(combined, dictCombined[1:]...)
 		}
-		if len(result.DictionarySuggestions) > 1 {
-			combined = append(combined, result.DictionarySuggestions[1:]...)
-		}
-	} else {
-		combined = append(combined, result.PatternDictionarySuggestions...)
-		combined = append(combined, result.DictionarySuggestions...)
 	}
 
 	combined = append(combined, result.TokenizerSuggestions...)
