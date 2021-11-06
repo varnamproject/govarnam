@@ -55,6 +55,7 @@ func main() {
 
 	if *versionFlag {
 		fmt.Println(govarnamgo.GetVersion())
+		fmt.Println(govarnamgo.GetBuild())
 		return
 	}
 

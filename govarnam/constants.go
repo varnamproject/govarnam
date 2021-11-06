@@ -6,8 +6,11 @@ import (
 	"path"
 )
 
-// GoVarnam version. This should be updated manually
-var VERSION = "1.7.0"
+// Compile-time variables.
+var (
+	BuildString   string
+	VersionString string
+)
 
 /* General */
 const ZWNJ = "\u200c"

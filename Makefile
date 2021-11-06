@@ -5,7 +5,12 @@ default: build ;
 
 CLI_BIN := varnamcli
 INSTALL_PREFIX := $(or ${PREFIX},${PREFIX},/usr/local)
-VERSION := $(shell echo $$(git describe --abbrev=0 --tags || echo "latest") | sed s/v//)
+
+# Try to get the commit hash from git
+LAST_COMMIT := $(or $(shell git rev-parse --short HEAD 2> /dev/null),"UNKNOWN")
+VERSION := $(or $(shell echo $$(git describe --abbrev=0 --tags || echo "latest") | sed s/v//),"v0.0.0")
+BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
+
 RELEASE_NAME := govarnam-${VERSION}-${shell uname -m}
 UNAME := $(shell uname)
 
@@ -16,6 +21,8 @@ ifeq ($(UNAME), Darwin)
   SED := sed -i ""
 	LIB_NAME = libgovarnam.dylib
 endif
+
+VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}'
 
 pc:
 	cp govarnam.pc.in govarnam.pc
@@ -45,10 +52,10 @@ cli:
 	go build -o ${CLI_BIN} -ldflags "-s -w" ./cli
 
 library-nosqlite:
-	CGO_ENABLED=1 go build -tags "fts5,libsqlite3" -buildmode=c-shared -ldflags "-s -w" -o ${LIB_NAME}
+	CGO_ENABLED=1 go build -tags "fts5,libsqlite3" -buildmode=c-shared -ldflags "-s -w ${VERSION_STAMP_LDFLAGS}" -o ${LIB_NAME} .
 
 library:
-	CGO_ENABLED=1 go build -tags "fts5" -buildmode=c-shared -ldflags "-s -w" -o ${LIB_NAME}
+	CGO_ENABLED=1 go build -tags "fts5" -buildmode=c-shared -ldflags "-s -w ${VERSION_STAMP_LDFLAGS}" -o ${LIB_NAME} .
 
 library-mac-universal:
 	GOOS=darwin GOARCH=arm64 $(MAKE) library

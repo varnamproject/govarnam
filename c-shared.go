@@ -103,7 +103,12 @@ func makeCTransliterationResult(ctx context.Context, goResult govarnam.Translite
 
 //export varnam_get_version
 func varnam_get_version() *C.char {
-	return C.CString(govarnam.VERSION)
+	return C.CString(govarnam.VersionString)
+}
+
+//export varnam_get_build
+func varnam_get_build() *C.char {
+	return C.CString(govarnam.BuildString)
 }
 
 //export varnam_set_vst_lookup_dir

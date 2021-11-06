@@ -193,6 +193,11 @@ func GetVersion() string {
 	return C.GoString(C.varnam_get_version())
 }
 
+// GetBuild get library build version
+func GetBuild() string {
+	return C.GoString(C.varnam_get_build())
+}
+
 // Init Initialize
 func Init(vstLoc string, dictLoc string) (*VarnamHandle, error) {
 	handleID := C.int(0)
