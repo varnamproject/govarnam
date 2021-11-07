@@ -30,7 +30,9 @@ init_version() {
   schemesVersion=$(get_latest_release "schemes")
   imeVersion=$(get_latest_release "govarnam-ibus")
   if [ -z $version ] || [ -z $schemesVersion ] || [ -z $imeVersion ]; then
-    echo "Couldn't find latest version. Possible reason: GitHub API Rate Limit"
+    echo "Couldn't find latest Varnam version. Possible reasons:"
+    echo "1. No internet connection"
+    echo "2. GitHub API Rate Limit (wait an hour for the rate limit to expire)"
     exit 1
   fi
   versionNumber=${version/v/}
@@ -61,7 +63,7 @@ install_govarnam() {
 }
 
 step1="Step 1: Install GoVarnam"
-step2="Step 2: Install your language"
+step2="Step 2: Install your language support for GoVarnam"
 step3="Step 3: Install Varnam IBus Engine"
 
 echo "Welcome to Varnam Installer. https://varnamproject.github.io/"
