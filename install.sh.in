@@ -8,8 +8,8 @@ if [ "$ARG1" == "install" ]; then
   sudo cp "$SCRIPT_DIR/varnamcli" "@INSTALL_PREFIX@/bin/varnamcli"
   
   sudo mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
-  sudo cp "$SCRIPT_DIR/libgovarnam.so" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@"
-  sudo ln -s "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so"
+  sudo cp "$SCRIPT_DIR/@LIB_NAME@" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@"
+  sudo ln -s "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@"
   sudo cp "$SCRIPT_DIR/govarnam.pc" "@INSTALL_PREFIX@/lib/pkgconfig/"
 
   sudo mkdir -p "@INSTALL_PREFIX@/include/libgovarnam"
@@ -23,7 +23,7 @@ if [ "$ARG1" == "install" ]; then
 
   notify-send "$msg" &> /dev/null || true
 elif [ "$ARG1" == "uninstall" ]; then
-  sudo rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/libgovarnam.so.@VERSION@" "@INSTALL_PREFIX@/lib/libgovarnam.so" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
+  sudo rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
   sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*
   sudo rmdir "@INSTALL_PREFIX@/include/libgovarnam"
   sudo rm "@INSTALL_PREFIX@/share/varnam/schemes/"*

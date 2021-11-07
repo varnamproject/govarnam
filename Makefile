@@ -42,6 +42,7 @@ install-script:
 	cp install.sh.in install.sh
 	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
 	${SED} "s#@VERSION@#${VERSION}#g" install.sh
+	${SED} "s#@LIB_NAME@#${LIB_NAME}#g" install.sh
 	chmod +x install.sh
 
 install:
