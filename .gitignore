@@ -1,7 +1,6 @@
-libgovarnam.so
-libgovarnam.h
+libgovarnam.*
 varnam
-varnamc
+varnamcli
 
 install.sh
 govarnam.pc
