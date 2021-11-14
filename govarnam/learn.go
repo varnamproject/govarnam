@@ -411,14 +411,17 @@ func (varnam *Varnam) LearnFromFile(filePath string) (LearnStatus, error) {
 				fmt.Println("Frequency report :", frequencyReport)
 			}
 		} else if frequencyReport {
+			number, numberErr := strconv.Atoi(curWord)
 			if word == "" {
-				word = curWord
+				// Sometimes word will be characters like <0xa0>
+				// which won't be detected by Go's bufio.ScanWords
+				if numberErr != nil {
+					word = curWord
+				}
 				continue
 			} else {
-				weight, err := strconv.Atoi(curWord)
-
-				if err == nil {
-					words = append(words, WordInfo{0, word, weight, 0})
+				if numberErr == nil {
+					words = append(words, WordInfo{0, word, number, 0})
 					count++
 				}
 				word = ""
