@@ -17,7 +17,7 @@ import (
 	"unicode/utf8"
 
 	// sqlite3
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // LangRules language reulated config

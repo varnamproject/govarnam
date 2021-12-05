@@ -12,8 +12,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-
-	"github.com/mattn/go-sqlite3"
 )
 
 // Symbol result from VST
@@ -40,19 +38,8 @@ type Token struct {
 	character string // Non language character
 }
 
-var sqlite3Conn *sqlite3.SQLiteConn
-
 func openDB(path string) (*sql.DB, error) {
-	if sqlite3Conn == nil {
-		sql.Register("sqlite3_with_limit", &sqlite3.SQLiteDriver{
-			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-				sqlite3Conn = conn
-				return nil
-			},
-		})
-	}
-
-	conn, err := sql.Open("sqlite3_with_limit", path)
+	conn, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
 	}

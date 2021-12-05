@@ -19,8 +19,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
-	"github.com/mattn/go-sqlite3"
+	"modernc.org/libc"
+	"modernc.org/libc/sys/types"
+	sqlite3 "modernc.org/sqlite/lib"
 )
 
 // WordInfo represent a item in words table
@@ -41,6 +44,46 @@ type LearnStatus struct {
 type exportFormat struct {
 	WordsDict    []map[string]interface{} `json:"words"`
 	PatternsDict []map[string]interface{} `json:"patterns"`
+}
+
+type sQLite3Conn struct {
+	db  uintptr // *sqlite3.Xsqlite3
+	tls *libc.TLS
+}
+
+func (c *sQLite3Conn) malloc(n int) (uintptr, error) {
+	if p := libc.Xmalloc(c.tls, types.Size_t(n)); p != 0 || n == 0 {
+		return p, nil
+	}
+
+	return 0, fmt.Errorf("sqlite: cannot allocate %d bytes of memory", n)
+}
+
+const ptrSize = unsafe.Sizeof(uintptr(0))
+
+func (varnam *Varnam) getSQLiteLimit(key int) int {
+	var p, s uintptr
+	var err error
+	if s, err = libc.CString(varnam.VSTPath); err != nil {
+		return 1
+	}
+
+	c := &sQLite3Conn{tls: libc.NewTLS()}
+
+	p, err = c.malloc(int(ptrSize))
+	if err != nil {
+		return 1
+	}
+
+	var flags int32 = sqlite3.SQLITE_OPEN_READONLY
+
+	if rc := sqlite3.Xsqlite3_open_v2(c.tls, s, p, flags, 0); rc != sqlite3.SQLITE_OK {
+		return 1
+	}
+
+	c.db = *(*uintptr)(unsafe.Pointer(p))
+
+	return int(sqlite3.Xsqlite3_limit(c.tls, c.db, sqlite3.SQLITE_LIMIT_EXPR_DEPTH, -1))
 }
 
 func (varnam *Varnam) languageSpecificSanitization(word string) string {
@@ -258,7 +301,7 @@ func (varnam *Varnam) LearnMany(words []WordInfo) (LearnStatus, error) {
 
 	// There is a limit on number of OR that can be done
 	// Reference: https://stackoverflow.com/questions/9570197/sqlite-expression-maximum-depth-limit
-	depthLimit := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_EXPR_DEPTH) - 1
+	depthLimit := varnam.getSQLiteLimit(sqlite3.SQLITE_LIMIT_EXPR_DEPTH) - 1
 
 	for len(updationValues) > 0 {
 		lastIndex := int(math.Min(float64(depthLimit), float64(len(updationValues))))
@@ -349,7 +392,7 @@ func (varnam *Varnam) LearnFromFile(filePath string) (LearnStatus, error) {
 	}
 	defer file.Close()
 
-	limitVariableNumber := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
+	limitVariableNumber := varnam.getSQLiteLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
 	log.Printf("default SQLITE_LIMIT_VARIABLE_NUMBER: %d", limitVariableNumber)
 
 	// We have 2 fields per item, word and weight
@@ -650,7 +693,7 @@ func (varnam *Varnam) Import(filePath string) error {
 		return fmt.Errorf("Parsing JSON failed, err: %s", err.Error())
 	}
 
-	limitVariableNumber := sqlite3Conn.GetLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
+	limitVariableNumber := varnam.getSQLiteLimit(sqlite3.SQLITE_LIMIT_VARIABLE_NUMBER)
 	log.Printf("default SQLITE_LIMIT_VARIABLE_NUMBER: %d", limitVariableNumber)
 
 	insertsPerTransaction := int(math.Min(
