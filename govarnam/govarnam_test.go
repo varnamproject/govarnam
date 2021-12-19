@@ -65,6 +65,9 @@ func getVarnamInstance(schemeID string) *Varnam {
 	if ok {
 		return instance
 	}
+
+	log.Fatalf("Varnam instance for %s not found", schemeID)
+
 	return nil
 }
 

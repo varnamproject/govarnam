@@ -389,7 +389,7 @@ func TestMLExportAndImport(t *testing.T) {
 func TestMLSearchSymbolTable(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
-	var search Symbol
+	search := NewSearchSymbol()
 	search.Value1 = "ക"
 	results, err := varnam.SearchSymbolTable(context.Background(), search)
 	checkError(err)

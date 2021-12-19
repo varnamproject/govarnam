@@ -91,7 +91,7 @@ func TestRecentlyLearnedWords(t *testing.T) {
 func TestSearchSymbolTable(t *testing.T) {
 	varnam := getVarnamInstance("ml")
 
-	var symbol Symbol
+	symbol := NewSearchSymbol()
 	symbol.Pattern = "la"
 	result := varnam.SearchSymbolTable(context.Background(), symbol)
 

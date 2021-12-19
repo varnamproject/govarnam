@@ -404,6 +404,27 @@ func varnam_get_vst_path(varnamHandleID C.int) *C.char {
 	return C.CString(handle.varnam.VSTPath)
 }
 
+//export varnam_new_search_symbol
+func varnam_new_search_symbol(resultPointer **C.struct_Symbol_t) C.int {
+	symbol := govarnam.NewSearchSymbol()
+	*resultPointer = C.makeSymbol(
+		C.int(symbol.Identifier),
+		C.int(symbol.Type),
+		C.int(symbol.MatchType),
+		C.CString(symbol.Pattern),
+		C.CString(symbol.Value1),
+		C.CString(symbol.Value2),
+		C.CString(symbol.Value3),
+		C.CString(symbol.Tag),
+		C.int(symbol.Weight),
+		C.int(symbol.Priority),
+		C.int(symbol.AcceptCondition),
+		C.int(symbol.Flags),
+	)
+
+	return C.VARNAM_SUCCESS
+}
+
 //export varnam_search_symbol_table
 func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C.struct_Symbol_t, resultPointer **C.varray) C.int {
 	ctx, cancel := makeContext(id)
