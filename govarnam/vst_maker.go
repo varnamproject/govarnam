@@ -225,7 +225,7 @@ func (varnam *Varnam) vmPersistToken(pattern string, value1 string, value2 strin
 		return fmt.Errorf("arguments invalid")
 	}
 
-	persisted, err := varnam.vmAlreadyPersisted(pattern, value1, matchType)
+	persisted, err := varnam.vmAlreadyPersisted(pattern, value1, matchType, acceptCondition)
 	if err != nil {
 		return err
 	}
@@ -260,9 +260,10 @@ func (varnam *Varnam) vmPersistToken(pattern string, value1 string, value2 strin
 	return nil
 }
 
-func (varnam *Varnam) vmAlreadyPersisted(pattern string, value1 string, matchType int) (bool, error) {
-	var searchCriteria Symbol
+func (varnam *Varnam) vmAlreadyPersisted(pattern string, value1 string, matchType int, acceptCondition int) (bool, error) {
+	searchCriteria := NewSearchSymbol()
 	searchCriteria.Pattern = pattern
+	searchCriteria.AcceptCondition = acceptCondition
 
 	if matchType == VARNAM_MATCH_EXACT {
 		searchCriteria.MatchType = matchType
