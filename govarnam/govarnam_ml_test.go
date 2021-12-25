@@ -206,19 +206,25 @@ func TestMLAtomicChil(t *testing.T) {
 
 func TestMLReverseTransliteration(t *testing.T) {
 	varnam := getVarnamInstance("ml")
+	oldLimit := varnam.TokenizerSuggestionsLimit
+	varnam.TokenizerSuggestionsLimit = 30
 
 	sugs, err := varnam.ReverseTransliterate("മലയാളം")
 	checkError(err)
 
 	// The order of this will fail if VST weights change
-	expected := []string{"malayaaLam", "malayALam", "malayaalam", "malayAlam", "malayaLam", "malayalam"}
-	for i, sug := range sugs {
-		assertEqual(t, sug.Word, expected[i])
+	expected := []string{"malayaaLam", "malayaaLam_", "malayALam", "malayALam_", "malayaalam", "malayaalam_", "malayAlam", "malayAlam_", "malayaLam", "malayaLam_", "malayalam", "malayalam_"}
+
+	assertEqual(t, len(sugs), len(expected))
+	for i, expectedWord := range expected {
+		assertEqual(t, sugs[i].Word, expectedWord)
 	}
 
 	sugs, err = varnam.ReverseTransliterate("2019 ഏപ്രിൽ 17-ന് മലയാളം വിക്കിപീഡിയയിലെ ലേഖനങ്ങളുടെ എണ്ണം 63,000 പിന്നിട്ടു.")
 
 	assertEqual(t, sugs[0].Word, "2019 Epril 17-n~ malayaaLam vikkipeeDiyayile lEkhanangaLuTe eNNam 63,000 pinnittu.")
+
+	varnam.TokenizerSuggestionsLimit = oldLimit
 }
 
 func TestDictionaryLimit(t *testing.T) {

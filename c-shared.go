@@ -271,22 +271,25 @@ func varnam_set_indic_digits(varnamHandleID C.int, val C.int) {
 	varnam_config(varnamHandleID, C.VARNAM_CONFIG_USE_INDIC_DIGITS, val)
 }
 
-// TODO move all config to varnam_config()
+// Deprecated. Use varnam_config()
 //export varnam_set_dictionary_suggestions_limit
 func varnam_set_dictionary_suggestions_limit(varnamHandleID C.int, val C.int) {
 	getVarnamHandle(varnamHandleID).varnam.DictionarySuggestionsLimit = int(val)
 }
 
+// Deprecated. Use varnam_config()
 //export varnam_set_pattern_dictionary_suggestions_limit
 func varnam_set_pattern_dictionary_suggestions_limit(varnamHandleID C.int, val C.int) {
 	getVarnamHandle(varnamHandleID).varnam.PatternDictionarySuggestionsLimit = int(val)
 }
 
+// Deprecated. Use varnam_config()
 //export varnam_set_tokenizer_suggestions_limit
 func varnam_set_tokenizer_suggestions_limit(varnamHandleID C.int, val C.int) {
 	getVarnamHandle(varnamHandleID).varnam.TokenizerSuggestionsLimit = int(val)
 }
 
+// Deprecated. Use varnam_config()
 //export varnam_set_dictionary_match_exact
 func varnam_set_dictionary_match_exact(varnamHandleID C.int, val C.int) {
 	if val == 0 {
@@ -653,6 +656,18 @@ func varnam_config(varnamHandleID C.int, key C.int, value C.int) C.int {
 		break
 	case C.VARNAM_CONFIG_IGNORE_DUPLICATE_TOKEN:
 		handle.varnam.VSTMakerConfig.IgnoreDuplicateTokens = cintToBool(value)
+		break
+	case C.VARNAM_CONFIG_SET_DICTIONARY_SUGGESTIONS_LIMIT:
+		handle.varnam.DictionarySuggestionsLimit = int(value)
+		break
+	case C.VARNAM_CONFIG_SET_PATTERN_DICTIONARY_SUGGESTIONS_LIMIT:
+		handle.varnam.PatternDictionarySuggestionsLimit = int(value)
+		break
+	case C.VARNAM_CONFIG_SET_TOKENIZER_SUGGESTIONS_LIMIT:
+		handle.varnam.TokenizerSuggestionsLimit = int(value)
+		break
+	case C.VARNAM_CONFIG_SET_DICTIONARY_MATCH_EXACT:
+		handle.varnam.DictionaryMatchExact = cintToBool(value)
 		break
 	}
 

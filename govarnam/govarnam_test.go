@@ -17,12 +17,12 @@ var testTempDir string
 
 // AssertEqual checks if values are equal
 // Thanks https://gist.github.com/samalba/6059502#gistcomment-2710184
-func assertEqual(t *testing.T, a interface{}, b interface{}) {
-	if a == b {
+func assertEqual(t *testing.T, value interface{}, expected interface{}) {
+	if value == expected {
 		return
 	}
 	debug.PrintStack()
-	t.Errorf("Received %v (type %v), expected %v (type %v)", a, reflect.TypeOf(a), b, reflect.TypeOf(b))
+	t.Errorf("Received %v (type %v), expected %v (type %v)", value, reflect.TypeOf(value), expected, reflect.TypeOf(expected))
 }
 
 func checkError(err error) {
