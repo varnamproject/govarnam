@@ -633,6 +633,29 @@ func (handle *VarnamHandle) GetVSTPath() string {
 	return C.GoString(cStr)
 }
 
+func makeGoSymbol(cSymbol *C.Symbol) Symbol {
+	var goSymbol Symbol
+	goSymbol.Identifier = int(cSymbol.Identifier)
+	goSymbol.Type = int(cSymbol.Type)
+	goSymbol.MatchType = int(cSymbol.MatchType)
+	goSymbol.Pattern = C.GoString(cSymbol.Pattern)
+	goSymbol.Value1 = C.GoString(cSymbol.Value1)
+	goSymbol.Value2 = C.GoString(cSymbol.Value2)
+	goSymbol.Value3 = C.GoString(cSymbol.Value3)
+	goSymbol.Tag = C.GoString(cSymbol.Tag)
+	goSymbol.Weight = int(cSymbol.Weight)
+	goSymbol.Priority = int(cSymbol.Priority)
+	goSymbol.AcceptCondition = int(cSymbol.AcceptCondition)
+	goSymbol.Flags = int(cSymbol.Flags)
+	return goSymbol
+}
+
+func NewSearchSymbol() Symbol {
+	var resultPointer *C.Symbol
+	C.varnam_new_search_symbol(&resultPointer)
+	return makeGoSymbol(resultPointer)
+}
+
 // SearchSymbolTable search VST
 func (handle *VarnamHandle) SearchSymbolTable(ctx context.Context, searchCriteria Symbol) []Symbol {
 	var goResults []Symbol
@@ -671,21 +694,7 @@ func (handle *VarnamHandle) SearchSymbolTable(ctx context.Context, searchCriteri
 		for i < int(C.varray_length(resultPointer)) {
 			result := (*C.Symbol)(C.varray_get(resultPointer, C.int(i)))
 
-			var goResult Symbol
-			goResult.Identifier = int(result.Identifier)
-			goResult.Type = int(result.Type)
-			goResult.MatchType = int(result.MatchType)
-			goResult.Pattern = C.GoString(result.Pattern)
-			goResult.Value1 = C.GoString(result.Value1)
-			goResult.Value2 = C.GoString(result.Value2)
-			goResult.Value3 = C.GoString(result.Value3)
-			goResult.Tag = C.GoString(result.Tag)
-			goResult.Weight = int(result.Weight)
-			goResult.Priority = int(result.Priority)
-			goResult.AcceptCondition = int(result.AcceptCondition)
-			goResult.Flags = int(result.Flags)
-
-			goResults = append(goResults, goResult)
+			goResults = append(goResults, makeGoSymbol(result))
 			i++
 		}
 

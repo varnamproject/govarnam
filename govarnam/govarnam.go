@@ -469,6 +469,10 @@ func (varnam *Varnam) ReverseTransliterate(word string) ([]Suggestion, error) {
 
 	tokens := varnam.splitTextByConjunct(ctx, word)
 
+	if varnam.Debug {
+		fmt.Println(tokens)
+	}
+
 	for i, token := range tokens {
 		for j, symbol := range token.symbols {
 			tokens[i].symbols[j].Value1 = symbol.Pattern

@@ -12,6 +12,12 @@ var (
 	VersionString string
 )
 
+// Go's struct int has default value 0.
+// For SearchSymbolTable usecase this is a problem.
+// Hence we use a constructor with default value setting.
+// https://stackoverflow.com/q/37135193/1372424
+const STRUCT_INT_DEFAULT_VALUE = -1
+
 /* General */
 const ZWNJ = "\u200c"
 const ZWJ = "\u200d"

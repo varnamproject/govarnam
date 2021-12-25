@@ -512,6 +512,23 @@ func removeNonExactTokens(tokens []Token) []Token {
 	return tokens
 }
 
+// NewSearchSymbol a constructor for making Symbol.
+// We're doing this because default int value in
+// go structs is 0. This won't work with searching
+// because fields can have 0 value.
+// https://stackoverflow.com/q/37135193/137242
+func NewSearchSymbol() Symbol {
+	symbol := Symbol{}
+	symbol.Identifier = STRUCT_INT_DEFAULT_VALUE
+	symbol.Type = STRUCT_INT_DEFAULT_VALUE
+	symbol.MatchType = STRUCT_INT_DEFAULT_VALUE
+	symbol.Weight = STRUCT_INT_DEFAULT_VALUE
+	symbol.Priority = STRUCT_INT_DEFAULT_VALUE
+	symbol.AcceptCondition = STRUCT_INT_DEFAULT_VALUE
+	symbol.Flags = STRUCT_INT_DEFAULT_VALUE
+	return symbol
+}
+
 // SearchSymbolTable For searching symbol table
 func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symbol) ([]Symbol, error) {
 	var (
@@ -534,7 +551,7 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 				return
 			}
 		} else {
-			if val.(int) == 0 {
+			if valInt, ok := val.(int); !ok || valInt == STRUCT_INT_DEFAULT_VALUE {
 				return
 			}
 		}
@@ -587,7 +604,7 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 }
 
 func (varnam *Varnam) getVirama() (string, error) {
-	var viramaSymbol Symbol
+	viramaSymbol := NewSearchSymbol()
 	viramaSymbol.Pattern = "~"
 	results, _ := varnam.SearchSymbolTable(context.Background(), viramaSymbol)
 
