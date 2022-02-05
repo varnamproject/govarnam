@@ -91,10 +91,11 @@ type Suggestion struct {
 // TransliterationResult result
 type TransliterationResult struct {
 	// Exactly found words in dictionary if there is any.
+	// From both patterns and normal dict
 	ExactWords []Suggestion
 
-	// Exact matches found in dictionary if there is any.
-	// From both patterns and normal dict
+	// Exactly starting word matches in dictionary if there is any.
+	// Not applicable for patterns dictionary.
 	ExactMatches []Suggestion
 
 	// Possible word suggestions from dictionary

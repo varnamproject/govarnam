@@ -151,6 +151,7 @@ func TestMLTrain(t *testing.T) {
 	checkError(err)
 
 	assertEqual(t, varnam.TransliterateAdvanced("india").ExactWords[0].Word, "ഇന്ത്യ")
+	assertEqual(t, varnam.TransliterateAdvanced("ind").PatternDictionarySuggestions[0].Word, "ഇന്ത്യ")
 	assertEqual(t, varnam.TransliterateAdvanced("indiayil").PatternDictionarySuggestions[0].Word, "ഇന്ത്യയിൽ")
 
 	// Word with virama at end
