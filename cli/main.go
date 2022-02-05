@@ -169,6 +169,9 @@ func main() {
 		fmt.Println("Greedy Tokenized")
 		printSugs(result.GreedyTokenized)
 
+		fmt.Println("Exact Words")
+		printSugs(result.ExactWords)
+
 		fmt.Println("Exact Matches")
 		printSugs(result.ExactMatches)
 

@@ -90,11 +90,15 @@ type Suggestion struct {
 
 // TransliterationResult result
 type TransliterationResult struct {
-	// Exact matches found in dictionary if any
+	// Exactly found words in dictionary if there is any.
 	// From both patterns and normal dict
+	ExactWords []Suggestion
+
+	// Exactly starting word matches in dictionary if there is any.
+	// Not applicable for patterns dictionary.
 	ExactMatches []Suggestion
 
-	// Possible words matching from dictionary
+	// Possible word suggestions from dictionary
 	DictionarySuggestions []Suggestion
 
 	// Possible words matching from patterns dictionary
@@ -319,6 +323,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 
 		case channelDictResult := <-dictSugsChan:
 			// From dictionary
+			result.ExactWords = channelDictResult.exactWords
 			result.ExactMatches = channelDictResult.exactMatches
 			result.DictionarySuggestions = channelDictResult.suggestions
 
@@ -327,7 +332,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 				return nil, result
 			case channelPatternDictResult := <-patternDictSugsChan:
 				// From patterns dictionary
-				result.ExactMatches = append(result.ExactMatches, channelPatternDictResult.exactMatches...)
+				result.ExactWords = append(result.ExactWords, channelPatternDictResult.exactWords...)
 				result.PatternDictionarySuggestions = SortSuggestions(channelPatternDictResult.suggestions)
 
 				if len(result.ExactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
@@ -345,6 +350,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 
 					// Sort everything now
 
+					result.ExactWords = SortSuggestions(result.ExactWords)
 					result.ExactMatches = SortSuggestions(result.ExactMatches)
 					result.DictionarySuggestions = SortSuggestions(result.DictionarySuggestions)
 					result.PatternDictionarySuggestions = SortSuggestions(result.PatternDictionarySuggestions)
@@ -401,7 +407,12 @@ func (varnam *Varnam) TransliterateAdvancedWithContext(ctx context.Context, word
 func flattenTR(result TransliterationResult) []Suggestion {
 	var combined []Suggestion
 
-	dictCombined := result.ExactMatches
+	dictCombined := result.ExactWords
+
+	if len(result.ExactWords) == 0 {
+		dictCombined = append(dictCombined, result.ExactMatches...)
+	}
+
 	dictCombined = append(dictCombined, result.PatternDictionarySuggestions...)
 	dictCombined = append(dictCombined, result.DictionarySuggestions...)
 
@@ -410,6 +421,7 @@ func flattenTR(result TransliterationResult) []Suggestion {
 	 */
 	if len(result.GreedyTokenized) > 0 && utf8.RuneCountInString(result.GreedyTokenized[0].Word) < 3 {
 		combined = append(combined, result.GreedyTokenized...)
+		combined = append(combined, result.ExactWords...)
 		combined = append(combined, result.ExactMatches...)
 		combined = append(combined, result.PatternDictionarySuggestions...)
 		combined = append(combined, result.DictionarySuggestions...)
@@ -473,8 +485,8 @@ func (varnam *Varnam) ReverseTransliterate(word string) ([]Suggestion, error) {
 		fmt.Println(tokens)
 	}
 
-	for i, token := range tokens {
-		for j, symbol := range token.symbols {
+	for i := range tokens {
+		for j, symbol := range tokens[i].symbols {
 			tokens[i].symbols[j].Value1 = symbol.Pattern
 			tokens[i].symbols[j].Value2 = symbol.Pattern
 		}
