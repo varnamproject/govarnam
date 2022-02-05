@@ -72,9 +72,9 @@ func (varnam *Varnam) channelTokensToGreedySuggestions(ctx context.Context, toke
 
 func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string, tokens *[]Token, channel chan channelDictionaryResult) {
 	var (
-		exactWords       []Suggestion
-		exactMatches     []Suggestion
-		extraSuggestions []Suggestion
+		exactWords      []Suggestion
+		exactMatches    []Suggestion
+		moreSuggestions []Suggestion
 	)
 
 	select {
@@ -90,9 +90,6 @@ func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string,
 			fmt.Println("Dictionary results:", dictResult)
 		}
 
-		exactWords = dictResult.exactWords
-		exactMatches = dictResult.exactMatches
-
 		if len(dictResult.exactMatches) > 0 {
 			start := time.Now()
 
@@ -104,8 +101,22 @@ func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string,
 				fmt.Println("More dictionary results:", moreFromDict)
 			}
 
-			for _, sugSet := range moreFromDict {
-				extraSuggestions = append(extraSuggestions, sugSet...)
+			exactWords = moreFromDict.exactWords
+
+			// Intersection of slices.
+			// exactMatches shouldn't have items from exactWords
+			hash := make(map[string]bool)
+			for i := range exactWords {
+				hash[exactWords[i].Word] = true
+			}
+			for _, sug := range dictResult.exactMatches {
+				if _, found := hash[sug.Word]; !found {
+					exactMatches = append(exactMatches, sug)
+				}
+			}
+
+			for _, sugSet := range moreFromDict.moreSuggestions {
+				moreSuggestions = append(moreSuggestions, sugSet...)
 			}
 
 			if LOG_TIME_TAKEN {
@@ -119,7 +130,12 @@ func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string,
 
 			start := time.Now()
 
-			extraSuggestions = varnam.tokenizeRestOfWord(ctx, restOfWord, dictResult.partialMatches, varnam.DictionarySuggestionsLimit)
+			moreSuggestions = varnam.tokenizeRestOfWord(
+				ctx,
+				restOfWord,
+				dictResult.partialMatches,
+				varnam.DictionarySuggestionsLimit,
+			)
 
 			if LOG_TIME_TAKEN {
 				log.Printf("%s took %v\n", "tokenizeRestOfWord", time.Since(start))
@@ -130,15 +146,19 @@ func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string,
 			log.Printf("%s took %v\n", "channelGetFromDictionary", time.Since(start))
 		}
 
-		channel <- channelDictionaryResult{exactWords, exactMatches, extraSuggestions}
+		channel <- channelDictionaryResult{
+			exactWords,
+			exactMatches,
+			moreSuggestions,
+		}
 		close(channel)
 	}
 }
 
 func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word string, channel chan channelDictionaryResult) {
 	var (
-		dictResults []Suggestion
-		exactWords  []Suggestion
+		exactWords      []Suggestion
+		moreSuggestions []Suggestion
 	)
 
 	select {
@@ -174,7 +194,7 @@ func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word 
 					// Same length, exact word matched
 					exactWords = append(exactWords, match.Sug)
 				} else {
-					dictResults = append(dictResults, match.Sug)
+					moreSuggestions = append(moreSuggestions, match.Sug)
 				}
 			}
 
@@ -187,11 +207,16 @@ func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word 
 			for _, match := range partialMatches {
 				restOfWord := word[match.Length:]
 
-				filled := varnam.tokenizeRestOfWord(ctx, restOfWord, []Suggestion{match.Sug}, perMatchLimit)
+				filled := varnam.tokenizeRestOfWord(
+					ctx,
+					restOfWord,
+					[]Suggestion{match.Sug},
+					perMatchLimit,
+				)
 
-				dictResults = append(dictResults, filled...)
+				moreSuggestions = append(moreSuggestions, filled...)
 
-				if len(dictResults) >= varnam.PatternDictionarySuggestionsLimit {
+				if len(moreSuggestions) >= varnam.PatternDictionarySuggestionsLimit {
 					break
 				}
 			}
@@ -201,12 +226,16 @@ func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word 
 			log.Printf("%s took %v\n", "channelGetFromPatternDictionary", time.Since(start))
 		}
 
-		channel <- channelDictionaryResult{exactWords, []Suggestion{}, dictResults}
+		channel <- channelDictionaryResult{
+			exactWords,
+			[]Suggestion{}, // Not applicable for patterns dictionary
+			moreSuggestions,
+		}
 		close(channel)
 	}
 }
 
-func (varnam *Varnam) channelGetMoreFromDictionary(ctx context.Context, sugs []Suggestion, channel chan [][]Suggestion) {
+func (varnam *Varnam) channelGetMoreFromDictionary(ctx context.Context, sugs []Suggestion, channel chan MoreDictionaryResult) {
 	select {
 	case <-ctx.Done():
 		close(channel)

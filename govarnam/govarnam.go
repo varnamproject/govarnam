@@ -331,7 +331,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 				return nil, result
 			case channelPatternDictResult := <-patternDictSugsChan:
 				// From patterns dictionary
-				result.ExactMatches = append(result.ExactMatches, channelPatternDictResult.exactMatches...)
+				result.ExactWords = append(result.ExactWords, channelPatternDictResult.exactWords...)
 				result.PatternDictionarySuggestions = SortSuggestions(channelPatternDictResult.suggestions)
 
 				if len(result.ExactMatches) == 0 || varnam.TokenizerSuggestionsAlways {
@@ -407,7 +407,11 @@ func flattenTR(result TransliterationResult) []Suggestion {
 	var combined []Suggestion
 
 	dictCombined := result.ExactWords
-	dictCombined = append(dictCombined, result.ExactMatches...)
+
+	if len(result.ExactWords) == 0 {
+		dictCombined = append(dictCombined, result.ExactMatches...)
+	}
+
 	dictCombined = append(dictCombined, result.PatternDictionarySuggestions...)
 	dictCombined = append(dictCombined, result.DictionarySuggestions...)
 

@@ -18,9 +18,6 @@ import (
 
 // DictionaryResult result from dictionary search
 type DictionaryResult struct {
-	// Exactly found words in dictionart.
-	exactWords []Suggestion
-
 	// Exactly found starting word matches.
 	exactMatches []Suggestion
 
@@ -28,6 +25,15 @@ type DictionaryResult struct {
 	partialMatches []Suggestion
 
 	longestMatchPosition int
+}
+
+// MoreDictionaryResult result from dictionary search
+type MoreDictionaryResult struct {
+	// Exactly found words
+	exactWords []Suggestion
+
+	// Words found in dictionary with same starting
+	moreSuggestions [][]Suggestion
 }
 
 // PatternDictionarySuggestion longest match result
@@ -179,7 +185,7 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 		// https://stackoverflow.com/q/68610241/1372424
 
 		if all {
-			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT w.* FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' AND w.word != c.match AND learned_on > 0 ORDER BY weight DESC LIMIT ?"
+			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS match, w.* FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' AND learned_on > 0 ORDER BY weight DESC LIMIT ?"
 			vals = append(vals, varnam.DictionarySuggestionsLimit)
 		} else {
 			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS match, w.word AS word, MAX(w.weight), MAX(w.learned_on) FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' GROUP BY c.match"
@@ -252,7 +258,7 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 							continue
 						}
 
-						till := tokenizedWord.word
+						till := tokenizedWord.match
 
 						var toSearch []string
 
@@ -268,7 +274,7 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 
 							for k, searchResult := range searchResults {
 								if k == 0 {
-									tokenizedWords[j].word = searchResult.word
+									tokenizedWords[j].match = searchResult.match
 									continue
 								}
 
@@ -292,17 +298,10 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 			}
 		}
 
-		for _, foundWord := range lastFoundDictWords {
-			sug := Suggestion{foundWord.word, foundWord.weight, foundWord.learnedOn}
-			if lastFoundPosition == tokens[len(tokens)-1].position {
-				if foundWord.word == foundWord.match {
-					result.exactMatches = append(result.exactMatches, sug)
-				} else {
-					result.exactMatches = append(result.exactMatches, sug)
-				}
-			} else {
-				result.partialMatches = append(result.partialMatches, sug)
-			}
+		if lastFoundPosition == tokens[len(tokens)-1].position {
+			result.exactMatches = convertSearchDictResultToSuggestion(lastFoundDictWords, false)
+		} else {
+			result.partialMatches = convertSearchDictResultToSuggestion(lastFoundDictWords, false)
 		}
 
 		result.longestMatchPosition = lastFoundPosition
@@ -311,19 +310,34 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 	}
 }
 
-func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggestion) [][]Suggestion {
-	var results [][]Suggestion
+func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggestion) MoreDictionaryResult {
+	var result MoreDictionaryResult
 
 	select {
 	case <-ctx.Done():
-		return results
+		return result
 	default:
 		for _, sug := range words {
+			var moreSugs []Suggestion
+
 			search := []string{sug.Word}
 			searchResults := varnam.searchDictionary(ctx, search, true)
-			results = append(results, convertSearchDictResultToSuggestion(searchResults))
+			for i := range searchResults {
+				sug := Suggestion{
+					searchResults[i].word,
+					searchResults[i].weight,
+					searchResults[i].learnedOn,
+				}
+				if searchResults[i].match == searchResults[i].word {
+					result.exactWords = append(result.exactWords, sug)
+				} else {
+					moreSugs = append(moreSugs, sug)
+				}
+			}
+
+			result.moreSuggestions = append(result.moreSuggestions, moreSugs)
 		}
-		return results
+		return result
 	}
 }
 
@@ -436,14 +450,21 @@ func (varnam *Varnam) GetSuggestions(ctx context.Context, word string) []Suggest
 	case <-ctx.Done():
 		return sugs
 	default:
-		return convertSearchDictResultToSuggestion(varnam.searchDictionary(ctx, []string{word}, true))
+		return convertSearchDictResultToSuggestion(varnam.searchDictionary(ctx, []string{word}, true), true)
 	}
 }
 
-func convertSearchDictResultToSuggestion(searchResults []searchDictionaryResult) []Suggestion {
+func convertSearchDictResultToSuggestion(searchResults []searchDictionaryResult, word bool) []Suggestion {
 	var sugs []Suggestion
-	for _, searchDictResult := range searchResults {
-		sug := Suggestion{searchDictResult.word, searchDictResult.weight, searchDictResult.learnedOn}
+	for i := range searchResults {
+		sug := Suggestion{
+			searchResults[i].match,
+			searchResults[i].weight,
+			searchResults[i].learnedOn,
+		}
+		if word {
+			sug.Word = searchResults[i].word
+		}
 		sugs = append(sugs, sug)
 	}
 	return sugs
