@@ -1,10 +1,14 @@
 # Varnam 
 
-Varnam is an Indian language transliteration library. GoVarnam is a Go port of [libvarnam](https://github.com/varnamproject/libvarnam) with some core architectural changes. Not every part of libvarnam is ported.
+Varnam is an Indian language transliteration library. GoVarnam is a brand new Go port of [libvarnam](https://github.com/varnamproject/libvarnam) with some core architectural changes.
 
-It is stable to use daily as an input method. See it in action here: https://varnamproject.github.io/editor/
+It is stable to use daily as an input method. Try out different languages here: https://varnamproject.github.io/editor/
 
-An [Input Method Engine](https://en.wikipedia.org/wiki/Input_method) for Linux operating systems via IBus is available here: https://github.com/varnamproject/govarnam-ibus
+Malayalam has really good support in Varnam. We welcome improvements of all languages in Varnam.
+
+* An [Input Method Engine](https://en.wikipedia.org/wiki/Input_method) for GNU/Linux operating systems via IBus is available here: https://github.com/varnamproject/govarnam-ibus
+* For macOS, there is a [Varnam IME too](https://github.com/varnamproject/varnam-macOS).
+* Windows: Need Help
 
 ## Installation & Usage
 

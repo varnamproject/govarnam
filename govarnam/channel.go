@@ -93,14 +93,16 @@ func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string,
 		if len(dictResult.exactMatches) > 0 {
 			start := time.Now()
 
-			// Since partial words are in dictionary, exactMatch will be TRUE
-			// for pathway to a word. Hence we're calling this here
+			// Exact words can be determined finally
+			// with help of this function's result
 			moreFromDict := varnam.getMoreFromDictionary(ctx, dictResult.exactMatches)
 
 			if varnam.Debug {
 				fmt.Println("More dictionary results:", moreFromDict)
 			}
 
+			// dictResult.exactMatches will have both matches and exact words.
+			// getMoreFromDictionary() will separate out the exact words.
 			exactWords = moreFromDict.exactWords
 
 			// Intersection of slices.
