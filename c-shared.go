@@ -65,10 +65,16 @@ func makeCTransliterationResult(ctx context.Context, goResult govarnam.Translite
 		// They should be freed manually. GC won't pick it.
 		// The freeing should be done by programs using govarnam
 
-		cExactMatch := C.varray_init()
+		cExactWords := C.varray_init()
+		for _, sug := range goResult.ExactWords {
+			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
+			C.varray_push(cExactWords, cSug)
+		}
+
+		cExactMatches := C.varray_init()
 		for _, sug := range goResult.ExactMatches {
 			cSug := unsafe.Pointer(C.makeSuggestion(C.CString(sug.Word), C.int(sug.Weight), C.int(sug.LearnedOn)))
-			C.varray_push(cExactMatch, cSug)
+			C.varray_push(cExactMatches, cSug)
 		}
 
 		cDictionarySuggestions := C.varray_init()
@@ -95,7 +101,7 @@ func makeCTransliterationResult(ctx context.Context, goResult govarnam.Translite
 			C.varray_push(cGreedyTokenized, cSug)
 		}
 
-		*resultPointer = C.makeResult(cExactMatch, cDictionarySuggestions, cPatternDictionarySuggestions, cTokenizerSuggestions, cGreedyTokenized)
+		*resultPointer = C.makeResult(cExactWords, cExactMatches, cDictionarySuggestions, cPatternDictionarySuggestions, cTokenizerSuggestions, cGreedyTokenized)
 
 		return C.VARNAM_SUCCESS
 	}

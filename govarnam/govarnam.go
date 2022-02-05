@@ -90,11 +90,14 @@ type Suggestion struct {
 
 // TransliterationResult result
 type TransliterationResult struct {
-	// Exact matches found in dictionary if any
+	// Exactly found words in dictionary if there is any.
+	ExactWords []Suggestion
+
+	// Exact matches found in dictionary if there is any.
 	// From both patterns and normal dict
 	ExactMatches []Suggestion
 
-	// Possible words matching from dictionary
+	// Possible word suggestions from dictionary
 	DictionarySuggestions []Suggestion
 
 	// Possible words matching from patterns dictionary
@@ -319,6 +322,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 
 		case channelDictResult := <-dictSugsChan:
 			// From dictionary
+			result.ExactWords = channelDictResult.exactWords
 			result.ExactMatches = channelDictResult.exactMatches
 			result.DictionarySuggestions = channelDictResult.suggestions
 
@@ -345,6 +349,7 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 
 					// Sort everything now
 
+					result.ExactWords = SortSuggestions(result.ExactWords)
 					result.ExactMatches = SortSuggestions(result.ExactMatches)
 					result.DictionarySuggestions = SortSuggestions(result.DictionarySuggestions)
 					result.PatternDictionarySuggestions = SortSuggestions(result.PatternDictionarySuggestions)
@@ -401,7 +406,8 @@ func (varnam *Varnam) TransliterateAdvancedWithContext(ctx context.Context, word
 func flattenTR(result TransliterationResult) []Suggestion {
 	var combined []Suggestion
 
-	dictCombined := result.ExactMatches
+	dictCombined := result.ExactWords
+	dictCombined = append(dictCombined, result.ExactMatches...)
 	dictCombined = append(dictCombined, result.PatternDictionarySuggestions...)
 	dictCombined = append(dictCombined, result.DictionarySuggestions...)
 
@@ -410,6 +416,7 @@ func flattenTR(result TransliterationResult) []Suggestion {
 	 */
 	if len(result.GreedyTokenized) > 0 && utf8.RuneCountInString(result.GreedyTokenized[0].Word) < 3 {
 		combined = append(combined, result.GreedyTokenized...)
+		combined = append(combined, result.ExactWords...)
 		combined = append(combined, result.ExactMatches...)
 		combined = append(combined, result.PatternDictionarySuggestions...)
 		combined = append(combined, result.DictionarySuggestions...)

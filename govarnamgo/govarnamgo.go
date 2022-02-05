@@ -44,6 +44,7 @@ type Suggestion struct {
 
 // TransliterationResult result
 type TransliterationResult struct {
+	ExactWords                   []Suggestion
 	ExactMatches                 []Suggestion
 	DictionarySuggestions        []Suggestion
 	PatternDictionarySuggestions []Suggestion
@@ -110,6 +111,16 @@ func makeGoTransliterationResult(ctx context.Context, cResult *C.struct_Translit
 		return result
 	default:
 		var i int
+
+		var exactWords []Suggestion
+		i = 0
+		for i < int(C.varray_length(cResult.ExactWords)) {
+			cSug := (*C.Suggestion)(C.varray_get(cResult.ExactWords, C.int(i)))
+			sug := makeSuggestion(cSug)
+			exactWords = append(exactWords, sug)
+			i++
+		}
+		result.ExactWords = exactWords
 
 		var exactMatches []Suggestion
 		i = 0

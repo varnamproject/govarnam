@@ -12,9 +12,10 @@ Suggestion* makeSuggestion(char* word, int weight, int learned_on)
   return sug;
 }
 
-TransliterationResult* makeResult(varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized)
+TransliterationResult* makeResult(varray* exact_words, varray* exact_matches, varray* dictionary_suggestions, varray* pattern_dictionary_suggestions, varray* tokenizer_suggestions, varray* greedy_tokenized)
 {
   TransliterationResult *result = (TransliterationResult*) malloc (sizeof(TransliterationResult));
+  result->ExactWords = exact_words;
   result->ExactMatches = exact_matches;
   result->DictionarySuggestions = dictionary_suggestions;
   result->PatternDictionarySuggestions = pattern_dictionary_suggestions;
