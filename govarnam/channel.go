@@ -204,13 +204,13 @@ func (varnam *Varnam) channelGetFromPatternDictionary(ctx context.Context, word 
 				perMatchLimit = perMatchLimit / len(partialMatches)
 			}
 
-			for _, match := range partialMatches {
-				restOfWord := word[match.Length:]
+			for i := range partialMatches {
+				restOfWord := word[partialMatches[i].Length:]
 
 				filled := varnam.tokenizeRestOfWord(
 					ctx,
 					restOfWord,
-					[]Suggestion{match.Sug},
+					[]Suggestion{partialMatches[i].Sug},
 					perMatchLimit,
 				)
 

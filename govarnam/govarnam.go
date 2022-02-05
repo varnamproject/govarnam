@@ -485,8 +485,8 @@ func (varnam *Varnam) ReverseTransliterate(word string) ([]Suggestion, error) {
 		fmt.Println(tokens)
 	}
 
-	for i, token := range tokens {
-		for j, symbol := range token.symbols {
+	for i := range tokens {
+		for j, symbol := range tokens[i].symbols {
 			tokens[i].symbols[j].Value1 = symbol.Pattern
 			tokens[i].symbols[j].Value2 = symbol.Pattern
 		}

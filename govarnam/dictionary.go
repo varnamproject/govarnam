@@ -172,12 +172,12 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 	default:
 		vals = append(vals, words[0])
 
-		for i, word := range words {
+		for i := range words {
 			if i == 0 {
 				continue
 			}
 			likes += ", (?)"
-			vals = append(vals, word)
+			vals = append(vals, words[i])
 		}
 
 		// Thanks forpas
@@ -224,7 +224,8 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 	case <-ctx.Done():
 		return result
 	default:
-		// This is a temporary storage for tokenized words.
+		// This is a temporary storage for words made from tokens,
+		// which will be searched in dictionary.
 		// Similar to 'result' usage in tokenizeWord
 		var tokenizedWords []searchDictionaryResult
 
@@ -238,9 +239,10 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 			if t.tokenType == VARNAM_TOKEN_SYMBOL {
 				if i == 0 {
 					start := time.Now()
+
 					var toSearch []string
-					for _, possibility := range t.symbols {
-						toSearch = append(toSearch, getSymbolValue(possibility, 0))
+					for j := range t.symbols {
+						toSearch = append(toSearch, getSymbolValue(t.symbols[j], 0))
 					}
 
 					searchResults := varnam.searchDictionary(ctx, toSearch, false)
@@ -253,12 +255,12 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 					}
 				} else {
 					start := time.Now()
-					for j, tokenizedWord := range tokenizedWords {
-						if tokenizedWord.weight == -1 {
+					for j := range tokenizedWords {
+						if tokenizedWords[j].weight == -1 {
 							continue
 						}
 
-						till := tokenizedWord.match
+						till := tokenizedWords[j].match
 
 						var toSearch []string
 
@@ -272,13 +274,18 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 						if len(searchResults) > 0 {
 							tempFoundDictWords = append(tempFoundDictWords, searchResults...)
 
-							for k, searchResult := range searchResults {
+							for k := range searchResults {
 								if k == 0 {
-									tokenizedWords[j].match = searchResult.match
+									tokenizedWords[j].match = searchResults[k].match
 									continue
 								}
 
-								sug := searchDictionaryResult{searchResult.match, searchResult.word, 0, 0}
+								sug := searchDictionaryResult{
+									searchResults[k].match,
+									searchResults[k].word,
+									0,
+									0,
+								}
 								tokenizedWords = append(tokenizedWords, sug)
 							}
 						} else {
@@ -317,11 +324,12 @@ func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggest
 	case <-ctx.Done():
 		return result
 	default:
-		for _, sug := range words {
+		for i := range words {
 			var moreSugs []Suggestion
 
-			search := []string{sug.Word}
+			search := []string{words[i].Word}
 			searchResults := varnam.searchDictionary(ctx, search, true)
+
 			for i := range searchResults {
 				sug := Suggestion{
 					searchResults[i].word,

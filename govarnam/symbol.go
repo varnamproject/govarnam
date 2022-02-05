@@ -470,9 +470,9 @@ func getSymbolWeight(symbol Symbol) int {
 
 // Removes less weighted symbols
 func removeLessWeightedSymbols(tokens []Token) []Token {
-	for i, token := range tokens {
+	for i := range tokens {
 		var reducedSymbols []Symbol
-		for _, symbol := range token.symbols {
+		for _, symbol := range tokens[i].symbols {
 			// TODO should 0 be fixed for all languages ?
 			// Because this may differ according to data source
 			// from where symbol frequency was found out
