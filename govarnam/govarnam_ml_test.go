@@ -28,6 +28,7 @@ func TestMLTokenizer(t *testing.T) {
 
 	// TestML non lang word
 	nonLangWord := varnam.TransliterateAdvanced("Шаблон")
+	assertEqual(t, len(nonLangWord.ExactWords), 0)
 	assertEqual(t, len(nonLangWord.ExactMatches), 0)
 	assertEqual(t, len(nonLangWord.DictionarySuggestions), 0)
 	assertEqual(t, len(nonLangWord.PatternDictionarySuggestions), 0)
@@ -75,10 +76,21 @@ func TestMLLearn(t *testing.T) {
 	checkError(err)
 
 	// After learning
-	assertEqual(t, varnam.TransliterateAdvanced("malayalam").ExactMatches[0].Word, "മലയാളം")
+	result := varnam.TransliterateAdvanced("malayalam")
+	assertEqual(t, result.ExactWords[0].Word, "മലയാളം")
+	assertEqual(t, len(result.ExactMatches), 0)
+
 	assertEqual(t, varnam.TransliterateAdvanced("malayalaththil").DictionarySuggestions[0].Word, "മലയാളത്തിൽ")
 	assertEqual(t, varnam.TransliterateAdvanced("malayaalar").DictionarySuggestions[0].Word, "മലയാളർ")
 	assertEqual(t, varnam.TransliterateAdvanced("malaykk").DictionarySuggestions[0].Word, "മലയ്ക്ക്")
+
+	// Test exact matches
+	result = varnam.TransliterateAdvanced("malaya")
+	assertEqual(t, len(result.ExactWords), 0)
+	assertEqual(t, result.ExactMatches[0].Word, "മലയ")
+	assertEqual(t, result.ExactMatches[1].Word, "മലയാ")
+	assertEqual(t, result.DictionarySuggestions[0].Word, "മലയാളം")
+	assertEqual(t, len(result.PatternDictionarySuggestions), 0)
 
 	start := time.Now().UTC()
 	err = varnam.Learn("മലയാളത്തിൽ", 0)
@@ -104,7 +116,7 @@ func TestMLLearn(t *testing.T) {
 
 	// Learn the word again
 	// This word will now be at the top
-	// TestML if weight has increased by one now
+	// Test if weight has increased by one now
 	err = varnam.Learn("മലയാളത്തിൽ", 0)
 	checkError(err)
 
@@ -112,7 +124,7 @@ func TestMLLearn(t *testing.T) {
 	assertEqual(t, sug, Suggestion{"മലയാളത്തിൽ", VARNAM_LEARNT_WORD_MIN_WEIGHT + 1, sug.LearnedOn})
 
 	// Subsequent pattern can be smaller now (no need of "thth")
-	assertEqual(t, varnam.TransliterateAdvanced("malayalathil").ExactMatches[0].Word, "മലയാളത്തിൽ")
+	assertEqual(t, varnam.TransliterateAdvanced("malayalathil").ExactWords[0].Word, "മലയാളത്തിൽ")
 
 	// Try words with symbols that have many possibilities
 	// thu has 12 possibilties
@@ -138,7 +150,7 @@ func TestMLTrain(t *testing.T) {
 	err := varnam.Train("india", "ഇന്ത്യ")
 	checkError(err)
 
-	assertEqual(t, varnam.TransliterateAdvanced("india").ExactMatches[0].Word, "ഇന്ത്യ")
+	assertEqual(t, varnam.TransliterateAdvanced("india").ExactWords[0].Word, "ഇന്ത്യ")
 	assertEqual(t, varnam.TransliterateAdvanced("indiayil").PatternDictionarySuggestions[0].Word, "ഇന്ത്യയിൽ")
 
 	// Word with virama at end
@@ -148,7 +160,7 @@ func TestMLTrain(t *testing.T) {
 	err = varnam.Train("college", "കോളേജ്")
 	checkError(err)
 
-	assertEqual(t, varnam.TransliterateAdvanced("college").ExactMatches[0].Word, "കോളേജ്")
+	assertEqual(t, varnam.TransliterateAdvanced("college").ExactWords[0].Word, "കോളേജ്")
 	assertEqual(t, varnam.TransliterateAdvanced("collegeil").PatternDictionarySuggestions[0].Word, "കോളേജിൽ")
 
 	// TODO without e at the end
@@ -201,7 +213,7 @@ func TestMLAtomicChil(t *testing.T) {
 
 	err := varnam.Train("professor", "പ്രൊഫസര്‍")
 	checkError(err)
-	assertEqual(t, varnam.TransliterateAdvanced("professor").ExactMatches[0].Word, "പ്രൊഫസർ")
+	assertEqual(t, varnam.TransliterateAdvanced("professor").ExactWords[0].Word, "പ്രൊഫസർ")
 }
 
 func TestMLReverseTransliteration(t *testing.T) {
@@ -279,7 +291,7 @@ func TestMLLearnFromFile(t *testing.T) {
 
 	varnam.LearnFromFile(filePath)
 
-	assertEqual(t, len(varnam.TransliterateAdvanced("thaay_vaanile").ExactMatches) != 0, true)
+	assertEqual(t, len(varnam.TransliterateAdvanced("thaay_vaanile").ExactWords) != 0, true)
 
 	// Try learning from a frequency report
 
@@ -300,8 +312,8 @@ func TestMLLearnFromFile(t *testing.T) {
 	assertEqual(t, learnStatus.TotalWords, 6)
 	assertEqual(t, learnStatus.FailedWords, 1)
 
-	assertEqual(t, varnam.TransliterateAdvanced("nithyaharitha").ExactMatches[0].Weight, 120)
-	assertEqual(t, varnam.TransliterateAdvanced("melaappum").ExactMatches[0].Weight, 12)
+	assertEqual(t, varnam.TransliterateAdvanced("nithyaharitha").ExactWords[0].Weight, 120)
+	assertEqual(t, varnam.TransliterateAdvanced("melaappum").ExactWords[0].Weight, 12)
 }
 
 func TestMLTrainFromFile(t *testing.T) {
@@ -323,8 +335,8 @@ func TestMLTrainFromFile(t *testing.T) {
 	assertEqual(t, learnStatus.TotalWords, 3)
 	assertEqual(t, learnStatus.FailedWords, 1)
 
-	assertEqual(t, varnam.TransliterateAdvanced("mandalamkunnu").ExactMatches[0].Word, "മന്ദലാംകുന്ന്")
-	assertEqual(t, len(varnam.TransliterateAdvanced("something").ExactMatches), 0)
+	assertEqual(t, varnam.TransliterateAdvanced("mandalamkunnu").ExactWords[0].Word, "മന്ദലാംകുന്ന്")
+	assertEqual(t, len(varnam.TransliterateAdvanced("something").ExactWords), 0)
 }
 
 func TestMLExportAndImport(t *testing.T) {
@@ -385,7 +397,7 @@ func TestMLExportAndImport(t *testing.T) {
 	`)
 	varnam.Import(filePath)
 
-	assertEqual(t, varnam.TransliterateAdvanced("algeria").ExactMatches[0], Suggestion{
+	assertEqual(t, varnam.TransliterateAdvanced("algeria").ExactWords[0], Suggestion{
 		Word:      "അൾജീരിയ",
 		Weight:    VARNAM_LEARNT_WORD_MIN_WEIGHT + 25,
 		LearnedOn: 1531131220,

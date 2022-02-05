@@ -66,9 +66,9 @@ func TestLearn(t *testing.T) {
 	assertEqual(t, learnStatus.FailedWords, 1)
 
 	result, err := varnam.TransliterateAdvanced(context.Background(), "nithyaharitha")
-	assertEqual(t, result.ExactMatches[0].Weight, 120)
+	assertEqual(t, result.ExactWords[0].Weight, 120)
 	result, err = varnam.TransliterateAdvanced(context.Background(), "melaappum")
-	assertEqual(t, result.ExactMatches[0].Weight, 12)
+	assertEqual(t, result.ExactWords[0].Weight, 12)
 }
 
 func TestRecentlyLearnedWords(t *testing.T) {
