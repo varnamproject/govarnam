@@ -156,8 +156,16 @@ func makeDictionary(dictPath string) (*sql.DB, error) {
 	return conn, nil
 }
 
+type searchDictionaryType int32
+
+const (
+	searchMatches      searchDictionaryType = 0 // For checking whether there are words in dictionary starting with something
+	searchStartingWith searchDictionaryType = 1 // Find all words in dictionary starting with something
+	searchExactWords   searchDictionaryType = 2 // Find exact words in dictionary
+)
+
 // all - Search for words starting with the word
-func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all bool) []searchDictionaryResult {
+func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, searchType searchDictionaryType) []searchDictionaryResult {
 	likes := ""
 
 	var (
@@ -184,11 +192,13 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, all 
 		// CC BY-SA 4.0 licensed
 		// https://stackoverflow.com/q/68610241/1372424
 
-		if all {
-			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS match, w.* FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' AND learned_on > 0 ORDER BY weight DESC LIMIT ?"
-			vals = append(vals, varnam.DictionarySuggestionsLimit)
-		} else {
+		if searchType == searchMatches {
 			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS match, w.word AS word, MAX(w.weight), MAX(w.learned_on) FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' GROUP BY c.match"
+		} else if searchType == searchStartingWith {
+			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS match, w.* FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' AND w.word != c.match ORDER BY weight DESC LIMIT ?"
+			vals = append(vals, varnam.DictionarySuggestionsLimit)
+		} else if searchType == searchExactWords {
+			query = "SELECT * FROM words WHERE word IN ((?) " + likes + ")"
 		}
 
 		rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
@@ -245,13 +255,21 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 						toSearch = append(toSearch, getSymbolValue(t.symbols[j], 0))
 					}
 
-					searchResults := varnam.searchDictionary(ctx, toSearch, false)
+					searchResults := varnam.searchDictionary(
+						ctx,
+						toSearch,
+						searchMatches,
+					)
 
 					tempFoundDictWords = searchResults
 					tokenizedWords = searchResults
 
 					if LOG_TIME_TAKEN {
-						log.Printf("%s took %v\n", "getFromDictionaryToken0", time.Since(start))
+						log.Printf(
+							"%s took %v\n",
+							"getFromDictionaryToken0",
+							time.Since(start),
+						)
 					}
 				} else {
 					start := time.Now()
@@ -269,7 +287,11 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 							toSearch = append(toSearch, newTill)
 						}
 
-						searchResults := varnam.searchDictionary(ctx, toSearch, false)
+						searchResults := varnam.searchDictionary(
+							ctx,
+							toSearch,
+							searchMatches,
+						)
 
 						if len(searchResults) > 0 {
 							tempFoundDictWords = append(tempFoundDictWords, searchResults...)
@@ -324,27 +346,26 @@ func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggest
 	case <-ctx.Done():
 		return result
 	default:
+		wordsToSearch := []string{}
+
 		for i := range words {
-			var moreSugs []Suggestion
+			wordsToSearch = append(wordsToSearch, words[i].Word)
 
 			search := []string{words[i].Word}
-			searchResults := varnam.searchDictionary(ctx, search, true)
-
-			for i := range searchResults {
-				sug := Suggestion{
-					searchResults[i].word,
-					searchResults[i].weight,
-					searchResults[i].learnedOn,
-				}
-				if searchResults[i].match == searchResults[i].word {
-					result.exactWords = append(result.exactWords, sug)
-				} else {
-					moreSugs = append(moreSugs, sug)
-				}
-			}
-
-			result.moreSuggestions = append(result.moreSuggestions, moreSugs)
+			result.moreSuggestions = append(
+				result.moreSuggestions,
+				convertSearchDictResultToSuggestion(
+					varnam.searchDictionary(ctx, search, searchStartingWith),
+					true,
+				),
+			)
 		}
+
+		result.exactWords = convertSearchDictResultToSuggestion(
+			varnam.searchDictionary(ctx, wordsToSearch, searchExactWords),
+			true,
+		)
+
 		return result
 	}
 }
@@ -458,7 +479,10 @@ func (varnam *Varnam) GetSuggestions(ctx context.Context, word string) []Suggest
 	case <-ctx.Done():
 		return sugs
 	default:
-		return convertSearchDictResultToSuggestion(varnam.searchDictionary(ctx, []string{word}, true), true)
+		return convertSearchDictResultToSuggestion(
+			varnam.searchDictionary(ctx, []string{word}, searchStartingWith),
+			true,
+		)
 	}
 }
 

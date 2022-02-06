@@ -373,7 +373,7 @@ func TestMLExportAndImport(t *testing.T) {
 	varnam.Import(exportFilePath)
 
 	for _, wordInfo := range words {
-		results := varnam.searchDictionary(context.Background(), []string{wordInfo.word}, false)
+		results := varnam.searchDictionary(context.Background(), []string{wordInfo.word}, searchMatches)
 
 		assertEqual(t, len(results) > 0, true)
 	}
