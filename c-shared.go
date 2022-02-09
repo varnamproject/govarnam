@@ -441,19 +441,7 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 
 	handle := getVarnamHandle(varnamHandleID)
 
-	var goSearchCriteria govarnam.Symbol
-	goSearchCriteria.Identifier = int(searchCriteria.Identifier)
-	goSearchCriteria.Type = int(searchCriteria.Type)
-	goSearchCriteria.MatchType = int(searchCriteria.MatchType)
-	goSearchCriteria.Pattern = C.GoString(searchCriteria.Pattern)
-	goSearchCriteria.Value1 = C.GoString(searchCriteria.Value1)
-	goSearchCriteria.Value2 = C.GoString(searchCriteria.Value2)
-	goSearchCriteria.Value3 = C.GoString(searchCriteria.Value3)
-	goSearchCriteria.Tag = C.GoString(searchCriteria.Tag)
-	goSearchCriteria.Weight = int(searchCriteria.Weight)
-	goSearchCriteria.Priority = int(searchCriteria.Priority)
-	goSearchCriteria.AcceptCondition = int(searchCriteria.AcceptCondition)
-	goSearchCriteria.Flags = int(searchCriteria.Flags)
+	goSearchCriteria := cSymbolToGoSymbol(searchCriteria)
 
 	var results []govarnam.Symbol
 
@@ -465,20 +453,7 @@ func varnam_search_symbol_table(varnamHandleID C.int, id C.int, searchCriteria C
 
 		cResult := C.varray_init()
 		for _, symbol := range results {
-			cSymbol := unsafe.Pointer(C.makeSymbol(
-				C.int(symbol.Identifier),
-				C.int(symbol.Type),
-				C.int(symbol.MatchType),
-				C.CString(symbol.Pattern),
-				C.CString(symbol.Value1),
-				C.CString(symbol.Value2),
-				C.CString(symbol.Value3),
-				C.CString(symbol.Tag),
-				C.int(symbol.Weight),
-				C.int(symbol.Priority),
-				C.int(symbol.AcceptCondition),
-				C.int(symbol.Flags),
-			))
+			cSymbol := unsafe.Pointer(goSymbolToCSymbol(symbol))
 			C.varray_push(cResult, cSymbol)
 		}
 		*resultPointer = cResult
@@ -638,6 +613,16 @@ func vm_create_token(varnamHandleID C.int, pattern *C.char, value1 *C.char, valu
 		cintToBool(buffered),
 	)
 
+	return checkError(handle.err)
+}
+
+//export vm_delete_token
+func vm_delete_token(varnamHandleID C.int, searchCriteria C.struct_Symbol_t) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+
+	goSearchCriteria := cSymbolToGoSymbol(searchCriteria)
+
+	handle.err = handle.varnam.VMDeleteToken(goSearchCriteria)
 	return checkError(handle.err)
 }
 
