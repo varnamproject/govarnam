@@ -529,8 +529,7 @@ func NewSearchSymbol() Symbol {
 	return symbol
 }
 
-// SearchSymbolTable For searching symbol table
-func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symbol) ([]Symbol, error) {
+func (varnam *Varnam) makeSearchSymbolQuery(queryPrefix string, searchCriteria Symbol) (string, []interface{}) {
 	var (
 		clauses []string
 		values  []interface{}
@@ -572,7 +571,7 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 	addItem("accept_condition", searchCriteria.AcceptCondition)
 	addItem("flags", searchCriteria.Flags)
 
-	query := "SELECT * FROM symbols"
+	query := queryPrefix
 
 	if len(values) > 0 {
 		query += " WHERE " + strings.Join(clauses, " AND ")
@@ -582,12 +581,18 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 		fmt.Println(query, values)
 	}
 
+	return query, values
+}
+
+// SearchSymbolTable For searching symbol table
+func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symbol) ([]Symbol, error) {
 	var results []Symbol
 
 	select {
 	case <-ctx.Done():
 		return results, nil
 	default:
+		query, values := varnam.makeSearchSymbolQuery("SELECT * FROM symbols", searchCriteria)
 		rows, err := varnam.vstConn.QueryContext(ctx, query, values...)
 		if err != nil {
 			return nil, err

@@ -279,6 +279,17 @@ func (varnam *Varnam) vmAlreadyPersisted(pattern string, value1 string, matchTyp
 	return len(result) > 0, nil
 }
 
+// VMDeleteToken Removes a token from VST
+func (varnam *Varnam) VMDeleteToken(searchCriteria Symbol) error {
+	query, values := varnam.makeSearchSymbolQuery("DELETE FROM symbols", searchCriteria)
+	_, err := varnam.vstConn.Exec(query, values...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Makes a prefix tree. This fills up the flags column
 // TODO incomplete
 func (varnam *Varnam) vmMakePrefixTree() error {
