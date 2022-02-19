@@ -110,13 +110,15 @@ func makeDictionary(dictPath string) (*sql.DB, error) {
 				INSERT INTO words_fts (rowid, word)
 				VALUES (new.id, new.word);
 			END;
-		
+		`,
+		`
 		CREATE TRIGGER words_ad AFTER DELETE ON words
 			BEGIN
 				INSERT INTO words_fts (words_fts, rowid, word)
 				VALUES ('delete', old.id, old.word);
 			END;
-		
+		`,
+		`
 		CREATE TRIGGER words_au AFTER UPDATE ON words
 			BEGIN
 				INSERT INTO words_fts (words_fts, rowid, word)
