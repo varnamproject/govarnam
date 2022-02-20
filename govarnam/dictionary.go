@@ -8,13 +8,17 @@ package govarnam
 
 import (
 	"context"
-	sql "database/sql"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path"
 	"time"
 )
+
+//go:embed migrations/*.sql
+var embedFS embed.FS
 
 // DictionaryResult result from dictionary search
 type DictionaryResult struct {
@@ -54,12 +58,34 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 	var err error
 
 	if !fileExists(dictPath) {
-		log.Printf("Making Varnam Learnings File at %s\n", dictPath)
-		os.MkdirAll(path.Dir(dictPath), 0750)
+		log.Printf("Making Varnam Learnings Dir for %s\n", dictPath)
+		err := os.MkdirAll(path.Dir(dictPath), 0750)
+		if err != nil {
+			return err
+		}
+	}
 
-		varnam.dictConn, err = makeDictionary(dictPath)
-	} else {
-		varnam.dictConn, err = openDB(dictPath)
+	varnam.dictConn, err = openDB(dictPath)
+	if err != nil {
+		return err
+	}
+
+	varnam.DictPath = dictPath
+
+	// cd into migrations directory
+	migrationsFS, err := fs.Sub(embedFS, "migrations")
+	if err != nil {
+		return err
+	}
+
+	mg, err := InitMigrate(varnam.dictConn, migrationsFS)
+	if err != nil {
+		return err
+	}
+
+	ranMigrations, err := mg.Run()
+	if ranMigrations != 0 {
+		log.Printf("ran %d migrations", ranMigrations)
 	}
 
 	// Since SQLite v3.12.0, default page size is 4096
@@ -67,95 +93,7 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 	// WAL makes writes & reads happen concurrently => significantly fast
 	varnam.dictConn.Exec("PRAGMA journal_mode=wal;")
 
-	varnam.DictPath = dictPath
-
 	return err
-}
-
-func makeDictionary(dictPath string) (*sql.DB, error) {
-	conn, err := openDB(dictPath)
-	if err != nil {
-		return nil, err
-	}
-
-	queries := []string{
-		`
-		CREATE TABLE IF NOT EXISTS metadata (
-			key TEXT UNIQUE,
-			value TEXT
-		);
-		`,
-		`
-		CREATE TABLE IF NOT EXISTS words (
-			id INTEGER PRIMARY KEY,
-			word TEXT UNIQUE,
-			weight INTEGER DEFAULT 1,
-			learned_on INTEGER
-		);
-		`,
-		`
-		CREATE VIRTUAL TABLE IF NOT EXISTS words_fts USING FTS5(
-			word,
-			weight UNINDEXED,
-			learned_on UNINDEXED,
-			content='words',
-			content_rowid='id',
-			tokenize='ascii',
-			prefix='1 2',
-		);
-		`,
-		`
-		CREATE TRIGGER words_ai AFTER INSERT ON words
-			BEGIN
-				INSERT INTO words_fts (rowid, word)
-				VALUES (new.id, new.word);
-			END;
-		`,
-		`
-		CREATE TRIGGER words_ad AFTER DELETE ON words
-			BEGIN
-				INSERT INTO words_fts (words_fts, rowid, word)
-				VALUES ('delete', old.id, old.word);
-			END;
-		`,
-		`
-		CREATE TRIGGER words_au AFTER UPDATE ON words
-			BEGIN
-				INSERT INTO words_fts (words_fts, rowid, word)
-				VALUES ('delete', old.id, old.word);
-				INSERT INTO words_fts (rowid, word)
-				VALUES (new.id, new.word);
-			END;
-		`,
-		`
-		CREATE TABLE IF NOT EXISTS patterns (
-			pattern TEXT NOT NULL COLLATE NOCASE,
-			word_id INTEGER NOT NULL,
-			FOREIGN KEY(word_id) REFERENCES words(id) ON DELETE CASCADE,
-			PRIMARY KEY(pattern, word_id)
-		);
-		`}
-
-	// Note: FTS can't be applied on patterns because
-	// we require partial word search which FTS doesn't support
-
-	for _, query := range queries {
-		ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancelFunc()
-
-		stmt, err := conn.PrepareContext(ctx, query)
-		if err != nil {
-			return nil, err
-		}
-		defer stmt.Close()
-
-		_, err = stmt.ExecContext(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return conn, nil
 }
 
 type searchDictionaryType int32
@@ -369,42 +307,6 @@ func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggest
 		)
 
 		return result
-	}
-}
-
-// A simpler function to get matches from pattern dictionary
-// Gets incomplete matches.
-// Eg: If pattern = "chin", will return "china"
-// TODO better function name ? Ambiguous ?
-func (varnam *Varnam) getTrailingFromPatternDictionary(ctx context.Context, pattern string) []Suggestion {
-	var results []Suggestion
-
-	select {
-	case <-ctx.Done():
-		return results
-	default:
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT word, weight FROM words WHERE id IN (SELECT word_id FROM patterns WHERE pattern LIKE ?) ORDER BY weight DESC LIMIT 10", pattern+"%")
-
-		if err != nil {
-			log.Print(err)
-			return results
-		}
-
-		defer rows.Close()
-
-		for rows.Next() {
-			var item Suggestion
-			rows.Scan(&item.Word, &item.Weight)
-			item.Weight += VARNAM_LEARNT_WORD_MIN_WEIGHT
-			results = append(results, item)
-		}
-
-		err = rows.Err()
-		if err != nil {
-			log.Print(err)
-		}
-
-		return results
 	}
 }
 

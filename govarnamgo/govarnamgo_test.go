@@ -33,10 +33,6 @@ func assertEqual(t *testing.T, a interface{}, b interface{}) {
 }
 
 func setUp(schemeID string) {
-	var err error
-	testTempDir, err = ioutil.TempDir("", "govarnam_test")
-	checkError(err)
-
 	varnam, err := InitFromID(schemeID)
 	checkError(err)
 
@@ -71,6 +67,10 @@ func tearDown() {
 }
 
 func TestMain(m *testing.M) {
+	var err error
+	testTempDir, err = ioutil.TempDir("", "govarnam_test")
+	checkError(err)
+
 	setUp("ml")
 	setUp("ml-inscript")
 	m.Run()
