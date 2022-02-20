@@ -96,6 +96,12 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 	return err
 }
 
+// ReIndexDictionary re-indexes dictionary
+func (varnam *Varnam) ReIndexDictionary() error {
+	_, err := varnam.dictConn.Exec("INSERT INTO words_fts(words_fts) VALUES('rebuild');")
+	return err
+}
+
 type searchDictionaryType int32
 
 const (

@@ -35,6 +35,8 @@ func main() {
 	debugFlag := flag.Bool("debug", false, "Enable debugging outputs")
 	schemeFlag := flag.String("s", "", "Scheme ID")
 
+	reIndexFlag := flag.Bool("reindex", false, "Reindex user dictionary database")
+
 	learnFlag := flag.Bool("learn", false, "Learn a word")
 	unlearnFlag := flag.Bool("unlearn", false, "Unlearn a word")
 	trainFlag := flag.Bool("train", false, "Train a word with a particular pattern. 2 Arguments: Pattern & Word")
@@ -77,7 +79,13 @@ func main() {
 
 	args := flag.Args()
 
-	if *trainFlag {
+	if *reIndexFlag {
+		err := varnam.ReIndexDictionary()
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		fmt.Println("Successfully re-indexed dictionary.")
+	} else if *trainFlag {
 		pattern := args[0]
 		word := args[1]
 
