@@ -124,14 +124,26 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, sear
 	case <-ctx.Done():
 		return results
 	default:
-		vals = append(vals, words[0])
+		if searchType == searchExactWords {
+			vals = append(vals, words[0])
+		} else {
+			// FTS5 MATCH requires strings to be wrapped in double quotes
+			// https://stackoverflow.com/q/28971633
+			// https://github.com/varnamproject/govarnam/issues/27
+			vals = append(vals, "\""+words[0]+"\"")
+		}
 
 		for i := range words {
 			if i == 0 {
 				continue
 			}
 			likes += ", (?)"
-			vals = append(vals, words[i])
+
+			if searchType == searchExactWords {
+				vals = append(vals, words[i])
+			} else {
+				vals = append(vals, "\""+words[i]+"\"")
+			}
 		}
 
 		// Thanks forpas
@@ -139,9 +151,30 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, sear
 		// https://stackoverflow.com/q/68610241/1372424
 
 		if searchType == searchMatches {
-			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS match, w.word AS word, MAX(w.weight), MAX(w.learned_on) FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' GROUP BY c.match"
+			query = `
+				WITH cte(match) AS (VALUES (?) ` + likes + `)
+				SELECT
+					SUBSTR(c.match, 2, LENGTH(c.match) - 2) AS match, -- Result will be double quoted, remove it
+					w.word AS word,
+					MAX(w.weight),
+					MAX(w.learned_on)
+				FROM words_fts w
+				INNER JOIN cte c
+					ON w.word MATCH c.match || '*'
+				GROUP BY c.match
+				`
 		} else if searchType == searchStartingWith {
-			query = "WITH cte(match) AS (VALUES (?) " + likes + ") SELECT c.match AS match, w.* FROM words_fts w INNER JOIN cte c ON w.word MATCH c.match || '*' AND w.word != c.match ORDER BY weight DESC LIMIT ?"
+			query = `
+				WITH cte(match) AS (VALUES (?) ` + likes + `)
+				SELECT
+					SUBSTR(c.match, 2, LENGTH(c.match) - 1) AS match,
+					w.*
+				FROM words_fts w
+				INNER JOIN cte c
+					ON w.word MATCH c.match || '*'
+					AND w.word != c.match
+				ORDER BY weight DESC LIMIT ?
+				`
 			vals = append(vals, varnam.DictionarySuggestionsLimit)
 		} else if searchType == searchExactWords {
 			query = "SELECT * FROM words WHERE word IN ((?) " + likes + ")"
