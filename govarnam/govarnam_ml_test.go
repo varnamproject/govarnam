@@ -195,6 +195,26 @@ func TestMLTrain(t *testing.T) {
 	assertEqual(t, err.Error(), "nothing to unlearn")
 }
 
+func TestAnyCharacterInputWillWorkFine(t *testing.T) {
+	// After working with Ruby on Rails for a while,
+	// I got the habit of describing method names elaborately
+	varnam := getVarnamInstance("ml")
+
+	varnam.Learn("ഒന്നും", 0)
+	varnam.Learn("പകൽ", 0)
+	assertEqual(
+		t,
+		varnam.TransliterateAdvanced("onnum!@#$%^&*(പകൽ);'[]?.,`*/kall").DictionarySuggestions[0].Word,
+		"ഒന്നും!@#$%^&*(പകൽ);'[]?.,`*ഽകല്ല്",
+	)
+
+	assertEqual(
+		t,
+		varnam.Transliterate("1-bi yil paTTikkunna kutti?!")[0].Word,
+		"1-ബി യിൽ പഠിക്കുന്ന കുട്ടി?!",
+	)
+}
+
 // TestML zero width joiner/non-joiner things
 func TestMLZW(t *testing.T) {
 	varnam := getVarnamInstance("ml")
