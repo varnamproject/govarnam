@@ -125,9 +125,3 @@ It's good to install an IME to test changes you make to the library live.
 * `patterns` table in learnings DB won't store malayalam patterns. Instead, for each input, all possible malayalam words are calculated (from `symbols` VARNAM_MATCH_ALL) and searched in `words`. These are returned as suggestions. Previously, `pattern` would store every pattern to a word. english => malayalam.
 
 * `patterns` in govarnam is used solely for English words. `Computer => കമ്പ്യൂട്ടർ`. These English words won't work out with our VST tokenizer cause the words are not really transliterable in our language. It would be `kambyoottar => Computer`
-
-### Release Process
-
-* Update version in `constants.go`
-* git tag
-* make build release
