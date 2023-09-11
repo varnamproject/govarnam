@@ -36,7 +36,7 @@ temp-pc:
 	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
 
 	${SED} "s#/include/libgovarnam##g" govarnam.pc
-	${SED} "s#/lib##g" govarnam.pc
+	${SED} "s#/lib\$$##g" govarnam.pc
 
 install-script:
 	cp install.sh.in install.sh
