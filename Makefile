@@ -19,7 +19,7 @@ LIB_NAME := libgovarnam.so
 
 ifeq ($(UNAME), Darwin)
   SED := sed -i ""
-	LIB_NAME = libgovarnam.dylib
+  LIB_NAME = libgovarnam.dylib
 endif
 
 VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}'
