@@ -8,6 +8,7 @@ ARG1=${1:-install}
 SUDO=${SUDO:-sudo}
 
 if [ "$ARG1" == "install" ]; then
+  "${SUDO}" mkdir -p "/usr/local/bin/"
   "${SUDO}" cp "$SCRIPT_DIR/varnamcli" "@INSTALL_PREFIX@/bin/varnamcli"
   
   "${SUDO}" mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
