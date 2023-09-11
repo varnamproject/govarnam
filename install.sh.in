@@ -18,7 +18,7 @@ if [ "$ARG1" == "install" ]; then
 
   "${SUDO}" mkdir -p "@INSTALL_PREFIX@/include/libgovarnam"
   "${SUDO}" cp "$SCRIPT_DIR/"*.h "@INSTALL_PREFIX@/include/libgovarnam/"
-  "${SUDO}" ldconfig
+  "${SUDO}" ldconfig || true
 
   "${SUDO}" mkdir -p "@INSTALL_PREFIX@/share/varnam/schemes"
 
