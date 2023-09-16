@@ -1,33 +1,37 @@
 #!/bin/bash
 
+set -e
+
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 ARG1=${1:-install}
+SUDO=${SUDO:-sudo}
 
 if [ "$ARG1" == "install" ]; then
-  sudo cp "$SCRIPT_DIR/varnamcli" "@INSTALL_PREFIX@/bin/varnamcli"
+  "${SUDO}" mkdir -p "/usr/local/bin/"
+  "${SUDO}" cp "$SCRIPT_DIR/varnamcli" "@INSTALL_PREFIX@/bin/varnamcli"
   
-  sudo mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
-  sudo cp "$SCRIPT_DIR/@LIB_NAME@" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@"
-  sudo ln -s "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@"
-  sudo cp "$SCRIPT_DIR/govarnam.pc" "@INSTALL_PREFIX@/lib/pkgconfig/"
+  "${SUDO}" mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
+  "${SUDO}" cp "$SCRIPT_DIR/@LIB_NAME@" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@"
+  "${SUDO}" ln -s "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@"
+  "${SUDO}" cp "$SCRIPT_DIR/govarnam.pc" "@INSTALL_PREFIX@/lib/pkgconfig/"
 
-  sudo mkdir -p "@INSTALL_PREFIX@/include/libgovarnam"
-  sudo cp "$SCRIPT_DIR/"*.h "@INSTALL_PREFIX@/include/libgovarnam/"
-  sudo ldconfig
+  "${SUDO}" mkdir -p "@INSTALL_PREFIX@/include/libgovarnam"
+  "${SUDO}" cp "$SCRIPT_DIR/"*.h "@INSTALL_PREFIX@/include/libgovarnam/"
+  "${SUDO}" ldconfig || true
 
-  sudo mkdir -p "@INSTALL_PREFIX@/share/varnam/schemes"
+  "${SUDO}" mkdir -p "@INSTALL_PREFIX@/share/varnam/schemes"
 
   msg="Installation finished"
   echo "$msg"
 
   notify-send "$msg" &> /dev/null || true
 elif [ "$ARG1" == "uninstall" ]; then
-  sudo rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
-  sudo rm "@INSTALL_PREFIX@/include/libgovarnam/"*
-  sudo rmdir "@INSTALL_PREFIX@/include/libgovarnam"
-  sudo rm "@INSTALL_PREFIX@/share/varnam/schemes/"*
-  sudo rmdir "@INSTALL_PREFIX@/share/varnam/schemes/"
+  "${SUDO}" rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
+  "${SUDO}" rm "@INSTALL_PREFIX@/include/libgovarnam/"*
+  "${SUDO}" rmdir "@INSTALL_PREFIX@/include/libgovarnam"
+  "${SUDO}" rm "@INSTALL_PREFIX@/share/varnam/schemes/"*
+  "${SUDO}" rmdir "@INSTALL_PREFIX@/share/varnam/schemes/"
 
   msg="Uninstallation finished"
   echo $msg
