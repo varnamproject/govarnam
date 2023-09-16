@@ -21,7 +21,6 @@ SO_NAME := $(shell (echo $(VERSION) | cut -d. -f1))
 ifeq ($(UNAME), Darwin)
   SED := sed -i ""
   LIB_NAME = libgovarnam.dylib
-else
   EXT_LDFLAGS = -extldflags -Wl,-soname,$(LIB_NAME).$(SO_NAME)
 endif
 
