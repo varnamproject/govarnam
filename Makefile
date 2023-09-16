@@ -16,14 +16,15 @@ UNAME := $(shell uname)
 
 SED := sed -i
 LIB_NAME := libgovarnam.so
+SO_NAME := $(shell (echo $(VERSION) | cut -d. -f1))
 
 ifeq ($(UNAME), Darwin)
   SED := sed -i ""
   LIB_NAME = libgovarnam.dylib
+  EXT_LDFLAGS = -extldflags -Wl,-soname,$(LIB_NAME).$(SO_NAME)
 endif
 
-VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}'
-
+VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}' $(EXT_LDFLAGS)
 pc:
 	cp govarnam.pc.in govarnam.pc
 	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" govarnam.pc
