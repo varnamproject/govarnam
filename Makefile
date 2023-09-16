@@ -19,7 +19,7 @@ LIB_NAME := libgovarnam.so
 
 ifeq ($(UNAME), Darwin)
   SED := sed -i ""
-	LIB_NAME = libgovarnam.dylib
+  LIB_NAME = libgovarnam.dylib
 endif
 
 VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}'
@@ -36,7 +36,7 @@ temp-pc:
 	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
 
 	${SED} "s#/include/libgovarnam##g" govarnam.pc
-	${SED} "s#/lib##g" govarnam.pc
+	${SED} "s#/lib\$$##g" govarnam.pc
 
 install-script:
 	cp install.sh.in install.sh
