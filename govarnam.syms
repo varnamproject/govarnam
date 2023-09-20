@@ -1,0 +1,9 @@
+{
+        global:
+                varnam_*;
+                varray_*;
+                vm_*;
+        local:
+                *;
+};
+
