@@ -17,11 +17,13 @@ UNAME := $(shell uname)
 SED := sed -i
 LIB_NAME := libgovarnam.so
 SO_NAME := $(shell (echo $(VERSION) | cut -d. -f1))
+CURDIR := $(shell pwd)
 
 ifeq ($(UNAME), Darwin)
   SED := sed -i ""
   LIB_NAME = libgovarnam.dylib
-  EXT_LDFLAGS = -extldflags -Wl,-soname,$(LIB_NAME).$(SO_NAME)
+else
+  EXT_LDFLAGS = -extldflags "-Wl,-soname,$(LIB_NAME).$(SO_NAME),--version-script,$(CURDIR)/govarnam.syms"
 endif
 
 VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}' $(EXT_LDFLAGS)
