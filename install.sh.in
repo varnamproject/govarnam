@@ -9,7 +9,9 @@ SUDO=${SUDO:-sudo}
 
 if [ "$ARG1" == "install" ]; then
   "${SUDO}" mkdir -p "/usr/local/bin/"
-  "${SUDO}" cp "$SCRIPT_DIR/varnamcli" "${DESTDIR}@INSTALL_PREFIX@/bin/varnamcli"
+  if [ -f $SCRIPT_DIR/varnamcli ]; then
+    "${SUDO}" cp "$SCRIPT_DIR/varnamcli" "${DESTDIR}@INSTALL_PREFIX@/bin/varnamcli"
+  fi
   
   "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig"
   "${SUDO}" cp "$SCRIPT_DIR/@LIB_NAME@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@"
