@@ -5,6 +5,7 @@ default: build ;
 
 CLI_BIN := varnamcli
 INSTALL_PREFIX := $(or ${PREFIX},${PREFIX},/usr/local)
+LIBDIR := /lib
 
 # Try to get the commit hash from git
 LAST_COMMIT := $(or $(shell git rev-parse --short HEAD 2> /dev/null),"UNKNOWN")
@@ -14,13 +15,12 @@ BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z")
 RELEASE_NAME := govarnam-${VERSION}-${shell uname -m}
 UNAME := $(shell uname)
 
-SED := sed -i
+SED := sed
 LIB_NAME := libgovarnam.so
 SO_NAME := $(shell (echo $(VERSION) | cut -d. -f1))
 CURDIR := $(shell pwd)
 
 ifeq ($(UNAME), Darwin)
-  SED := sed -i ""
   LIB_NAME = libgovarnam.dylib
 else
   EXT_LDFLAGS = -extldflags "-Wl,-soname,$(LIB_NAME).$(SO_NAME),--version-script,$(CURDIR)/govarnam.syms"
@@ -28,24 +28,29 @@ endif
 
 VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}' $(EXT_LDFLAGS)
 pc:
-	cp govarnam.pc.in govarnam.pc
-	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" govarnam.pc
-	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
+	${SED} -e "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" \
+	       -e "s#@VERSION@#${VERSION}#g" \
+	       -e "s#@LIBDIR@#${LIBDIR}#g" \
+		govarnam.pc.in > govarnam.pc.tmp
+	mv govarnam.pc.tmp govarnam.pc
 
 # Used only for building the CLI
 temp-pc:
-	cp govarnam.pc.in govarnam.pc
-	${SED} "s#@INSTALL_PREFIX@#$(realpath .)#g" govarnam.pc
-	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
-
-	${SED} "s#/include/libgovarnam##g" govarnam.pc
-	${SED} "s#/lib\$$##g" govarnam.pc
+	${SED} -e "s#@INSTALL_PREFIX@#$(realpath .)#g" \
+	       -e "s#@VERSION@#${VERSION}#g" \
+	       -e "s#@LIBDIR@#${LIBDIR}#g" \
+	       -e "s#/include/libgovarnam##g" \
+	       -e "s#/lib\$$##g" \
+	       govarnam.pc.in > govarnam.pc.tmp
+	mv govarnam.pc.tmp govarnam.pc
 
 install-script:
-	cp install.sh.in install.sh
-	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
-	${SED} "s#@VERSION@#${VERSION}#g" install.sh
-	${SED} "s#@LIB_NAME@#${LIB_NAME}#g" install.sh
+	${SED} -e "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" \
+	       -e "s#@VERSION@#${VERSION}#g" \
+	       -e "s#@LIBDIR@#${LIBDIR}#g" \
+	       -e "s#@LIB_NAME@#${LIB_NAME}#g" \
+               install.sh.in > install.sh.tmp
+	mv install.sh.tmp install.sh
 	chmod +x install.sh
 
 install:
