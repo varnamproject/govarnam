@@ -11,11 +11,11 @@ if [ "$ARG1" == "install" ]; then
   "${SUDO}" mkdir -p "/usr/local/bin/"
   "${SUDO}" cp "$SCRIPT_DIR/varnamcli" "${DESTDIR}@INSTALL_PREFIX@/bin/varnamcli"
 
-  "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig"
-  "${SUDO}" cp "$SCRIPT_DIR/@LIB_NAME@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@"
-  "${SUDO}" ln -sf "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@"
-  "${SUDO}" ln -sf "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@SO_NAME@"
-  "${SUDO}" cp "$SCRIPT_DIR/govarnam.pc" "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig/"
+  "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@@LIBDIR@/pkgconfig"
+  "${SUDO}" cp "$SCRIPT_DIR/@LIB_NAME@" "${DESTDIR}@INSTALL_PREFIX@@LIBDIR@/@LIB_NAME@.@VERSION@"
+  "${SUDO}" ln -s "@INSTALL_PREFIX@@LIBDIR@/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@@LIBDIR@/@LIB_NAME@"
+  "${SUDO}" ln -s "@INSTALL_PREFIX@@LIBDIR@/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@@LIBDIR@/@LIB_NAME@.@SO_NAME@"
+  "${SUDO}" cp "$SCRIPT_DIR/govarnam.pc" "${DESTDIR}@INSTALL_PREFIX@@LIBDIR@/pkgconfig/"
 
   "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam"
   "${SUDO}" cp "$SCRIPT_DIR/"*.h "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam/"
@@ -28,7 +28,7 @@ if [ "$ARG1" == "install" ]; then
 
   notify-send "$msg" &> /dev/null || true
 elif [ "$ARG1" == "uninstall" ]; then
-  "${SUDO}" rm -f "${DESTDIR}@INSTALL_PREFIX@/bin/varnamcli" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@" "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
+  "${SUDO}" rm -f "${DESTDIR}@INSTALL_PREFIX@/bin/varnamcli" "${DESTDIR}@INSTALL_PREFIX@@LIBDIR@/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@@LIBDIR@/@LIB_NAME@" "${DESTDIR}@INSTALL_PREFIX@@LIBDIR@/pkgconfig/govarnam.pc"
   "${SUDO}" rm -f "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam/"*
   "${SUDO}" rmdir "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam" || true
   "${SUDO}" rm -f "${DESTDIR}@INSTALL_PREFIX@/share/varnam/schemes/"* 
