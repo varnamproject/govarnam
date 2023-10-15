@@ -48,11 +48,9 @@ type VSTMakerConfig struct {
 // Varnam config
 type Varnam struct {
 	VSTPath     string
-	DictPath    string // deprecated
 	DictsConfig []DictionaryConfig
 
-	vstConn  *sql.DB
-	dictConn *sql.DB
+	vstConn *sql.DB
 
 	LangRules     LangRules
 	SchemeDetails SchemeDetails
@@ -258,7 +256,7 @@ func (varnam *Varnam) setDefaultConfig() {
 	}
 }
 
-// SortSuggestions by weight and learned on time
+// SortSuggestions by learned on time and weight
 func SortSuggestions(sugs []Suggestion) []Suggestion {
 	// TODO write tests
 	sort.SliceStable(sugs, func(i, j int) bool {
@@ -309,12 +307,12 @@ func (varnam *Varnam) transliterate(ctx context.Context, word string) (
 		exactTokens = removeNonExactTokens(exactTokens)
 
 		if varnam.DictionaryMatchExact {
-			go varnam.channelGetFromDictionary(ctx, word, &exactTokens, dictSugsChan)
+			go varnam.channelGetFromDictionaries(ctx, word, &exactTokens, dictSugsChan)
 		} else {
-			go varnam.channelGetFromDictionary(ctx, word, tokensPointer, dictSugsChan)
+			go varnam.channelGetFromDictionaries(ctx, word, tokensPointer, dictSugsChan)
 		}
 
-		go varnam.channelGetFromPatternDictionary(ctx, word, patternDictSugsChan)
+		go varnam.channelGetFromPatternDictionaries(ctx, word, patternDictSugsChan)
 		go varnam.channelTokensToGreedySuggestions(ctx, &exactTokens, greedyTokenizedChan)
 
 		tokenizerSugsChan := make(chan []Suggestion)
@@ -515,7 +513,10 @@ func Init(vstPath string, dictPath string) (*Varnam, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = varnam.InitDict(dictPath)
+
+	dictConfig := DictionaryConfig{dictPath, true, nil}
+
+	err = varnam.InitDict(&dictConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -554,8 +555,12 @@ func (varnam *Varnam) Close() error {
 	if varnam.vstConn != nil {
 		varnam.vstConn.Close()
 	}
-	if varnam.dictConn != nil {
-		varnam.dictConn.Close()
+
+	for _, dictConfig := range varnam.DictsConfig {
+		if dictConfig.conn != nil {
+			dictConfig.conn.Close()
+		}
 	}
+
 	return nil
 }

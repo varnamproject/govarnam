@@ -8,6 +8,7 @@ package govarnam
 
 import (
 	"context"
+	sql "database/sql"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -54,24 +55,25 @@ type searchDictionaryResult struct {
 }
 
 // InitDict open connection to dictionary
-func (varnam *Varnam) InitDict(dictPath string) error {
+func (varnam *Varnam) InitDict(dictConfig *DictionaryConfig) error {
 	var err error
 
-	if !fileExists(dictPath) {
-		log.Printf("Making Varnam dictionaries dir for %s\n", dictPath)
-		err := os.MkdirAll(path.Dir(dictPath), 0750)
+	if !fileExists(dictConfig.Path) {
+		log.Printf("Making Varnam dictionaries dir for %s\n", dictConfig.Path)
+		err := os.MkdirAll(path.Dir(dictConfig.Path), 0750)
 		if err != nil {
 			return err
 		}
 	}
 
-	varnam.dictConn, err = openDB(dictPath)
+	dictConfig.conn, err = openDB(dictConfig.Path)
 	if err != nil {
 		return err
 	}
 
-	// Deprecated
-	varnam.DictPath = dictPath
+	if !dictConfig.Write {
+		return nil
+	}
 
 	// cd into migrations directory
 	migrationsFS, err := fs.Sub(embedFS, "migrations")
@@ -79,7 +81,7 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 		return err
 	}
 
-	mg, err := InitMigrate(varnam.dictConn, migrationsFS)
+	mg, err := InitMigrate(dictConfig.conn, migrationsFS)
 	if err != nil {
 		return err
 	}
@@ -90,17 +92,26 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 	}
 
 	// Since SQLite v3.12.0, default page size is 4096
-	varnam.dictConn.Exec("PRAGMA page_size=4096;")
+	dictConfig.conn.Exec("PRAGMA page_size=4096;")
 	// WAL makes writes & reads happen concurrently => significantly fast
-	varnam.dictConn.Exec("PRAGMA journal_mode=wal;")
+	dictConfig.conn.Exec("PRAGMA journal_mode=wal;")
 
 	return err
 }
 
 // ReIndexDictionary re-indexes dictionary
 func (varnam *Varnam) ReIndexDictionary() error {
-	_, err := varnam.dictConn.Exec("INSERT INTO words_fts(words_fts) VALUES('rebuild');")
-	return err
+	for _, dictConfig := range varnam.DictsConfig {
+		if !dictConfig.Write {
+			continue
+		}
+
+		_, err := dictConfig.conn.Exec("INSERT INTO words_fts(words_fts) VALUES('rebuild');")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type searchDictionaryType int32
@@ -112,7 +123,12 @@ const (
 )
 
 // all - Search for words starting with the word
-func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, searchType searchDictionaryType) []searchDictionaryResult {
+func (varnam *Varnam) searchDictionary(
+	ctx context.Context,
+	dbConn *sql.DB,
+	words []string,
+	searchType searchDictionaryType,
+) []searchDictionaryResult {
 	likes := ""
 
 	var (
@@ -181,7 +197,7 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, sear
 			query = "SELECT * FROM words WHERE word IN ((?) " + likes + ")"
 		}
 
-		rows, err := varnam.dictConn.QueryContext(ctx, query, vals...)
+		rows, err := dbConn.QueryContext(ctx, query, vals...)
 
 		if err != nil {
 			log.Print(err)
@@ -206,7 +222,11 @@ func (varnam *Varnam) searchDictionary(ctx context.Context, words []string, sear
 	}
 }
 
-func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]Token) DictionaryResult {
+func (varnam *Varnam) getFromDictionary(
+	ctx context.Context,
+	dbConn *sql.DB,
+	tokensPointer *[]Token,
+) DictionaryResult {
 	var result DictionaryResult
 	tokens := *tokensPointer
 
@@ -237,6 +257,7 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 
 					searchResults := varnam.searchDictionary(
 						ctx,
+						dbConn,
 						toSearch,
 						searchMatches,
 					)
@@ -269,6 +290,7 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 
 						searchResults := varnam.searchDictionary(
 							ctx,
+							dbConn,
 							toSearch,
 							searchMatches,
 						)
@@ -308,9 +330,9 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 		}
 
 		if lastFoundPosition == tokens[len(tokens)-1].position {
-			result.exactMatches = convertSearchDictResultToSuggestion(lastFoundDictWords, false)
+			result.exactMatches = convertSearchDictResultToSuggestions(lastFoundDictWords, false)
 		} else {
-			result.partialMatches = convertSearchDictResultToSuggestion(lastFoundDictWords, false)
+			result.partialMatches = convertSearchDictResultToSuggestions(lastFoundDictWords, false)
 		}
 
 		result.longestMatchPosition = lastFoundPosition
@@ -319,7 +341,11 @@ func (varnam *Varnam) getFromDictionary(ctx context.Context, tokensPointer *[]To
 	}
 }
 
-func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggestion) MoreDictionaryResult {
+func (varnam *Varnam) getMoreFromDictionary(
+	ctx context.Context,
+	dbConn *sql.DB,
+	words []Suggestion,
+) MoreDictionaryResult {
 	var result MoreDictionaryResult
 
 	select {
@@ -334,15 +360,15 @@ func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggest
 			search := []string{words[i].Word}
 			result.moreSuggestions = append(
 				result.moreSuggestions,
-				convertSearchDictResultToSuggestion(
-					varnam.searchDictionary(ctx, search, searchStartingWith),
+				convertSearchDictResultToSuggestions(
+					varnam.searchDictionary(ctx, dbConn, search, searchStartingWith),
 					true,
 				),
 			)
 		}
 
-		result.exactWords = convertSearchDictResultToSuggestion(
-			varnam.searchDictionary(ctx, wordsToSearch, searchExactWords),
+		result.exactWords = convertSearchDictResultToSuggestions(
+			varnam.searchDictionary(ctx, dbConn, wordsToSearch, searchExactWords),
 			true,
 		)
 
@@ -352,14 +378,18 @@ func (varnam *Varnam) getMoreFromDictionary(ctx context.Context, words []Suggest
 
 // Gets incomplete and complete matches from pattern dictionary
 // Eg: If pattern = "chin" or "chinayil", will return "china"
-func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern string) []PatternDictionarySuggestion {
+func (varnam *Varnam) getFromPatternDictionary(
+	ctx context.Context,
+	dbConn *sql.DB,
+	pattern string,
+) []PatternDictionarySuggestion {
 	var results []PatternDictionarySuggestion
 
 	select {
 	case <-ctx.Done():
 		return results
 	default:
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), w.word, w.weight, w.learned_on FROM `patterns` pts LEFT JOIN words w ON w.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.PatternDictionarySuggestionsLimit)
+		rows, err := dbConn.QueryContext(ctx, "SELECT LENGTH(pts.pattern), w.word, w.weight, w.learned_on FROM `patterns` pts LEFT JOIN words w ON w.id = pts.word_id WHERE ? LIKE (pts.pattern || '%') OR pattern LIKE ? ORDER BY LENGTH(pts.pattern) DESC LIMIT ?", pattern, pattern+"%", varnam.PatternDictionarySuggestionsLimit)
 
 		if err != nil {
 			log.Print(err)
@@ -384,15 +414,20 @@ func (varnam *Varnam) getFromPatternDictionary(ctx context.Context, pattern stri
 	}
 }
 
-// GetRecentlyLearntWords get recently learnt words
-func (varnam *Varnam) GetRecentlyLearntWords(ctx context.Context, offset int, limit int) ([]Suggestion, error) {
+// get recently learnt words
+func (varnam *Varnam) getRecentlyLearntWordsFromDict(
+	ctx context.Context,
+	dbConn *sql.DB,
+	offset int,
+	limit int,
+) ([]Suggestion, error) {
 	var result []Suggestion
 
 	select {
 	case <-ctx.Done():
 		return result, nil
 	default:
-		rows, err := varnam.dictConn.QueryContext(ctx, "SELECT word, weight, learned_on FROM words ORDER BY learned_on DESC, id DESC LIMIT "+fmt.Sprint(offset)+", "+fmt.Sprint(limit))
+		rows, err := dbConn.QueryContext(ctx, "SELECT word, weight, learned_on FROM words ORDER BY learned_on DESC, id DESC LIMIT "+fmt.Sprint(offset)+", "+fmt.Sprint(limit))
 
 		if err != nil {
 			return result, err
@@ -415,22 +450,22 @@ func (varnam *Varnam) GetRecentlyLearntWords(ctx context.Context, offset int, li
 	}
 }
 
-// GetSuggestions get word suggestions from dictionary
-func (varnam *Varnam) GetSuggestions(ctx context.Context, word string) []Suggestion {
+// get word suggestions from dictionary
+func (varnam *Varnam) getSuggestionsFromDict(ctx context.Context, dbConn *sql.DB, word string) []Suggestion {
 	var sugs []Suggestion
 
 	select {
 	case <-ctx.Done():
 		return sugs
 	default:
-		return convertSearchDictResultToSuggestion(
-			varnam.searchDictionary(ctx, []string{word}, searchStartingWith),
+		return convertSearchDictResultToSuggestions(
+			varnam.searchDictionary(ctx, dbConn, []string{word}, searchStartingWith),
 			true,
 		)
 	}
 }
 
-func convertSearchDictResultToSuggestion(searchResults []searchDictionaryResult, word bool) []Suggestion {
+func convertSearchDictResultToSuggestions(searchResults []searchDictionaryResult, word bool) []Suggestion {
 	var sugs []Suggestion
 	for i := range searchResults {
 		sug := Suggestion{
