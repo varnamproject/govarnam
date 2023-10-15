@@ -47,8 +47,9 @@ type VSTMakerConfig struct {
 
 // Varnam config
 type Varnam struct {
-	VSTPath  string
-	DictPath string
+	VSTPath     string
+	DictPath    string // deprecated
+	DictsConfig []DictionaryConfig
 
 	vstConn  *sql.DB
 	dictConn *sql.DB
@@ -249,6 +250,8 @@ func (varnam *Varnam) setDefaultConfig() {
 	varnam.LangRules.IndicDigits = false
 
 	varnam.LangRules.Virama, _ = varnam.getVirama()
+
+	varnam.setDefaultDictionariesConfig()
 
 	if varnam.SchemeDetails.LangCode == "ml" {
 		varnam.RegisterPatternWordPartializer(varnam.mlPatternWordPartializer)
@@ -524,11 +527,6 @@ func Init(vstPath string, dictPath string) (*Varnam, error) {
 
 // InitFromID Init from ID. Scheme ID doesn't necessarily be a language code
 func InitFromID(schemeID string) (*Varnam, error) {
-	var (
-		vstPath  string
-		dictPath string
-	)
-
 	vstPath, err := findVSTPath(schemeID)
 	if err != nil {
 		return nil, err
@@ -541,15 +539,12 @@ func InitFromID(schemeID string) (*Varnam, error) {
 		return nil, err
 	}
 
-	// One dictionary for one language, not for different scheme
-	dictPath = findLearningsFilePath(varnam.SchemeDetails.LangCode)
+	varnam.setDefaultConfig()
 
-	err = varnam.InitDict(dictPath)
+	err = varnam.InitDicts()
 	if err != nil {
 		return nil, err
 	}
-
-	varnam.setDefaultConfig()
 
 	return &varnam, nil
 }

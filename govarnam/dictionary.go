@@ -58,7 +58,7 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 	var err error
 
 	if !fileExists(dictPath) {
-		log.Printf("Making Varnam Learnings Dir for %s\n", dictPath)
+		log.Printf("Making Varnam dictionaries dir for %s\n", dictPath)
 		err := os.MkdirAll(path.Dir(dictPath), 0750)
 		if err != nil {
 			return err
@@ -70,6 +70,7 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 		return err
 	}
 
+	// Deprecated
 	varnam.DictPath = dictPath
 
 	// cd into migrations directory

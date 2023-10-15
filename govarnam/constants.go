@@ -82,7 +82,7 @@ func SetVSTLookupDir(path string) {
 	VARNAM_VST_DIR = path
 }
 
-// SetVSTLookupDir This overrides the environment variable
+// SetLearningsDir This overrides the environment variable
 func SetLearningsDir(path string) {
 	VARNAM_LEARNINGS_DIR = path
 }
@@ -98,7 +98,7 @@ func getVSTLookupDirs() []string {
 	}
 }
 
-//FindVSTDir Get the VST storing directory
+// FindVSTDir Get the VST storing directory
 func FindVSTDir() (string, error) {
 	for _, loc := range getVSTLookupDirs() {
 		if dirExists(loc) {
@@ -118,7 +118,25 @@ func findVSTPath(schemeID string) (string, error) {
 	return "", fmt.Errorf("Couldn't find VST for %q", schemeID)
 }
 
-func findLearningsFilePath(langCode string) string {
+func getDictionaryLookupDirs() []string {
+	return []string{
+		"/usr/local/share/varnam/dictionaries",
+		"/usr/share/varnam/dictionaries",
+	}
+}
+
+func findSystemDictionaryPath(langCode string) (string, error) {
+	for _, dirPath := range getDictionaryLookupDirs() {
+		filePath := path.Join(dirPath, fmt.Sprintf("%s.vdb", langCode))
+		if fileExists(filePath) {
+			return filePath, nil
+		}
+	}
+
+	return "", fmt.Errorf("Couldn't find any varnam '%s' dictionaries in system paths", langCode)
+}
+
+func findUserDictionaryPath(langCode string) string {
 	var (
 		loc string
 		dir string
@@ -127,17 +145,16 @@ func findLearningsFilePath(langCode string) string {
 	if VARNAM_LEARNINGS_DIR != "" {
 		dir = VARNAM_LEARNINGS_DIR
 	} else {
-		// libvarnam used to use "suggestions" folder
 		home := os.Getenv("XDG_DATA_HOME")
 		if home != "" {
-			dir = path.Join(home, "varnam", "learnings")
+			dir = path.Join(home, "varnam", "dictionaries")
 		} else {
 			home = os.Getenv("HOME")
-			dir = path.Join(home, ".local", "share", "varnam", "learnings")
+			dir = path.Join(home, ".local", "share", "varnam", "dictionaries")
 		}
 	}
 
-	loc = path.Join(dir, langCode+".vst.learnings")
+	loc = path.Join(dir, fmt.Sprintf("%s.vdb", langCode))
 
 	return loc
 }
