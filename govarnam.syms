@@ -3,6 +3,8 @@
                 varnam_*;
                 varray_*;
                 vm_*;
+		makeSymbol;
+		destroy*;
         local:
                 *;
 };
