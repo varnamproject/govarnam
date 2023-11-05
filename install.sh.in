@@ -9,29 +9,30 @@ SUDO=${SUDO:-sudo}
 
 if [ "$ARG1" == "install" ]; then
   "${SUDO}" mkdir -p "/usr/local/bin/"
-  "${SUDO}" cp "$SCRIPT_DIR/varnamcli" "@INSTALL_PREFIX@/bin/varnamcli"
-  
-  "${SUDO}" mkdir -p "@INSTALL_PREFIX@/lib/pkgconfig"
-  "${SUDO}" cp "$SCRIPT_DIR/@LIB_NAME@" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@"
-  "${SUDO}" ln -s "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@"
-  "${SUDO}" cp "$SCRIPT_DIR/govarnam.pc" "@INSTALL_PREFIX@/lib/pkgconfig/"
+  "${SUDO}" cp "$SCRIPT_DIR/varnamcli" "${DESTDIR}@INSTALL_PREFIX@/bin/varnamcli"
 
-  "${SUDO}" mkdir -p "@INSTALL_PREFIX@/include/libgovarnam"
-  "${SUDO}" cp "$SCRIPT_DIR/"*.h "@INSTALL_PREFIX@/include/libgovarnam/"
+  "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig"
+  "${SUDO}" cp "$SCRIPT_DIR/@LIB_NAME@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@"
+  "${SUDO}" ln -sf "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@"
+  "${SUDO}" ln -sf "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@SO_NAME@"
+  "${SUDO}" cp "$SCRIPT_DIR/govarnam.pc" "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig/"
+
+  "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam"
+  "${SUDO}" cp "$SCRIPT_DIR/"*.h "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam/"
   "${SUDO}" ldconfig || true
 
-  "${SUDO}" mkdir -p "@INSTALL_PREFIX@/share/varnam/schemes"
+  "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@/share/varnam/schemes"
 
   msg="Installation finished"
   echo "$msg"
 
   notify-send "$msg" &> /dev/null || true
 elif [ "$ARG1" == "uninstall" ]; then
-  "${SUDO}" rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
-  "${SUDO}" rm "@INSTALL_PREFIX@/include/libgovarnam/"*
-  "${SUDO}" rmdir "@INSTALL_PREFIX@/include/libgovarnam"
-  "${SUDO}" rm "@INSTALL_PREFIX@/share/varnam/schemes/"*
-  "${SUDO}" rmdir "@INSTALL_PREFIX@/share/varnam/schemes/"
+  "${SUDO}" rm -f "${DESTDIR}@INSTALL_PREFIX@/bin/varnamcli" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@" "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
+  "${SUDO}" rm -f "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam/"*
+  "${SUDO}" rmdir "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam" || true
+  "${SUDO}" rm -f "${DESTDIR}@INSTALL_PREFIX@/share/varnam/schemes/"* 
+  "${SUDO}" rmdir "${DESTDIR}@INSTALL_PREFIX@/share/varnam/schemes/" || true
 
   msg="Uninstallation finished"
   echo $msg
