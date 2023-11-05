@@ -50,7 +50,7 @@ install.sh: install.sh.in
 	chmod +x install.sh
 
 .PHONY: install
-install: install-script
+install: install.sh
 	./install.sh install
 
 .PHONY: cli
