@@ -41,6 +41,7 @@ temp-pc:
 	${SED} "s#/include/libgovarnam##g" govarnam.pc
 	${SED} "s#/lib\$$##g" govarnam.pc
 
+.PHONY: install-script
 install-script:
 	cp install.sh.in install.sh
 	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
@@ -48,7 +49,8 @@ install-script:
 	${SED} "s#@LIB_NAME@#${LIB_NAME}#g" install.sh
 	chmod +x install.sh
 
-install:
+.PHONY: install
+install: install-script
 	./install.sh install
 
 .PHONY: cli
