@@ -51,7 +51,7 @@ install-script:
 install:
 	./install.sh install
 
-.PHNY: uninstall
+.PHONY: uninstall
 uninstall: install-script
 	./install.sh uninstall
 
