@@ -46,10 +46,17 @@ install-script:
 	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
 	${SED} "s#@VERSION@#${VERSION}#g" install.sh
 	${SED} "s#@LIB_NAME@#${LIB_NAME}#g" install.sh
+	${SED} "s#@SO_NAME@#${SO_NAME}#g" install.sh
 	chmod +x install.sh
 
 install:
 	./install.sh install
+
+.PHONY: uninstall
+uninstall: install-script
+	./install.sh uninstall
+
+
 
 .PHONY: cli
 cli:
@@ -60,6 +67,7 @@ library-nosqlite:
 
 library:
 	CGO_ENABLED=1 go build -tags "fts5" -buildmode=c-shared -ldflags "-s -w ${VERSION_STAMP_LDFLAGS}" -o ${LIB_NAME} .
+	ln -sf "$(realpath ./)/libgovarnam.so" "$(realpath ./)/libgovarnam.so.${SO_NAME}"
 
 library-mac-universal:
 	GOOS=darwin GOARCH=arm64 $(MAKE) library
@@ -105,4 +113,4 @@ test:
 
 .PHONY: clean
 clean:
-	rm -f varnamcli libgovarnam.so libgovarnam.h govarnam.pc 
+	rm -f varnamcli libgovarnam.*  govarnam.pc install.sh
