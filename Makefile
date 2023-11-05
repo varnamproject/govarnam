@@ -105,4 +105,4 @@ test:
 
 .PHONY: clean
 clean:
-	rm -f varnamcli libgovarnam.so libgovarnam.h govarnam.pc 
+	rm -f varnamcli libgovarnam.*  govarnam.pc install.sh
