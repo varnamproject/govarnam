@@ -13,8 +13,8 @@ if [ "$ARG1" == "install" ]; then
 
   "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig"
   "${SUDO}" cp "$SCRIPT_DIR/@LIB_NAME@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@"
-  "${SUDO}" ln -sf "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@"
-  "${SUDO}" ln -sf "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@SO_NAME@"
+  "${SUDO}" ln -sf "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@"
+  "${SUDO}" ln -sf "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "${DESTDIR}@INSTALL_PREFIX@/lib/@LIB_NAME@.@SO_NAME@"
   "${SUDO}" cp "$SCRIPT_DIR/govarnam.pc" "${DESTDIR}@INSTALL_PREFIX@/lib/pkgconfig/"
 
   "${SUDO}" mkdir -p "${DESTDIR}@INSTALL_PREFIX@/include/libgovarnam"
