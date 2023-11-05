@@ -52,6 +52,12 @@ install-script:
 install:
 	./install.sh install
 
+.PHONY: uninstall
+uninstall: install-script
+	./install.sh uninstall
+
+
+
 .PHONY: cli
 cli:
 	go build -o ${CLI_BIN} -ldflags "-s -w" ./cli

@@ -28,11 +28,11 @@ if [ "$ARG1" == "install" ]; then
 
   notify-send "$msg" &> /dev/null || true
 elif [ "$ARG1" == "uninstall" ]; then
-  "${SUDO}" rm "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
-  "${SUDO}" rm "@INSTALL_PREFIX@/include/libgovarnam/"*
-  "${SUDO}" rmdir "@INSTALL_PREFIX@/include/libgovarnam"
-  "${SUDO}" rm "@INSTALL_PREFIX@/share/varnam/schemes/"*
-  "${SUDO}" rmdir "@INSTALL_PREFIX@/share/varnam/schemes/"
+  "${SUDO}" rm -f "@INSTALL_PREFIX@/bin/varnamcli" "@INSTALL_PREFIX@/lib/@LIB_NAME@.@VERSION@" "@INSTALL_PREFIX@/lib/@LIB_NAME@" "@INSTALL_PREFIX@/lib/pkgconfig/govarnam.pc"
+  "${SUDO}" rm -f "@INSTALL_PREFIX@/include/libgovarnam/"*
+  "${SUDO}" rmdir "@INSTALL_PREFIX@/include/libgovarnam" || true
+  "${SUDO}" rm -f "@INSTALL_PREFIX@/share/varnam/schemes/"* 
+  "${SUDO}" rmdir "@INSTALL_PREFIX@/share/varnam/schemes/" || true
 
   msg="Uninstallation finished"
   echo $msg
