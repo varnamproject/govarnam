@@ -42,7 +42,7 @@ temp-pc:
 	${SED} "s#/lib\$$##g" govarnam.pc
 
 .PHONY: install-script
-install-script:
+install.sh: install.sh.in
 	cp install.sh.in install.sh
 	${SED} "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" install.sh
 	${SED} "s#@VERSION@#${VERSION}#g" install.sh
