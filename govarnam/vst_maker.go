@@ -254,7 +254,7 @@ func (varnam *Varnam) vmPersistToken(pattern string, value1 string, value2 strin
 
 	_, err = stmt.ExecContext(ctx, symbolType, pattern, value1, value2, value3, tag, matchType, priority, acceptCondition)
 	if err != nil {
-		return fmt.Errorf("Failed to persist token: %s", err.Error())
+		return fmt.Errorf("Failed to persist token: {%s} %s", varnam.VSTPath, err.Error())
 	}
 
 	return nil
