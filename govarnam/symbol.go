@@ -75,7 +75,6 @@ func (varnam *Varnam) InitVST(vstPath string) error {
 
 	varnam.vstConn.Exec("PRAGMA TEMP_STORE=2;")
 	varnam.vstConn.Exec("PRAGMA LOCKING_MODE=EXCLUSIVE;")
-	// varnam.vstConn.Exec("PRAGMA journal_mode=WAL;") // enabled write-ahead logging to avoid db lock issues
 
 	varnam.VSTPath = vstPath
 	varnam.setSchemeInfo()
