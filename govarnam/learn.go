@@ -12,7 +12,6 @@ import (
 	sql "database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -624,7 +623,7 @@ func (varnam *Varnam) Export(filePath string, wordsPerFile int) error {
 		jsonData, err := json.Marshal(output)
 
 		filePathWithPageNumber := filePath + "-" + fmt.Sprint(page) + ".vlf"
-		err = ioutil.WriteFile(filePathWithPageNumber, jsonData, 0644)
+		err = os.WriteFile(filePathWithPageNumber, jsonData, 0644)
 		if err != nil {
 			return err
 		}
@@ -642,7 +641,7 @@ func (varnam *Varnam) Import(filePath string) error {
 	}
 
 	// TODO better reading of JSON. This loads entire file into memory
-	fileContent, _ := ioutil.ReadFile(filePath)
+	fileContent, _ := os.ReadFile(filePath)
 
 	var dbData exportFormat
 

@@ -1,7 +1,6 @@
 package govarnam
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -104,7 +103,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	testTempDir, err = ioutil.TempDir("", "govarnam_test")
+	testTempDir, err = os.TempDir("", "govarnam_test")
 	checkError(err)
 
 	for _, schemeDetail := range schemeDetails {

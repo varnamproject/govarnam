@@ -2,7 +2,6 @@ package govarnam
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"path"
 	"strings"
@@ -377,7 +376,7 @@ func TestMLExportAndImport(t *testing.T) {
 	varnam.Export(exportFileIntendedPath, 300)
 
 	// read the whole file at once
-	b, err := ioutil.ReadFile(exportFilePath)
+	b, err := os.ReadFile(exportFilePath)
 	if err != nil {
 		panic(err)
 	}

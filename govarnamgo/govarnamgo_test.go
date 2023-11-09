@@ -1,7 +1,6 @@
 package govarnamgo
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -68,7 +67,7 @@ func tearDown() {
 
 func TestMain(m *testing.M) {
 	var err error
-	testTempDir, err = ioutil.TempDir("", "govarnam_test")
+	testTempDir, err = os.TempDir("", "govarnam_test")
 	checkError(err)
 
 	setUp("ml")
