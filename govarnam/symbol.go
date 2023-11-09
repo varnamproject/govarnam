@@ -599,8 +599,6 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 			return nil, err
 		}
 
-		defer rows.Close()
-
 		for rows.Next() {
 			var item Symbol
 			rows.Scan(&item.Identifier, &item.Type, &item.Pattern, &item.Value1, &item.Value2, &item.Value3, &item.Tag, &item.MatchType, &item.Priority, &item.AcceptCondition, &item.Flags, &item.Weight)
