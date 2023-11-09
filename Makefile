@@ -54,7 +54,7 @@ install: install.sh
 	./install.sh install
 
 .PHONY: uninstall
-uninstall: install-script
+uninstall: install.sh
 	./install.sh uninstall
 
 
@@ -85,7 +85,7 @@ nix:
 	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH $(MAKE) cli
 
 	$(MAKE) pc
-	$(MAKE) install-script
+	$(MAKE) install.sh
 
 .PHONY:
 build:
