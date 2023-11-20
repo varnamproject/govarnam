@@ -478,6 +478,7 @@ func TestMLRecentlyLearnedWords(t *testing.T) {
 	}
 
 	result, err = varnam.GetRecentlyLearntWords(context.Background(), 4, len(words))
+	checkError(err)
 	assertEqual(t, result[0].Word, "ആലപ്പുഴ")
 }
 
@@ -494,4 +495,16 @@ func TestMLGetSuggestions(t *testing.T) {
 	assertEqual(t, len(result), 3)
 
 	assertEqual(t, result[0].Word, "ആലപ്പുഴ")
+}
+
+func TestMLNativePartialWordsInInput(t *testing.T) {
+	varnam := getVarnamInstance("ml")
+
+	words := []string{"ആലപ്പുഴ", "പുസ്തകം"}
+	for _, word := range words {
+		varnam.Learn(word, 0)
+	}
+
+	assertEqual(t, varnam.TransliterateAdvanced("ആലppu").DictionarySuggestions[0].Word, "ആലപ്പുഴ")
+	assertEqual(t, varnam.TransliterateAdvanced("puസ്ത").DictionarySuggestions[0].Word, "പുസ്തകം")
 }

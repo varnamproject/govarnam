@@ -1,5 +1,7 @@
 package govarnam
 
+import "unicode"
+
 /**
  * govarnam - An Indian language transliteration library
  * Copyright Subin Siby <mail at subinsb (.) com>, 2021
@@ -22,4 +24,16 @@ func (varnam *Varnam) mlPatternWordPartializer(sug *Suggestion) {
 	} else if lastChar == "ം" {
 		sug.Word = sug.Word[0:len(sug.Word)-size] + "മ"
 	}
+}
+
+func (varnam *Varnam) getUnicodeBlock() unicode.RangeTable {
+	switch varnam.SchemeDetails.LangCode {
+	case "kn":
+		return unicode.RangeTable{R16: []unicode.Range16{{0x0C80, 0x0CFF, 1}}}
+	case "ml":
+		return unicode.RangeTable{R16: []unicode.Range16{{0x0D00, 0x0D7F, 1}}}
+	default:
+		return unicode.RangeTable{}
+	}
+	// TODO add for all languages
 }
