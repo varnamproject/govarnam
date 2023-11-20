@@ -98,7 +98,7 @@ func getVSTLookupDirs() []string {
 	}
 }
 
-//FindVSTDir Get the VST storing directory
+// FindVSTDir Get the VST storing directory
 func FindVSTDir() (string, error) {
 	for _, loc := range getVSTLookupDirs() {
 		if dirExists(loc) {

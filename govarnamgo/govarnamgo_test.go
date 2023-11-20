@@ -67,7 +67,7 @@ func tearDown() {
 
 func TestMain(m *testing.M) {
 	var err error
-	testTempDir, err = os.TempDir("", "govarnam_test")
+	testTempDir, err = os.MkdirTemp("", "govarnamgo_test")
 	checkError(err)
 
 	setUp("ml")

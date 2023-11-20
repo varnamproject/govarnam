@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	// sqlite3
@@ -25,6 +26,7 @@ type LangRules struct {
 	Virama               string
 	IndicDigits          bool
 	PatternLongestLength int // Longest length of pattern in VST
+	UnicodeBlock         unicode.RangeTable
 }
 
 // SchemeDetails of VST
@@ -247,8 +249,8 @@ func (varnam *Varnam) setDefaultConfig() {
 	varnam.DictionaryMatchExact = false
 
 	varnam.LangRules.IndicDigits = false
-
 	varnam.LangRules.Virama, _ = varnam.getVirama()
+	varnam.LangRules.UnicodeBlock = varnam.getUnicodeBlock()
 
 	if varnam.SchemeDetails.LangCode == "ml" {
 		varnam.RegisterPatternWordPartializer(varnam.mlPatternWordPartializer)

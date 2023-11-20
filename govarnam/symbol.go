@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"unicode"
 
 	"github.com/mattn/go-sqlite3"
 )
@@ -274,10 +275,17 @@ func (varnam *Varnam) tokenizeWord(ctx context.Context, word string, matchType i
 			matches := varnam.findLongestPatternMatchSymbols(ctx, sequence, matchType, acceptCondition)
 
 			if len(matches) == 0 {
-				// No matches, add a character token
-				// Note that we just add 1 character, and move on
-				token := Token{VARNAM_TOKEN_CHAR, matches, i, string(sequence[:1])}
-				results = append(results, token)
+				if unicode.In(sequence[0], &varnam.LangRules.UnicodeBlock) {
+					// This helps to get suggestions in inputs like "ആലppu"
+					character := string(sequence[0])
+					token := Token{VARNAM_TOKEN_SYMBOL, []Symbol{{Value1: character}}, i, character}
+					results = append(results, token)
+				} else {
+					// No matches, add a character token
+					// Note that we just add 1 character, and move on
+					token := Token{VARNAM_TOKEN_CHAR, matches, i, string(sequence[:1])}
+					results = append(results, token)
+				}
 
 				i++
 			} else {
