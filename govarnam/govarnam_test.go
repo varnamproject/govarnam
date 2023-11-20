@@ -103,7 +103,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	testTempDir, err = os.TempDir("", "govarnam_test")
+	testTempDir, err = os.MkdirTemp("", "govarnam_test")
 	checkError(err)
 
 	for _, schemeDetail := range schemeDetails {
