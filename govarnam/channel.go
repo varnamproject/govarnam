@@ -128,7 +128,7 @@ func (varnam *Varnam) channelGetFromDictionary(ctx context.Context, word string,
 
 		if len(dictResult.partialMatches) > 0 {
 			// Tokenize the word after the longest match found in dictionary
-			restOfWord := word[dictResult.longestMatchPosition+1:]
+			restOfWord := string([]rune(word)[dictResult.longestMatchPosition+1:])
 
 			start := time.Now()
 

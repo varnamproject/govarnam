@@ -507,4 +507,5 @@ func TestMLNativePartialWordsInInput(t *testing.T) {
 
 	assertEqual(t, varnam.TransliterateAdvanced("ആലppu").DictionarySuggestions[0].Word, "ആലപ്പുഴ")
 	assertEqual(t, varnam.TransliterateAdvanced("puസ്ത").DictionarySuggestions[0].Word, "പുസ്തകം")
+	assertEqual(t, varnam.TransliterateAdvanced("ആലippazham").DictionarySuggestions[0].Word, "ആലിപ്പഴം")
 }
