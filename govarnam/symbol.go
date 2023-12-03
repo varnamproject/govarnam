@@ -41,16 +41,18 @@ type Token struct {
 	character string // Non language character
 }
 
+var sqlite3WithLimitDriverRegistered bool
 var sqlite3Conn *sqlite3.SQLiteConn
 
 func openDB(path string) (*sql.DB, error) {
-	if sqlite3Conn == nil {
+	if !sqlite3WithLimitDriverRegistered {
 		sql.Register("sqlite3_with_limit", &sqlite3.SQLiteDriver{
 			ConnectHook: func(conn *sqlite3.SQLiteConn) error {
 				sqlite3Conn = conn
 				return nil
 			},
 		})
+		sqlite3WithLimitDriverRegistered = true
 	}
 
 	conn, err := sql.Open("sqlite3_with_limit", path)
