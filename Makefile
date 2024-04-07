@@ -95,7 +95,7 @@ release:
 	echo "Hope you have updated version in constants.go"
 	mkdir -p ${RELEASE_NAME}
 	cp ${CLI_BIN} ${RELEASE_NAME}/
-	cp libgovarnam.so ${RELEASE_NAME}/
+	cp libgovarnam.so* ${RELEASE_NAME}/
 	cp *.h ${RELEASE_NAME}/
 	cp *.pc ${RELEASE_NAME}/
 	cp install.sh ${RELEASE_NAME}/
