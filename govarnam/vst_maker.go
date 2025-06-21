@@ -10,6 +10,7 @@ import (
 	"context"
 	sql "database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -290,6 +291,56 @@ func (varnam *Varnam) VMDeleteToken(searchCriteria Symbol) error {
 	return nil
 }
 
+// VMRemoveTokens Removes tokens from VST based on pattern, value and accept conditions
+// This allows fine-grained control over which tokens to remove based on their position
+func (varnam *Varnam) VMRemoveTokens(pattern string, value1 string, symbolType int, acceptCondition int) error {
+	if pattern == "" && value1 == "" {
+		return fmt.Errorf("either pattern or value1 must be specified for removal")
+	}
+
+	if acceptCondition != VARNAM_TOKEN_ACCEPT_ALL &&
+		acceptCondition != VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH &&
+		acceptCondition != VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN &&
+		acceptCondition != VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH {
+		return fmt.Errorf("invalid accept condition specified. It should be one of VARNAM_TOKEN_ACCEPT_XXX")
+	}
+
+	query := "DELETE FROM symbols WHERE 1=1"
+	var values []interface{}
+
+	if pattern != "" {
+		query += " AND pattern = ?"
+		values = append(values, pattern)
+	}
+
+	if value1 != "" {
+		query += " AND value1 = ?"
+		values = append(values, value1)
+	}
+
+	if symbolType > 0 {
+		query += " AND type = ?"
+		values = append(values, symbolType)
+	}
+
+	if acceptCondition != VARNAM_TOKEN_ACCEPT_ALL {
+		query += " AND accept_condition = ?"
+		values = append(values, acceptCondition)
+	}
+
+	varnam.log(fmt.Sprintf("Removing tokens with query: %s", query))
+
+	result, err := varnam.vstConn.Exec(query, values...)
+	if err != nil {
+		return fmt.Errorf("failed to remove tokens: %s", err.Error())
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	varnam.log(fmt.Sprintf("Removed %d tokens", rowsAffected))
+
+	return nil
+}
+
 // Makes a prefix tree. This fills up the flags column
 // TODO incomplete
 func (varnam *Varnam) vmMakePrefixTree() error {
@@ -395,4 +446,206 @@ func canGenerateDeadConsonant(input []rune) bool {
 	}
 	return string(input[len(input)-2]) != "a" &&
 		string(input[len(input)-1]) == "a"
+}
+
+// GenerateCV generates consonant-vowel combinations automatically
+// Takes consonant and vowel symbols and creates CV combination tokens
+func (varnam *Varnam) GenerateCV() error {
+	varnam.log("Generating consonant-vowel combinations...")
+	
+	// Start buffering for batch operations
+	err := varnam.vmStartBuffering()
+	if err != nil {
+		return err
+	}
+
+	// Get all consonants from the symbol table
+	consonantSearch := NewSearchSymbol()
+	consonantSearch.Type = VARNAM_SYMBOL_CONSONANT
+	consonants, err := varnam.SearchSymbolTable(context.Background(), consonantSearch)
+	if err != nil {
+		varnam.vmDiscardChanges()
+		return fmt.Errorf("failed to fetch consonants: %s", err.Error())
+	}
+
+	// Get all vowels from the symbol table
+	vowelSearch := NewSearchSymbol()
+	vowelSearch.Type = VARNAM_SYMBOL_VOWEL
+	vowels, err := varnam.SearchSymbolTable(context.Background(), vowelSearch)
+	if err != nil {
+		varnam.vmDiscardChanges()
+		return fmt.Errorf("failed to fetch vowels: %s", err.Error())
+	}
+
+	// Get dead consonants too for more complete CV generation
+	deadConsonantSearch := NewSearchSymbol()
+	deadConsonantSearch.Type = VARNAM_SYMBOL_DEAD_CONSONANT
+	deadConsonants, err := varnam.SearchSymbolTable(context.Background(), deadConsonantSearch)
+	if err != nil {
+		varnam.vmDiscardChanges()
+		return fmt.Errorf("failed to fetch dead consonants: %s", err.Error())
+	}
+
+	// Combine regular consonants and dead consonants
+	allConsonants := append(consonants, deadConsonants...)
+
+	generatedCount := 0
+	skippedCount := 0
+
+	// Generate CV combinations for each consonant-vowel pair
+	for _, consonant := range allConsonants {
+		for _, vowel := range vowels {
+			// Skip if vowel doesn't have a combining form (value2)
+			if vowel.Value2 == "" {
+				continue
+			}
+
+			// Generate pattern by combining consonant pattern with vowel pattern
+			// Remove trailing 'a' from consonant pattern if present
+			consonantPattern := consonant.Pattern
+			if len(consonantPattern) > 1 && consonantPattern[len(consonantPattern)-1] == 'a' {
+				consonantPattern = consonantPattern[:len(consonantPattern)-1]
+			}
+			cvPattern := consonantPattern + vowel.Pattern
+
+			// Generate CV value by combining consonant with vowel sign (value2)
+			cvValue1 := consonant.Value1 + vowel.Value2
+			
+			// For value2 and value3, we'll keep them empty for now
+			// They can be used for alternative representations if needed
+			cvValue2 := ""
+			cvValue3 := ""
+
+			// Create a tag to identify auto-generated CV combinations
+			cvTag := "cv-auto"
+
+			// Check if this combination already exists
+			existingSearch := NewSearchSymbol()
+			existingSearch.Pattern = cvPattern
+			existingSearch.Type = VARNAM_SYMBOL_CONSONANT_VOWEL
+			existing, _ := varnam.SearchSymbolTable(context.Background(), existingSearch)
+			
+			if len(existing) > 0 {
+				skippedCount++
+				continue
+			}
+
+			// Create the CV token
+			err := varnam.vmPersistToken(
+				cvPattern,
+				cvValue1,
+				cvValue2,
+				cvValue3,
+				cvTag,
+				VARNAM_SYMBOL_CONSONANT_VOWEL,
+				VARNAM_MATCH_EXACT,
+				0, // priority
+				VARNAM_TOKEN_ACCEPT_ALL,
+			)
+			
+			if err != nil {
+				varnam.log(fmt.Sprintf("Failed to create CV for %s + %s: %s", consonant.Pattern, vowel.Pattern, err.Error()))
+				continue
+			}
+			
+			generatedCount++
+		}
+	}
+
+	// Flush the buffer to persist all changes
+	err = varnam.vmFlushChanges()
+	if err != nil {
+		return fmt.Errorf("failed to flush CV generation changes: %s", err.Error())
+	}
+
+	varnam.log(fmt.Sprintf("CV generation completed. Generated: %d, Skipped: %d", generatedCount, skippedCount))
+	return nil
+}
+
+// GenerateCVForPattern generates CV combinations for a specific consonant pattern
+// This is useful when adding new consonants to generate their CV forms
+func (varnam *Varnam) GenerateCVForPattern(consonantPattern string, consonantValue string) error {
+	// Get all vowels from the symbol table
+	vowelSearch := NewSearchSymbol()
+	vowelSearch.Type = VARNAM_SYMBOL_VOWEL
+	vowels, err := varnam.SearchSymbolTable(context.Background(), vowelSearch)
+	if err != nil {
+		return fmt.Errorf("failed to fetch vowels: %s", err.Error())
+	}
+
+	generatedCount := 0
+
+	// Generate CV combinations for this consonant with all vowels
+	for _, vowel := range vowels {
+		// Skip if vowel doesn't have a combining form (value2)
+		if vowel.Value2 == "" {
+			continue
+		}
+
+		// Generate pattern by combining consonant pattern with vowel pattern
+		// Remove trailing 'a' from consonant pattern if present
+		cvPatternBase := consonantPattern
+		if len(cvPatternBase) > 1 && cvPatternBase[len(cvPatternBase)-1] == 'a' {
+			cvPatternBase = cvPatternBase[:len(cvPatternBase)-1]
+		}
+		cvPattern := cvPatternBase + vowel.Pattern
+
+		// Generate CV value by combining consonant with vowel sign
+		cvValue := consonantValue + vowel.Value2
+
+		// Create the CV token
+		err := varnam.VMCreateToken(
+			cvPattern,
+			cvValue,
+			"",    // value2
+			"",    // value3
+			"cv-auto", // tag
+			VARNAM_SYMBOL_CONSONANT_VOWEL,
+			VARNAM_MATCH_EXACT,
+			0, // priority
+			VARNAM_TOKEN_ACCEPT_ALL,
+			true, // buffered
+		)
+		
+		if err != nil {
+			if !varnam.VSTMakerConfig.IgnoreDuplicateTokens {
+				varnam.log(fmt.Sprintf("Failed to create CV for %s + %s: %s", consonantPattern, vowel.Pattern, err.Error()))
+			}
+			continue
+		}
+		
+		generatedCount++
+	}
+
+	varnam.log(fmt.Sprintf("Generated %d CV combinations for consonant '%s'", generatedCount, consonantPattern))
+	return nil
+}
+
+// VMCreateConsonantWithCV creates a consonant and automatically generates its CV combinations
+func (varnam *Varnam) VMCreateConsonantWithCV(pattern string, value1 string, value2 string, value3 string, tag string, matchType int, priority int, acceptCondition int, buffered bool) error {
+	// First create the consonant
+	err := varnam.VMCreateToken(pattern, value1, value2, value3, tag, VARNAM_SYMBOL_CONSONANT, matchType, priority, acceptCondition, buffered)
+	if err != nil {
+		return err
+	}
+
+	// Then generate CV combinations for it
+	if varnam.VSTMakerConfig.GenerateCVCombinations {
+		// Get the actual consonant value to use for CV generation
+		consonantValue := value1
+		
+		// If the consonant already has virama, remove it for CV generation
+		virama, viramaErr := varnam.getVirama()
+		if viramaErr == nil && strings.HasSuffix(consonantValue, virama) {
+			consonantValue = consonantValue[:len(consonantValue)-len(virama)]
+		}
+		
+		err = varnam.GenerateCVForPattern(pattern, consonantValue)
+		if err != nil {
+			varnam.log(fmt.Sprintf("Warning: Failed to generate CV for consonant %s: %s", pattern, err.Error()))
+			// Don't fail the whole operation if CV generation fails
+		}
+	}
+
+	return nil
 }

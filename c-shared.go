@@ -626,6 +626,22 @@ func vm_delete_token(varnamHandleID C.int, searchCriteria C.struct_Symbol_t) C.i
 	return checkError(handle.err)
 }
 
+//export vm_remove_tokens
+func vm_remove_tokens(varnamHandleID C.int, pattern *C.char, value1 *C.char, symbolType C.int, acceptCondition C.int) C.int {
+	handle := getVarnamHandle(varnamHandleID)
+
+	var patternStr, value1Str string
+	if pattern != nil {
+		patternStr = C.GoString(pattern)
+	}
+	if value1 != nil {
+		value1Str = C.GoString(value1)
+	}
+
+	handle.err = handle.varnam.VMRemoveTokens(patternStr, value1Str, int(symbolType), int(acceptCondition))
+	return checkError(handle.err)
+}
+
 //export vm_flush_buffer
 func vm_flush_buffer(varnamHandleID C.int) C.int {
 	handle := getVarnamHandle(varnamHandleID)
