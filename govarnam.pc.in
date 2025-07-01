@@ -1,7 +1,7 @@
-prefix=@INSTALL_PREFIX@
-exec_prefix=${prefix}
-libdir=${prefix}@LIBDIR@
-includedir=${prefix}/include/libgovarnam
+prefix=@PREFIX@
+exec_prefix=@PREFIX@
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@/libgovarnam
 
 Name: GoVarnam
 Description: A transliteration library for Indian languages
