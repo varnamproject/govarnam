@@ -58,7 +58,7 @@ void destroyTransliterationResult(TransliterationResult* result)
   result = NULL;
 }
 
-SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* DisplayName, char* Author, char* CompiledDate, bool IsStable)
+SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* DisplayName, char* Author, char* CompiledDate, int IsStable)
 {
   SchemeDetails* sd = (SchemeDetails*) malloc (sizeof(SchemeDetails));
   sd->Identifier = Identifier;

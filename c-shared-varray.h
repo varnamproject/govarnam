@@ -24,11 +24,11 @@ varray_push(varray *array, void *data);
 VARNAM_EXPORT extern int
 varray_length(varray *array);
 
-VARNAM_EXPORT extern bool
+VARNAM_EXPORT extern int
 varray_is_empty (varray *array);
 
-VARNAM_EXPORT extern bool
-varray_exists (varray *array, void *item, bool (*equals)(void *left, void *right));
+VARNAM_EXPORT extern int
+varray_exists (varray *array, void *item, int (*equals)(void *left, void *right));
 
 VARNAM_EXPORT extern void
 varray_clear(varray *array);
