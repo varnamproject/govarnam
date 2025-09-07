@@ -14,9 +14,10 @@
 #endif
 
 #ifndef __cplusplus
-  typedef int bool;
+#if __GNUC__ < 15
   #define false 0
   #define true  1
+#endif
 #endif
 
 #endif /* __UTIL_H__ */

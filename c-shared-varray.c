@@ -52,7 +52,7 @@ varray_length(varray *array)
     return array->index + 1;
 }
 
-bool
+int
 varray_is_empty (varray *array)
 {
     return (varray_length (array) == 0);
@@ -113,8 +113,8 @@ varray_insert(varray *array, int index, void *data)
     array->memory[index] = data;
 }
 
-bool
-varray_exists (varray *array, void *item, bool (*equals)(void *left, void *right))
+int
+varray_exists (varray *array, void *item, int (*equals)(void *left, void *right))
 {
     int i;
 

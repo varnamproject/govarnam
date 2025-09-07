@@ -46,10 +46,10 @@ typedef struct SchemeDetails_t {
   char* DisplayName;
   char* Author;
   char* CompiledDate;
-  bool IsStable;
+  int   IsStable;
 } SchemeDetails;
 
-SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* DisplayName, char* Author, char* CompiledDate, bool IsStable);
+SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* DisplayName, char* Author, char* CompiledDate, int IsStable);
 
 void destroySchemeDetailsArray(void* cSchemeDetails);
 
