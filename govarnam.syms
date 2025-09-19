@@ -1,10 +1,13 @@
 {
         global:
+		destroySchemeDetailsArray;
+		destroySuggestionsArray;
+		destroySymbolArray;
+		destroyTransliterationResult;
+		makeSymbol;
                 varnam_*;
                 varray_*;
                 vm_*;
-		makeSymbol;
-		destroy*;
         local:
                 *;
 };
