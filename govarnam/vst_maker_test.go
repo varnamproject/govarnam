@@ -232,3 +232,85 @@ func TestPrefixTree(t *testing.T) {
 	// varnam, err := initTestVM()
 	// checkError(err)
 }
+
+func TestVMRemoveTokens(t *testing.T) {
+	varnam, err := initTestVM()
+	if err != nil {
+		t.Errorf("Failed to initialize VST maker: %s", err)
+		return
+	}
+
+	// Test 1: Remove anusvara at end
+	t.Run("RemoveAnusvaraAtEnd", func(t *testing.T) {
+		// Create test tokens
+		err := varnam.VMCreateToken("m", "ം", "", "", "", VARNAM_SYMBOL_ANUSVARA, VARNAM_MATCH_EXACT, 0, VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH, true)
+		checkError(err)
+		err = varnam.VMCreateToken("m", "ം", "", "", "", VARNAM_SYMBOL_ANUSVARA, VARNAM_MATCH_EXACT, 0, VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN, true)
+		checkError(err)
+		err = varnam.VMCreateToken("m", "മ്", "", "", "", VARNAM_SYMBOL_ANUSVARA, VARNAM_MATCH_EXACT, 0, VARNAM_TOKEN_ACCEPT_IF_STARTS_WITH, true)
+		checkError(err)
+		err = varnam.VMFlushBuffer()
+		checkError(err)
+
+		// Remove only the one that accepts at end
+		err = varnam.VMRemoveTokens("m", "ം", VARNAM_SYMBOL_ANUSVARA, VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH)
+		checkError(err)
+
+		// Verify removal
+		search := NewSearchSymbol()
+		search.Pattern = "m"
+		search.Type = VARNAM_SYMBOL_ANUSVARA
+		symbols, err := varnam.SearchSymbolTable(context.Background(), search)
+		checkError(err)
+
+		// Should have 2 tokens remaining (in_between and starts_with)
+		assertEqual(t, len(symbols), 2)
+
+		// Verify the ends_with token was removed
+		for _, symbol := range symbols {
+			if symbol.AcceptCondition == VARNAM_TOKEN_ACCEPT_IF_ENDS_WITH && symbol.Value1 == "ം" {
+				t.Error("Token with ACCEPT_IF_ENDS_WITH should have been removed")
+			}
+		}
+	})
+
+	// Test 2: Remove all tokens with specific pattern
+	t.Run("RemoveAllWithPattern", func(t *testing.T) {
+		// Create test tokens
+		err := varnam.VMCreateToken("ka", "ക", "", "", "", VARNAM_SYMBOL_CONSONANT, VARNAM_MATCH_EXACT, 0, VARNAM_TOKEN_ACCEPT_ALL, true)
+		checkError(err)
+		err = varnam.VMCreateToken("ka", "ക്ക", "", "", "", VARNAM_SYMBOL_CONSONANT, VARNAM_MATCH_EXACT, 0, VARNAM_TOKEN_ACCEPT_IF_IN_BETWEEN, true)
+		checkError(err)
+		err = varnam.VMFlushBuffer()
+		checkError(err)
+
+		// Remove all with pattern "ka"
+		err = varnam.VMRemoveTokens("ka", "", VARNAM_SYMBOL_CONSONANT, VARNAM_TOKEN_ACCEPT_ALL)
+		checkError(err)
+
+		// Verify removal
+		search := NewSearchSymbol()
+		search.Pattern = "ka"
+		search.Type = VARNAM_SYMBOL_CONSONANT
+		symbols, err := varnam.SearchSymbolTable(context.Background(), search)
+		checkError(err)
+
+		// Should have 0 tokens remaining
+		assertEqual(t, len(symbols), 0)
+	})
+
+	// Test 3: Validation tests
+	t.Run("ValidationErrors", func(t *testing.T) {
+		// Test empty pattern and value
+		err := varnam.VMRemoveTokens("", "", VARNAM_SYMBOL_VOWEL, VARNAM_TOKEN_ACCEPT_ALL)
+		if err == nil {
+			t.Error("Expected error for empty pattern and value, but got none")
+		}
+
+		// Test invalid accept condition
+		err = varnam.VMRemoveTokens("a", "അ", VARNAM_SYMBOL_VOWEL, 999)
+		if err == nil {
+			t.Error("Expected error for invalid accept condition, but got none")
+		}
+	})
+}
