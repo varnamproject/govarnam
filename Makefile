@@ -5,6 +5,11 @@ default: build ;
 
 CLI_BIN := varnamcli
 INSTALL_PREFIX := $(or ${PREFIX},/usr/local)
+DESTDIR =
+BINDIR = ${INSTALL_PREFIX}/bin
+INCLUDEDIR = ${INSTALL_PREFIX}/include
+LIBDIR = ${INSTALL_PREFIX}/lib
+PKGCONFIGDIR = ${INSTALL_PREFIX}/lib/pkgconfig
 
 VERSION := 1.9.1
 BUILDSTR := ${VERSION} ($(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
@@ -26,21 +31,17 @@ endif
 
 VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}' $(EXT_LDFLAGS)
 pc:
-	${SED} -e "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" \
-	       -e "s#@VERSION@#${VERSION}#g" \
-	       -e "s#@LIBDIR@#${LIBDIR}#g" \
-		govarnam.pc.in > govarnam.pc.tmp
-	mv govarnam.pc.tmp govarnam.pc
+	cp govarnam.pc.in govarnam.pc
+	${SED} "s#@LIBDIR@#${LIBDIR}#g" govarnam.pc
+	${SED} "s#@INCLUDEDIR@#${INCLUDEDIR}/libgovarnam#g" govarnam.pc
+	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
 
 # Used only for building the CLI
 temp-pc:
-	${SED} -e "s#@INSTALL_PREFIX@#$(realpath .)#g" \
-	       -e "s#@VERSION@#${VERSION}#g" \
-	       -e "s#@LIBDIR@#${LIBDIR}#g" \
-	       -e "s#/include/libgovarnam##g" \
-	       -e "s#/lib\$$##g" \
-	       govarnam.pc.in > govarnam.pc.tmp
-	mv govarnam.pc.tmp govarnam.pc
+	cp govarnam.pc.in govarnam.pc
+	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
+	${SED} "s#@LIBDIR@#${CURDIR}#g" govarnam.pc
+	${SED} "s#@INCLUDEDIR@#${CURDIR}#g" govarnam.pc
 
 install.sh: install.sh.in
 	${SED} -e "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" \
