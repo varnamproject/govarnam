@@ -7,10 +7,8 @@ CLI_BIN := varnamcli
 INSTALL_PREFIX := $(or ${PREFIX},${PREFIX},/usr/local)
 LIBDIR := /lib
 
-# Try to get the commit hash from git
-LAST_COMMIT := $(or $(shell git rev-parse --short HEAD 2> /dev/null),"UNKNOWN")
-VERSION := $(or $(shell echo $$(git describe --abbrev=0 --tags || echo "latest") | sed s/v//),"v0.0.0")
-BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
+VERSION := 1.9.1
+BUILDSTR := ${VERSION} ($(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
 
 RELEASE_NAME := govarnam-${VERSION}-${shell uname -m}
 UNAME := $(shell uname)
