@@ -17,6 +17,12 @@ BUILDSTR := ${VERSION} ($(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
 RELEASE_NAME := govarnam-${VERSION}-${shell uname -m}
 UNAME := $(shell uname)
 
+HEADERS = libgovarnam.h \
+	c-shared.h \
+	c-shared-util.h \
+	c-shared-varray.h
+
+INSTALL := install
 SED := sed -i
 LINKER_NAME := libgovarnam.so
 SO_NAME := ${LINKER_NAME}.$(shell (echo $(VERSION) | cut -d. -f1))
@@ -43,25 +49,34 @@ temp-pc:
 	${SED} "s#@LIBDIR@#${CURDIR}#g" govarnam.pc
 	${SED} "s#@INCLUDEDIR@#${CURDIR}#g" govarnam.pc
 
-install.sh: install.sh.in
-	${SED} -e "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" \
-	       -e "s#@VERSION@#${VERSION}#g" \
-	       -e "s#@LIBDIR@#${LIBDIR}#g" \
-	       -e "s#@LIB_NAME@#${LIB_NAME}#g" \
-	       -e "s#@SO_NAME@#${SO_NAME}#g" \
-               install.sh.in > install.sh.tmp
-	mv install.sh.tmp install.sh
-	chmod +x install.sh
-
 .PHONY: install
-install: install.sh
-	./install.sh install
+install:
+	mkdir -p $(DESTDIR)$(BINDIR)
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)/libgovarnam
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	mkdir -p $(DESTDIR)$(PKGCONFIGDIR)
+	$(INSTALL) -Dpm 0755 $(CLI_BIN) $(DESTDIR)$(BINDIR)
+	for i in $(HEADERS) ;\
+		do $(INSTALL) -Dpm 0644 $$i \
+			$(DESTDIR)$(INCLUDEDIR)/libgovarnam ;\
+	done
+	cd $(DESTDIR)$(LIBDIR) \
+		&& ln -sf $(LIB_NAME) $(SO_NAME) \
+		&& ln -sf $(LIB_NAME) $(LINKER_NAME)
+	$(INSTALL) -Dpm 0644 $(LIB_NAME) $(DESTDIR)$(LIBDIR)
+	$(INSTALL) -Dpm 0644 govarnam.pc $(DESTDIR)$(PKGCONFIGDIR)
 
 .PHONY: uninstall
-uninstall: install.sh
-	./install.sh uninstall
-
-
+uninstall:
+	rm $(DESTDIR)$(BINDIR)/$(CLI_BIN)
+	for i in $(HEADERS) ;\
+		do rm $(DESTDIR)$(INCLUDEDIR)/libgovarnam/$$i ;\
+	done
+	rm -r $(DESTDIR)$(INCLUDEDIR)/libgovarnam
+	for i in $(LIB_NAME) $(SO_NAME) $(LINKER_NAME) ;\
+		do rm $(DESTDIR)$(LIBDIR)/$$i ;\
+	done
+	rm $(DESTDIR)$(PKGCONFIGDIR)/govarnam.pc
 
 .PHONY: cli
 cli:
@@ -90,7 +105,6 @@ nix:
 	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH $(MAKE) cli
 
 	$(MAKE) pc
-	$(MAKE) install.sh
 
 .PHONY:
 build:
@@ -119,4 +133,4 @@ test:
 
 .PHONY: clean
 clean:
-	rm -f varnamcli libgovarnam.*  govarnam.pc install.sh
+	rm -f varnamcli libgovarnam.* govarnam.pc
