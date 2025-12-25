@@ -4,8 +4,7 @@
 default: build ;
 
 CLI_BIN := varnamcli
-INSTALL_PREFIX := $(or ${PREFIX},${PREFIX},/usr/local)
-LIBDIR := /lib
+INSTALL_PREFIX := $(or ${PREFIX},/usr/local)
 
 VERSION := 1.9.1
 BUILDSTR := ${VERSION} ($(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
