@@ -12,15 +12,16 @@ BUILDSTR := ${VERSION} ($(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
 RELEASE_NAME := govarnam-${VERSION}-${shell uname -m}
 UNAME := $(shell uname)
 
-SED := sed
-LIB_NAME := libgovarnam.so
-SO_NAME := $(shell (echo $(VERSION) | cut -d. -f1))
+SED := sed -i
+LINKER_NAME := libgovarnam.so
+SO_NAME := ${LINKER_NAME}.$(shell (echo $(VERSION) | cut -d. -f1))
+LIB_NAME := ${LINKER_NAME}.$(VERSION)
 CURDIR := $(shell pwd)
 
 ifeq ($(UNAME), Darwin)
   LIB_NAME = libgovarnam.dylib
 else
-  EXT_LDFLAGS = -extldflags "-Wl,-soname,$(LIB_NAME).$(SO_NAME),--version-script,$(CURDIR)/govarnam.syms"
+  EXT_LDFLAGS = -extldflags "-Wl,-soname,$(SO_NAME),--version-script,$(CURDIR)/govarnam.syms"
 endif
 
 VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}' $(EXT_LDFLAGS)
@@ -70,7 +71,8 @@ library-nosqlite:
 
 library:
 	CGO_ENABLED=1 go build -tags "fts5" -buildmode=c-shared -ldflags "-s -w ${VERSION_STAMP_LDFLAGS}" -o ${LIB_NAME} .
-	ln -sf "$(realpath ./)/libgovarnam.so" "$(realpath ./)/libgovarnam.so.${SO_NAME}"
+	ln -sf "$(realpath ./)/${LIB_NAME}" "$(realpath ./)/${LINKER_NAME}"
+	mv libgovarnam.so.*.h libgovarnam.h
 
 library-mac-universal:
 	GOOS=darwin GOARCH=arm64 $(MAKE) library
