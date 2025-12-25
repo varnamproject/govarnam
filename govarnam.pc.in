@@ -3,7 +3,7 @@ includedir=@INCLUDEDIR@
 
 Name: GoVarnam
 Description: A transliteration library for Indian languages
-URL: http://varnamproject.com
+URL: https://varnamproject.com
 Version: @VERSION@
 Libs: -L${libdir} -lgovarnam
 Cflags: -I${includedir}
