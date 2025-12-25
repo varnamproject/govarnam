@@ -4,65 +4,79 @@
 default: build ;
 
 CLI_BIN := varnamcli
-INSTALL_PREFIX := $(or ${PREFIX},${PREFIX},/usr/local)
-LIBDIR := /lib
+INSTALL_PREFIX := $(or ${PREFIX},/usr/local)
+DESTDIR =
+BINDIR = ${INSTALL_PREFIX}/bin
+INCLUDEDIR = ${INSTALL_PREFIX}/include
+LIBDIR = ${INSTALL_PREFIX}/lib
+PKGCONFIGDIR = ${INSTALL_PREFIX}/lib/pkgconfig
 
-# Try to get the commit hash from git
-LAST_COMMIT := $(or $(shell git rev-parse --short HEAD 2> /dev/null),"UNKNOWN")
-VERSION := $(or $(shell echo $$(git describe --abbrev=0 --tags || echo "latest") | sed s/v//),"v0.0.0")
-BUILDSTR := ${VERSION} (\#${LAST_COMMIT} $(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
+VERSION := 1.9.1
+BUILDSTR := ${VERSION} ($(shell date -u +"%Y-%m-%dT%H:%M:%S%z"))
 
 RELEASE_NAME := govarnam-${VERSION}-${shell uname -m}
 UNAME := $(shell uname)
 
-SED := sed
-LIB_NAME := libgovarnam.so
-SO_NAME := $(shell (echo $(VERSION) | cut -d. -f1))
+HEADERS = libgovarnam.h \
+	c-shared.h \
+	c-shared-util.h \
+	c-shared-varray.h
+
+INSTALL := install
+SED := sed -i
+LINKER_NAME := libgovarnam.so
+SO_NAME := ${LINKER_NAME}.$(shell (echo $(VERSION) | cut -d. -f1))
+LIB_NAME := ${LINKER_NAME}.$(VERSION)
 CURDIR := $(shell pwd)
 
 ifeq ($(UNAME), Darwin)
   LIB_NAME = libgovarnam.dylib
 else
-  EXT_LDFLAGS = -extldflags "-Wl,-soname,$(LIB_NAME).$(SO_NAME),--version-script,$(CURDIR)/govarnam.syms"
+  EXT_LDFLAGS = -extldflags "-Wl,-soname,$(SO_NAME),--version-script,$(CURDIR)/govarnam.syms"
 endif
 
 VERSION_STAMP_LDFLAGS := -X 'github.com/varnamproject/govarnam/govarnam.BuildString=${BUILDSTR}' -X 'github.com/varnamproject/govarnam/govarnam.VersionString=${VERSION}' $(EXT_LDFLAGS)
 pc:
-	${SED} -e "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" \
-	       -e "s#@VERSION@#${VERSION}#g" \
-	       -e "s#@LIBDIR@#${LIBDIR}#g" \
-		govarnam.pc.in > govarnam.pc.tmp
-	mv govarnam.pc.tmp govarnam.pc
+	cp govarnam.pc.in govarnam.pc
+	${SED} "s#@LIBDIR@#${LIBDIR}#g" govarnam.pc
+	${SED} "s#@INCLUDEDIR@#${INCLUDEDIR}/libgovarnam#g" govarnam.pc
+	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
 
 # Used only for building the CLI
 temp-pc:
-	${SED} -e "s#@INSTALL_PREFIX@#$(realpath .)#g" \
-	       -e "s#@VERSION@#${VERSION}#g" \
-	       -e "s#@LIBDIR@#${LIBDIR}#g" \
-	       -e "s#/include/libgovarnam##g" \
-	       -e "s#/lib\$$##g" \
-	       govarnam.pc.in > govarnam.pc.tmp
-	mv govarnam.pc.tmp govarnam.pc
-
-install.sh: install.sh.in
-	${SED} -e "s#@INSTALL_PREFIX@#${INSTALL_PREFIX}#g" \
-	       -e "s#@VERSION@#${VERSION}#g" \
-	       -e "s#@LIBDIR@#${LIBDIR}#g" \
-	       -e "s#@LIB_NAME@#${LIB_NAME}#g" \
-	       -e "s#@SO_NAME@#${SO_NAME}#g" \
-               install.sh.in > install.sh.tmp
-	mv install.sh.tmp install.sh
-	chmod +x install.sh
+	cp govarnam.pc.in govarnam.pc
+	${SED} "s#@VERSION@#${VERSION}#g" govarnam.pc
+	${SED} "s#@LIBDIR@#${CURDIR}#g" govarnam.pc
+	${SED} "s#@INCLUDEDIR@#${CURDIR}#g" govarnam.pc
 
 .PHONY: install
-install: install.sh
-	./install.sh install
+install:
+	mkdir -p $(DESTDIR)$(BINDIR)
+	mkdir -p $(DESTDIR)$(INCLUDEDIR)/libgovarnam
+	mkdir -p $(DESTDIR)$(LIBDIR)
+	mkdir -p $(DESTDIR)$(PKGCONFIGDIR)
+	$(INSTALL) -Dpm 0755 $(CLI_BIN) $(DESTDIR)$(BINDIR)
+	for i in $(HEADERS) ;\
+		do $(INSTALL) -Dpm 0644 $$i \
+			$(DESTDIR)$(INCLUDEDIR)/libgovarnam ;\
+	done
+	cd $(DESTDIR)$(LIBDIR) \
+		&& ln -sf $(LIB_NAME) $(SO_NAME) \
+		&& ln -sf $(LIB_NAME) $(LINKER_NAME)
+	$(INSTALL) -Dpm 0644 $(LIB_NAME) $(DESTDIR)$(LIBDIR)
+	$(INSTALL) -Dpm 0644 govarnam.pc $(DESTDIR)$(PKGCONFIGDIR)
 
 .PHONY: uninstall
-uninstall: install.sh
-	./install.sh uninstall
-
-
+uninstall:
+	rm $(DESTDIR)$(BINDIR)/$(CLI_BIN)
+	for i in $(HEADERS) ;\
+		do rm $(DESTDIR)$(INCLUDEDIR)/libgovarnam/$$i ;\
+	done
+	rm -r $(DESTDIR)$(INCLUDEDIR)/libgovarnam
+	for i in $(LIB_NAME) $(SO_NAME) $(LINKER_NAME) ;\
+		do rm $(DESTDIR)$(LIBDIR)/$$i ;\
+	done
+	rm $(DESTDIR)$(PKGCONFIGDIR)/govarnam.pc
 
 .PHONY: cli
 cli:
@@ -73,7 +87,8 @@ library-nosqlite:
 
 library:
 	CGO_ENABLED=1 go build -tags "fts5" -buildmode=c-shared -ldflags "-s -w ${VERSION_STAMP_LDFLAGS}" -o ${LIB_NAME} .
-	ln -sf "$(realpath ./)/libgovarnam.so" "$(realpath ./)/libgovarnam.so.${SO_NAME}"
+	ln -sf "$(realpath ./)/${LIB_NAME}" "$(realpath ./)/${LINKER_NAME}"
+	mv libgovarnam.so.*.h libgovarnam.h
 
 library-mac-universal:
 	GOOS=darwin GOARCH=arm64 $(MAKE) library
@@ -90,7 +105,6 @@ nix:
 	PKG_CONFIG_PATH=$(realpath .):$$PKG_CONFIG_PATH $(MAKE) cli
 
 	$(MAKE) pc
-	$(MAKE) install.sh
 
 .PHONY:
 build:
@@ -119,4 +133,4 @@ test:
 
 .PHONY: clean
 clean:
-	rm -f varnamcli libgovarnam.*  govarnam.pc install.sh
+	rm -f varnamcli libgovarnam.* govarnam.pc
