@@ -51,6 +51,7 @@ typedef struct SchemeDetails_t {
 
 SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* DisplayName, char* Author, char* CompiledDate, int IsStable);
 
+void destroySchemeDetails(SchemeDetails* sd);
 void destroySchemeDetailsArray(void* cSchemeDetails);
 
 typedef struct LearnStatus_t {

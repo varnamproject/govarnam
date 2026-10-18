@@ -44,11 +44,13 @@ void destroySuggestionsArray(varray* pointer)
 
 void destroyTransliterationResult(TransliterationResult* result)
 {
+  destroySuggestionsArray(result->ExactWords);
   destroySuggestionsArray(result->ExactMatches);
   destroySuggestionsArray(result->DictionarySuggestions);
   destroySuggestionsArray(result->PatternDictionarySuggestions);
   destroySuggestionsArray(result->TokenizerSuggestions);
   destroySuggestionsArray(result->GreedyTokenized);
+  result->ExactWords = NULL;
   result->ExactMatches = NULL;
   result->DictionarySuggestions = NULL;
   result->PatternDictionarySuggestions = NULL;
@@ -71,20 +73,27 @@ SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* Display
   return sd;
 }
 
-void destroySchemeDetails(void* pointer)
+void destroySchemeDetails(SchemeDetails* sd)
 {
-  if (pointer != NULL) {
-    Suggestion* sug = (Suggestion*) pointer;
-    free(sug->Word);
-    sug->Word = NULL;
-    free(sug);
-    sug = NULL;
+  if (sd != NULL) {
+    free(sd->Identifier);
+    free(sd->LangCode);
+    free(sd->DisplayName);
+    free(sd->Author);
+    free(sd->CompiledDate);
+    free(sd);
   }
+}
+
+/* varray destructors take void*, so adapt the typed destructor */
+static void destroySchemeDetailsVoid(void* pointer)
+{
+  destroySchemeDetails((SchemeDetails*) pointer);
 }
 
 void destroySchemeDetailsArray(void* cSchemeDetails)
 {
-  varray_free(cSchemeDetails, &destroySchemeDetails);
+  varray_free(cSchemeDetails, &destroySchemeDetailsVoid);
 }
 
 LearnStatus makeLearnStatus(int TotalWords, int FailedWords)
