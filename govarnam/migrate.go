@@ -93,6 +93,7 @@ func (mg *migrate) runMigrations(status *migrationStatus) (int, error) {
 
 			_, err = tx.Exec(string(fileContents))
 			if err != nil {
+				tx.Rollback()
 				return 0, err
 			}
 
@@ -102,11 +103,15 @@ func (mg *migrate) runMigrations(status *migrationStatus) (int, error) {
 				return 0, err
 			}
 			_, err = stmt.Exec(migrationName)
+			stmt.Close()
 			if err != nil {
 				tx.Rollback()
+				return 0, err
 			}
 
-			tx.Commit()
+			if err := tx.Commit(); err != nil {
+				return 0, err
+			}
 
 			ranMigrations++
 		}
