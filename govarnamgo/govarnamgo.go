@@ -407,6 +407,8 @@ func (handle *VarnamHandle) TransliterateGreedyTokenized(word string) []Suggesti
 		return result
 	}
 
+	defer C.destroySuggestionsArray(resultPointer)
+
 	i := 0
 	for i < int(C.varray_length(resultPointer)) {
 		cSug := (*C.Suggestion)(C.varray_get(resultPointer, C.int(i)))
@@ -426,7 +428,6 @@ func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, err
 	defer C.free(unsafe.Pointer(cWord))
 
 	var resultPointer *C.varray
-	defer C.destroySuggestionsArray(resultPointer)
 
 	code := C.varnam_reverse_transliterate(handle.connectionID, cWord, &resultPointer)
 	if code != C.VARNAM_SUCCESS {
@@ -435,6 +436,8 @@ func (handle *VarnamHandle) ReverseTransliterate(word string) ([]Suggestion, err
 			Message:   handle.GetLastError(),
 		}
 	}
+
+	defer C.destroySuggestionsArray(resultPointer)
 
 	i := 0
 	for i < int(C.varray_length(resultPointer)) {
@@ -536,6 +539,7 @@ func (handle *VarnamHandle) TrainFromFile(filePath string) (LearnStatus, error) 
 // Export learnigns to a file
 func (handle *VarnamHandle) Export(filePath string, wordsPerFile int) error {
 	cFilePath := C.CString(filePath)
+	defer C.free(unsafe.Pointer(cFilePath))
 	err := C.varnam_export(handle.connectionID, cFilePath, C.int(wordsPerFile))
 	return handle.checkError(err)
 }
@@ -543,6 +547,7 @@ func (handle *VarnamHandle) Export(filePath string, wordsPerFile int) error {
 // Import learnigns to a file
 func (handle *VarnamHandle) Import(filePath string) error {
 	cFilePath := C.CString(filePath)
+	defer C.free(unsafe.Pointer(cFilePath))
 	err := C.varnam_import(handle.connectionID, cFilePath)
 	return handle.checkError(err)
 }
@@ -567,6 +572,8 @@ func (handle *VarnamHandle) GetRecentlyLearntWords(ctx context.Context, offset i
 				Message:   handle.GetLastError(),
 			}
 		}
+
+		defer C.destroySuggestionsArray(resultPointer)
 
 		i := 0
 		for i < int(C.varray_length(resultPointer)) {
@@ -604,6 +611,8 @@ func (handle *VarnamHandle) GetSuggestions(ctx context.Context, word string) ([]
 			}
 		}
 
+		defer C.destroySuggestionsArray(resultPointer)
+
 		i := 0
 		for i < int(C.varray_length(resultPointer)) {
 			cSug := (*C.Suggestion)(C.varray_get(resultPointer, C.int(i)))
@@ -634,7 +643,9 @@ func makeGoSchemeDetails(cSD *C.struct_SchemeDetails_t) SchemeDetails {
 
 // GetSchemeDetails get scheme details
 func (handle *VarnamHandle) GetSchemeDetails() SchemeDetails {
-	return makeGoSchemeDetails(C.varnam_get_scheme_details(handle.connectionID))
+	cSD := C.varnam_get_scheme_details(handle.connectionID)
+	defer C.destroySchemeDetails(cSD)
+	return makeGoSchemeDetails(cSD)
 }
 
 // GetVSTPath Get path to VST of current handle
@@ -664,6 +675,7 @@ func makeGoSymbol(cSymbol *C.Symbol) Symbol {
 func NewSearchSymbol() Symbol {
 	var resultPointer *C.Symbol
 	C.varnam_new_search_symbol(&resultPointer)
+	defer C.destroySymbol(unsafe.Pointer(resultPointer))
 	return makeGoSymbol(resultPointer)
 }
 
@@ -691,15 +703,17 @@ func (handle *VarnamHandle) SearchSymbolTable(ctx context.Context, searchCriteri
 		Flags := C.int(searchCriteria.Flags)
 
 		symbol := C.makeSymbol(Identifier, Type, MatchType, Pattern, Value1, Value2, Value3, Tag, Weight, Priority, AcceptCondition, Flags)
+		defer C.destroySymbol(unsafe.Pointer(symbol))
 
 		var resultPointer *C.varray
-		defer C.destroySymbolArray(unsafe.Pointer(resultPointer))
 
 		code := C.varnam_search_symbol_table(handle.connectionID, operationID, *symbol, &resultPointer)
 
 		if code != C.VARNAM_SUCCESS {
 			return goResults
 		}
+
+		defer C.destroySymbolArray(unsafe.Pointer(resultPointer))
 
 		i := 0
 		for i < int(C.varray_length(resultPointer)) {

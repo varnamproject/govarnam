@@ -51,6 +51,7 @@ typedef struct SchemeDetails_t {
 
 SchemeDetails* makeSchemeDetails(char* Identifier, char* LangCode, char* DisplayName, char* Author, char* CompiledDate, int IsStable);
 
+void destroySchemeDetails(SchemeDetails* sd);
 void destroySchemeDetailsArray(void* cSchemeDetails);
 
 typedef struct LearnStatus_t {
@@ -77,6 +78,7 @@ typedef struct Symbol_t {
 
 Symbol* makeSymbol(int Identifier, int Type, int MatchType, char* Pattern, char* Value1, char* Value2, char* Value3, char* Tag, int Weight, int Priority, int AcceptCondition, int Flags);
 
+void destroySymbol(void* pointer);
 void destroySymbolArray(void* cSymbols);
 
 #endif /* __C_SHARED_H__ */
