@@ -78,6 +78,7 @@ typedef struct Symbol_t {
 
 Symbol* makeSymbol(int Identifier, int Type, int MatchType, char* Pattern, char* Value1, char* Value2, char* Value3, char* Tag, int Weight, int Priority, int AcceptCondition, int Flags);
 
+void destroySymbol(void* pointer);
 void destroySymbolArray(void* cSymbols);
 
 #endif /* __C_SHARED_H__ */
