@@ -251,6 +251,7 @@ func (varnam *Varnam) LearnMany(words []WordInfo) (LearnStatus, error) {
 	}
 
 	_, err = stmt.Exec(insertionArgs...)
+	stmt.Close()
 	if err != nil {
 		return learnStatus, err
 	}
@@ -268,9 +269,9 @@ func (varnam *Varnam) LearnMany(words []WordInfo) (LearnStatus, error) {
 		if err != nil {
 			return learnStatus, err
 		}
-		defer stmt.Close()
 
 		_, err = stmt.Exec(updationArgs[0:lastIndex]...)
+		stmt.Close()
 		if err != nil {
 			return learnStatus, err
 		}
@@ -681,6 +682,7 @@ func (varnam *Varnam) Import(filePath string) error {
 			}
 
 			_, err = stmt.Exec(args...)
+			stmt.Close()
 			if err != nil {
 				return err
 			}
@@ -722,6 +724,7 @@ func (varnam *Varnam) Import(filePath string) error {
 			}
 
 			_, err = stmt.Exec(args...)
+			stmt.Close()
 			if err != nil {
 				return err
 			}

@@ -516,6 +516,7 @@ func Init(vstPath string, dictPath string) (*Varnam, error) {
 	}
 	err = varnam.InitDict(dictPath)
 	if err != nil {
+		varnam.Close()
 		return nil, err
 	}
 
@@ -548,6 +549,7 @@ func InitFromID(schemeID string) (*Varnam, error) {
 
 	err = varnam.InitDict(dictPath)
 	if err != nil {
+		varnam.Close()
 		return nil, err
 	}
 

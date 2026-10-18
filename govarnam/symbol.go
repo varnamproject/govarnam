@@ -73,6 +73,8 @@ func (varnam *Varnam) InitVST(vstPath string) error {
 
 	err = varnam.setPatternLongestLength()
 	if err != nil {
+		varnam.vstConn.Close()
+		varnam.vstConn = nil
 		return err
 	}
 
@@ -91,6 +93,7 @@ func (varnam *Varnam) setPatternLongestLength() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	length := 0
 	for rows.Next() {
@@ -114,6 +117,7 @@ func (varnam *Varnam) setSchemeInfo() {
 
 	if err != nil {
 		log.Print(err)
+		return
 	}
 	defer rows.Close()
 
@@ -607,6 +611,7 @@ func (varnam *Varnam) SearchSymbolTable(ctx context.Context, searchCriteria Symb
 		if err != nil {
 			return nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var item Symbol

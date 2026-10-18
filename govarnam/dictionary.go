@@ -75,11 +75,15 @@ func (varnam *Varnam) InitDict(dictPath string) error {
 	// cd into migrations directory
 	migrationsFS, err := fs.Sub(embedFS, "migrations")
 	if err != nil {
+		varnam.dictConn.Close()
+		varnam.dictConn = nil
 		return err
 	}
 
 	mg, err := InitMigrate(varnam.dictConn, migrationsFS)
 	if err != nil {
+		varnam.dictConn.Close()
+		varnam.dictConn = nil
 		return err
 	}
 

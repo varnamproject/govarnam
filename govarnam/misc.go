@@ -51,10 +51,11 @@ func GetAllSchemeDetails() ([]SchemeDetails, error) {
 
 		if err == nil {
 			schemeDetails = append(schemeDetails, varnam.SchemeDetails)
-			varnam.Close()
 		} else {
 			log.Println(err)
 		}
+
+		varnam.Close()
 	}
 
 	return schemeDetails, nil
